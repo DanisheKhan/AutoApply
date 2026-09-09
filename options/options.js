@@ -111,32 +111,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Resume File Upload / Replace Picker
-  const resumePicker = document.getElementById('resume-file-picker');
-  const replaceResumeBtn = document.getElementById('btn-replace-resume');
-  if (replaceResumeBtn && resumePicker) {
-    replaceResumeBtn.addEventListener('click', () => resumePicker.click());
-    resumePicker.addEventListener('change', (e) => {
+  // Export & Import Profile JSON
+  const exportBtn = document.getElementById('btn-export-profile');
+  const importBtn = document.getElementById('btn-import-profile');
+  const importPicker = document.getElementById('import-file-picker');
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const data = extractFormData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AutoApply_Profile_${(data.personal?.firstName || 'Candidate').replace(/\s+/g, '_')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("✓ Profile exported successfully!");
+    });
+  }
+
+  if (importBtn && importPicker) {
+    importBtn.addEventListener('click', () => importPicker.click());
+    importPicker.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = async (event) => {
-          const base64 = event.target.result.split(',')[1];
-          currentProfile.resume = {
-            filename: file.name,
-            sizeBytes: file.size,
-            mimeType: file.type || 'application/pdf',
-            base64: base64,
-            updatedAt: Date.now()
-          };
-          const nameEl = document.getElementById('resume-display-name');
-          const sizeEl = document.getElementById('resume-display-size');
-          if (nameEl) nameEl.textContent = file.name;
-          if (sizeEl) sizeEl.textContent = `${(file.size / 1024).toFixed(1)} KB • PDF • Ready for Auto-Upload`;
-          showToast(`✓ Resume updated: ${file.name}`);
-          await saveProfile();
+          try {
+            const imported = JSON.parse(event.target.result);
+            currentProfile = imported;
+            populateForm(currentProfile);
+            await saveProfile();
+            showToast(`✓ Imported profile from ${file.name}!`);
+          } catch (err) {
+            showToast(`Import error: Invalid JSON file.`, "error");
+          }
         };
-        reader.readAsDataURL(file);
+        reader.readAsText(file);
       }
     });
   }
@@ -231,6 +242,9 @@ function populateForm(p) {
   // Personal Info
   setVal('personal-fullName', p.personal?.fullName);
   setVal('personal-shortName', p.personal?.shortName);
+  setVal('personal-firstName', p.personal?.firstName || "Mohammad Danish");
+  setVal('personal-middleName', p.personal?.middleName || "Naeem Khan");
+  setVal('personal-lastName', p.personal?.lastName || "Khan");
   setVal('personal-gender', p.personal?.gender);
   setVal('personal-fatherName', p.personal?.fatherName);
   setVal('personal-motherName', p.personal?.motherName);
@@ -329,6 +343,9 @@ function extractFormData() {
   p.personal = p.personal || {};
   p.personal.fullName = getVal('personal-fullName');
   p.personal.shortName = getVal('personal-shortName');
+  p.personal.firstName = getVal('personal-firstName') || "Mohammad Danish";
+  p.personal.middleName = getVal('personal-middleName') || "Naeem Khan";
+  p.personal.lastName = getVal('personal-lastName') || "Khan";
   p.personal.gender = getVal('personal-gender');
   p.personal.fatherName = getVal('personal-fatherName');
   p.personal.motherName = getVal('personal-motherName');

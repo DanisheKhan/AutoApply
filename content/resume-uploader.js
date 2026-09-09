@@ -1,5 +1,5 @@
 /**
- * AutoApply Pro - Automated Resume Uploader
+ * AutoApply Pro - Automated Resume & Document Uploader
  * Converts bundled DanishKhan_Resume.pdf into a live browser File object and attaches
  * it to job portal file inputs and drag-and-drop zones (SmartRecruiters, Greenhouse, Lever, Workday, etc.)
  */
@@ -60,9 +60,10 @@ async function autoUploadResume() {
   }
 
   let uploadedCount = 0;
+  // Look for all file inputs, including hidden or stylized ones
   const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
 
-  // Match resume-specific file inputs
+  // Filter for resume-specific file inputs (ignore cover letter or profile photos if separate)
   const resumeInputs = fileInputs.filter(input => {
     const id = (input.id || '').toLowerCase();
     const name = (input.name || '').toLowerCase();
@@ -73,12 +74,14 @@ async function autoUploadResume() {
     const container = input.closest('label, div[class*="upload"], div[class*="drop"], div[class*="file"], div[class*="resume"], section, fieldset') || input.parentElement;
     const containerText = container ? container.innerText.toLowerCase() : '';
 
-    const isResumeRegex = /(resume|cv|curriculum|biodata|profile|attachment|upload.*file|file.*upload)/i;
-    
-    // If accept specifies pdf/doc
-    const acceptsDoc = accept.includes('pdf') || accept.includes('doc') || accept === '*';
+    const isResumeRegex = /(resume|cv\b|curriculum|biodata|profile|attachment|upload.*file|file.*upload)/i;
+    const isCoverLetter = /cover[_\s-]?letter/i.test(id) || /cover[_\s-]?letter/i.test(name) || /cover[_\s-]?letter/i.test(containerText);
+    const isPhoto = /photo|picture|avatar|image|signature/i.test(id) || /photo|signature/i.test(name) || /photo|signature/i.test(containerText);
 
-    // If there's only 1 file input on a job page, it is almost certainly the resume
+    if (isCoverLetter || isPhoto) return false;
+
+    const acceptsDoc = accept.includes('pdf') || accept.includes('doc') || accept.includes('docx') || accept === '*' || accept === '';
+
     if (fileInputs.length === 1) return true;
 
     return isResumeRegex.test(id) || 
@@ -105,7 +108,6 @@ async function autoUploadResume() {
       // Find dropzone target or parent wrapper
       const dropZone = input.closest('[class*="dropzone"], [class*="drop"], [class*="upload"], label, .file-input-wrapper') || input.parentElement;
       if (dropZone) {
-        // Dispatch synthetic drag/drop events
         try {
           const dragEnter = new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt });
           const dragOver = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
@@ -115,10 +117,9 @@ async function autoUploadResume() {
           dropZone.dispatchEvent(dragOver);
           dropZone.dispatchEvent(drop);
         } catch (de) {
-          // Some browsers restrict synthetic DragEvents
+          // Synthetic DragEvents may be restricted in some browsers
         }
 
-        // Highlight upload area with Google AI Studio blue glow
         highlightResumeDropzone(dropZone);
       }
 
@@ -133,7 +134,7 @@ async function autoUploadResume() {
     const dropAreas = document.querySelectorAll('[class*="dropzone"], [class*="drop-zone"], [data-testid*="dropzone"], [data-qa*="dropzone"], [class*="file-upload"]');
     for (const dropArea of dropAreas) {
       const text = (dropArea.innerText || '').toLowerCase();
-      if (/drag.*drop|upload.*resume|upload.*file/i.test(text)) {
+      if (/drag.*drop|upload.*resume|upload.*file|attach.*cv/i.test(text)) {
         try {
           const dt = new DataTransfer();
           dt.items.add(resumeFile);

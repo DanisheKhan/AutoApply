@@ -17,6 +17,7 @@ const DEFAULT_PROFILE = {
     certificateName: "Mohammad Danish Khan",
     shortName: "Danish Khan",
     firstName: "Mohammad Danish",
+    middleName: "Naeem Khan",
     lastName: "Khan",
     fatherName: "Naeem Khan",
     motherName: "Yasmeen Bano",
