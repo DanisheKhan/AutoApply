@@ -165,6 +165,144 @@ function generateInstantFallbackAnswer(question, profile) {
 }
 
 /**
+ * Uses Gemini AI to infer the value or best option for unique/unknown form fields.
+ */
+async function inferFieldWithGemini({ label, tag = "input", type = "text", options = [], sectionContext = "", placeholder = "" }, profile) {
+  if (!label || !label.trim()) return null;
+
+  const apiKey = profile?.gemini?.apiKey;
+  const model = profile?.gemini?.model || DEFAULT_MODEL;
+
+  // Bio-Data context snapshot
+  const candidateBio = `Candidate: Mohammad Danish Khan Naeem Khan (Male, Born: 01/06/2005).
+Location: Bhusawal, Dist. Jalgaon, Maharashtra - 425201, India.
+Citizenship: Indian / Citizen. Marital Status: Single / Unmarried. Religion: Islam.
+Degree: B.Tech in Artificial Intelligence (2022-2026), CGPA 7.79, Zero Backlogs, G H Raisoni College of Engineering, KBC North Maharashtra University.
+Tech Stack: React.js, Node.js, Express.js, MongoDB, Supabase, Next.js, Java DSA (500+ solved).
+Experience: 1 year 9 months total (10-month Full Stack Intern at Meet Bros, Freelance Client Architect for Madina Perfumes, Muskan Hospital, Vega Star).
+Passport: Indian Passport AH927400, Valid till 2035.
+Notice Period: Immediate (0 Days). Work Authorization: Legally authorized in India.
+Current Location: Bhusawal, Maharashtra. Willing to relocate: Yes (Pune, Bengaluru, Mumbai, Hyderabad, Gurgaon, Remote).`;
+
+  // Instant heuristic fallback for known edge cases
+  function getFastFallback() {
+    const lLower = label.toLowerCase();
+    if (/prefix|salutation|title/i.test(lLower) && !/job|position/i.test(lLower)) return "Mr.";
+    if (/gender|sex/i.test(lLower)) return "Male";
+    if (/nationality|citizenship/i.test(lLower)) return "Indian";
+    if (/marital/i.test(lLower)) return "Single";
+    if (/state|province/i.test(lLower)) return "Maharashtra";
+    if (/country/i.test(lLower) && !/code|isd/i.test(lLower)) return "India";
+    if (/city|location/i.test(lLower)) return "Bhusawal";
+    if (/valid.*passport/i.test(lLower)) return "Yes";
+    if (/immigration.*status/i.test(lLower)) return "Citizen";
+    if (/interview.*last|applied.*before/i.test(lLower)) return "No";
+    if (/confirm.*id|read.*understood|agree|declaration/i.test(lLower)) return "Yes";
+    if (/highest.*(education|qualification|degree)/i.test(lLower)) return "B.Tech";
+    if (/visa.*if.*any|other.*visa/i.test(lLower)) return "None";
+    if (/notice|availability/i.test(lLower)) return "Immediate";
+    if (/ppo|pre[_\s-]?placement|post.*internship/i.test(lLower)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|definitely|interested)\b/i.test(o.trim()));
+        if (yesOpt) return yesOpt;
+      }
+      return "Yes";
+    }
+    if (/stipend|program[_\s-]?structure|program[_\s-]?details|gone.*through.*program|clear.*stipend/i.test(lLower)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|definitely|clear|agree)\b/i.test(o.trim()));
+        if (yesOpt) return yesOpt;
+      }
+      return "Yes";
+    }
+    if (/how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?/i.test(lLower)) {
+      if (options && options.length > 0) {
+        const rangeOpt = options.find(o => {
+          const t = o.toLowerCase();
+          return t.includes('6-12') || t.includes('6 to 12') || t.includes('10') || t.includes('1-2') || t.includes('1 year');
+        }) || options.find(o => o.toLowerCase().includes('0-6') || o.toLowerCase().includes('fresher'));
+        if (rangeOpt) return rangeOpt;
+      }
+      return "10";
+    }
+    if (/relocat|willing.*relocate/i.test(lLower)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|agree|positive)\b/i.test(o.trim()));
+        if (yesOpt) return yesOpt;
+      }
+      return "Yes";
+    }
+    if (tag === 'select' && options.length > 0) {
+      const positive = options.find(o => /^(yes|citizen|indian|male|single|mr|b\.?tech|maharashtra|india)$/i.test(o.trim()));
+      if (positive) return positive;
+    }
+    return "";
+  }
+
+  if (!apiKey || apiKey.trim() === "") {
+    return getFastFallback();
+  }
+
+  let prompt;
+  if (options && options.length > 0) {
+    prompt = `${candidateBio}
+
+You are filling a job application form for the candidate.
+Section: ${sectionContext || "General"}
+Field Label: "${label}"
+Field Tag: <${tag}>
+Dropdown Options available: ${JSON.stringify(options.slice(0, 30))}
+
+Instructions:
+Select the exact single option text from the list that best fits candidate Mohammad Danish Khan.
+If it is a Yes/No or boolean question, pick the affirmative or accurate answer for this candidate.
+Respond ONLY with the exact matching option string from the list. Do not include markdown, explanations, or quotes.`;
+  } else {
+    prompt = `${candidateBio}
+
+You are filling a job application form for the candidate.
+Section: ${sectionContext || "General"}
+Field Label: "${label}"
+Placeholder: "${placeholder}"
+Field Tag: <${tag}>
+
+Instructions:
+Provide the concise, single factual value for candidate Mohammad Danish Khan.
+Respond ONLY with the value to enter into the input. No explanation or greetings.`;
+  }
+
+  const url = `${GEMINI_API_ENDPOINT}/${model}:generateContent?key=${apiKey.trim()}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 50 }
+      })
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const textPart = parts.find(p => p.text && !p.thought) || parts[0];
+      const answer = textPart?.text?.trim().replace(/^["']|["']$/g, '');
+      if (answer) return answer;
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn("[AutoApply Pro] AI field inference fallback:", err.message);
+  }
+
+  return getFastFallback();
+}
+
+/**
  * Tests the Gemini API Key connection with low latency.
  * @param {string} apiKey 
  * @param {string} model 
@@ -214,5 +352,5 @@ async function testGeminiApiKey(apiKey, model = DEFAULT_MODEL) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { generateAnswerWithGemini, testGeminiApiKey, generateInstantFallbackAnswer };
+  module.exports = { generateAnswerWithGemini, inferFieldWithGemini, testGeminiApiKey, generateInstantFallbackAnswer };
 }

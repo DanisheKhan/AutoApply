@@ -5,11 +5,10 @@
  */
 
 function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
-  if (document.getElementById('autoapply-pro-root')) return;
-
-  const host = document.createElement('div');
-  host.id = 'autoapply-pro-root';
-  document.documentElement.appendChild(host);
+  const existing = document.getElementById('autoapply-pro-root');
+  if (existing) existing.remove();
+  // Floating black bar removed per user request in favor of minimal in-field button
+  return;
 
   const shadow = host.attachShadow({ mode: 'closed' });
 
@@ -357,6 +356,8 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
         msg = (result.filledCount || 0) > 0 
           ? `✓ Filled ${result.filledCount} fields + Attached Resume!`
           : `✓ Attached ${result.resumeFilename || 'DanishKhan_Resume.pdf'}!`;
+      } else if (result.openedResumeDialog) {
+        msg = `✓ Filled ${result.filledCount || 0} fields! (Resume dialog opened)`;
       }
       showToast(msg);
     } catch (e) {

@@ -4,6 +4,13 @@
  * LinkedIn Easy Apply, Workday, Greenhouse, Lever, Ashby, and Modern React/Vue/Angular ATS.
  */
 
+let _heuristics = {};
+if (typeof require !== 'undefined') {
+  try {
+    _heuristics = require('./heuristics.js');
+  } catch (e) {}
+}
+
 // 1. Synthetic React 16/17/18/19 & Vue Event Dispatcher
 function setNativeValue(element, value) {
   if (!element || value === undefined || value === null) return false;
@@ -186,7 +193,95 @@ function detectCurrentPlatform() {
   return 'Generic Form';
 }
 
-// 4. Helper: Extract meaningful descriptive label for an element
+// 4. Section & Accordion Auto-Expander (Supports Multi-Step & Collapsible ATS Portals)
+function expandAllCollapsedSections() {
+  let expandedCount = 0;
+
+  // 1. Explicit "Expand all sections" buttons or links
+  const expandAllBtns = document.querySelectorAll('button, a, div[role="button"], span');
+  for (const btn of expandAllBtns) {
+    const text = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+    if (text.includes('expand all') || text === '+ expand all sections' || text === 'expand all sections') {
+      try {
+        btn.click();
+        expandedCount++;
+      } catch (e) {}
+    }
+  }
+
+  // 2. Collapsed accordion headers / sections with aria-expanded="false" or class "collapsed"
+  const collapsedHeaders = document.querySelectorAll(
+    '[aria-expanded="false"], .collapsed, [data-toggle="collapse"].collapsed, .accordion-header, summary, div[role="tab"][aria-selected="false"], .panel-heading'
+  );
+  for (const header of collapsedHeaders) {
+    // Strictly skip form dropdowns, listboxes, comboboxes, and Google Forms menus
+    const tag = header.tagName.toLowerCase();
+    const role = (header.getAttribute('role') || '').toLowerCase();
+    const ariaHasPopup = (header.getAttribute('aria-haspopup') || '').toLowerCase();
+    if (tag === 'select' || role === 'combobox' || role === 'listbox' || role === 'option' || role === 'menu' || ariaHasPopup === 'listbox') continue;
+    if (header.classList.contains('ry3kXd') || header.classList.contains('quantumWizMenuPaperselectEl') || header.classList.contains('gf-custom-select')) continue;
+    if (header.closest('.Qr7Oae, .geS5n, .vQx30e, .gf-select-container')) continue;
+
+    if (header.getAttribute('aria-expanded') === 'false' || header.classList.contains('collapsed')) {
+      try {
+        header.click();
+        expandedCount++;
+      } catch (e) {}
+    }
+  }
+
+  // 3. Look for section headers with chevron or arrow (e.g. "> My Documents", "> Profile Information")
+  const headersWithChevrons = document.querySelectorAll('.card-header, .accordion-title, .section-header, h2, h3, h4');
+  for (const h of headersWithChevrons) {
+    const text = (h.innerText || '').trim();
+    if (text.startsWith('>') || text.startsWith('▶') || text.startsWith('+')) {
+      try {
+        h.click();
+        expandedCount++;
+      } catch (e) {}
+    }
+  }
+
+  return expandedCount;
+}
+
+// 5. Helper: Check if an input or select is already filled by candidate
+function isElementAlreadyFilled(element) {
+  if (!element) return false;
+  if (element.type === 'radio' || element.type === 'checkbox') return false;
+
+  const tag = element.tagName.toLowerCase();
+
+  // Native <select> element
+  if (tag === 'select') {
+    if (element.selectedIndex < 0) return false;
+    const selectedOpt = element.options[element.selectedIndex];
+    if (!selectedOpt) return false;
+    const val = (selectedOpt.value || '').trim().toLowerCase();
+    const text = (selectedOpt.text || '').trim().toLowerCase();
+
+    // Check if current selection is a placeholder like "No Selection", "- Select -", "Choose", "None", empty, 0, etc.
+    const isPlaceholderVal = !val || val === '0' || val === '-1' || val === 'none' || val === 'select' || val === 'no_selection' || /^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(val);
+    const isPlaceholderText = !text || /^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(text);
+
+    return !(isPlaceholderVal || isPlaceholderText);
+  }
+
+  // ContentEditable div
+  if (element.isContentEditable || element.getAttribute('contenteditable') === 'true') {
+    const text = (element.textContent || '').trim();
+    return text.length > 0;
+  }
+
+  // Standard text/email/tel/number/url input or textarea
+  const val = (element.value || '').trim();
+  if (!val) return false;
+  if (/^(-|--|select|choose|none|no\s*selection|--select--|- select -)$/i.test(val)) return false;
+
+  return true;
+}
+
+// 6. Helper: Extract meaningful descriptive label for an element
 function getElementLabel(element) {
   if (!element) return '';
   const labels = [];
@@ -239,7 +334,7 @@ function getElementLabel(element) {
   return labels.join(' ').replace(/\s+/g, ' ').trim();
 }
 
-// 5. Match value from profile using Heuristics
+// 7. Match value from profile using Heuristics
 function matchValueFromProfile(element, profile) {
   const labelText = getElementLabel(element);
   if (!labelText) return null;
@@ -279,29 +374,146 @@ function matchValueFromProfile(element, profile) {
   return null;
 }
 
-// 6. Universal Custom Dropdown / Combobox Resolver
+// 8. Universal Custom Dropdown / Combobox Resolver
 function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
   if (!selectOrCombobox || !targetValue) return false;
   const valStr = targetValue.toString().trim().toLowerCase();
 
+  // Helper: Detect placeholder options
+  function isPlaceholder(text, val) {
+    const t = (text || '').trim().toLowerCase();
+    const v = (val || '').trim().toLowerCase();
+    if (!t && !v) return true;
+    if (v === '0' || v === '-1' || v === 'none' || v === 'select' || v === 'no_selection') return true;
+    if (/^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(t)) return true;
+    if (/^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(v)) return true;
+    return false;
+  }
+
   // Case A: Native HTML <select>
   if (selectOrCombobox.tagName.toLowerCase() === 'select') {
     const options = Array.from(selectOrCombobox.options);
-    let matchedOpt = options.find(o => o.text.trim().toLowerCase() === valStr || o.value.trim().toLowerCase() === valStr);
-    
-    if (!matchedOpt) {
-      matchedOpt = options.find(o => o.text.toLowerCase().includes(valStr) || o.value.toLowerCase().includes(valStr) || valStr.includes(o.text.toLowerCase()));
+    let matchedOpt = null;
+
+    // 1. Phone Country Code special handling (+91 / India / IN / 91)
+    if (valStr === '+91' || valStr === '91' || valStr.includes('91') || valStr.includes('india')) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').toLowerCase().trim();
+        const oVal = (o.value || '').toLowerCase().trim();
+        if (isPlaceholder(oText, oVal) && !oText.includes('+91') && !oText.includes('91')) return false;
+        return oText.includes('+91') || oText.includes('(91)') || oText.includes('91') || oText.includes('india') || oVal === '+91' || oVal === '91' || oVal === 'in' || oVal === 'ind' || oVal === 'india';
+      });
     }
+
+    // 2. Country of Residence special handling (India / IN / IND)
+    if (!matchedOpt && (valStr === 'india' || valStr.includes('india'))) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal) && !oText.includes('india')) return false;
+        return oText === 'india' || oText.includes('india') || oVal === 'in' || oVal === 'ind' || oVal === 'india' || oVal === '356';
+      });
+    }
+
+    // 3. Prefix / Salutation special handling (Mr. / Mr / Male)
+    if (!matchedOpt && (valStr === 'mr.' || valStr === 'mr')) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText === 'mr.' || oText === 'mr' || oText.startsWith('mr.') || oText.startsWith('mr ') || oVal === 'mr' || oVal === 'mr.';
+      });
+    }
+
+    // 4. Marital Status special handling (Single / Unmarried)
+    if (!matchedOpt && (valStr.includes('single') || valStr.includes('unmarried'))) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText.includes('single') || oText.includes('unmarried') || oVal.includes('single') || oVal.includes('unmarried');
+      });
+    }
+
+    // 5. Highest Education / Degree special handling (B.Tech / Bachelor)
+    if (!matchedOpt && (valStr.includes('b.tech') || valStr.includes('btech') || valStr.includes('bachelor'))) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText.includes('b.tech') || oText.includes('btech') || oText.includes('bachelor') || oText.includes('undergraduate') || oText.includes('graduate') || oVal.includes('btech') || oVal.includes('b.tech');
+      });
+    }
+
+    // 6. Nationality / Citizenship special handling (Indian / Citizen)
+    if (!matchedOpt && (valStr.includes('indian') || valStr.includes('citizen'))) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText.includes('indian') || oText.includes('citizen') || oText.includes('india') || oVal === 'in' || oVal === 'ind';
+      });
+    }
+
+    // 7. Exact match by text or value
+    if (!matchedOpt) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = o.text.trim().toLowerCase();
+        const oVal = o.value.trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText === valStr || oVal === valStr;
+      });
+    }
+
+    // 8. Substring inclusion
+    if (!matchedOpt) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = o.text.toLowerCase();
+        const oVal = o.value.toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return oText.includes(valStr) || oVal.includes(valStr) || valStr.includes(oText);
+      });
+    }
+
+    // 9. Token match
     if (!matchedOpt) {
       const tokens = valStr.split(/[\s/,-]+/).filter(t => t.length > 2);
-      matchedOpt = options.find(o => tokens.some(tok => o.text.toLowerCase().includes(tok)));
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = o.text.toLowerCase();
+        if (isPlaceholder(oText, o.value)) return false;
+        return tokens.some(tok => oText.includes(tok));
+      });
     }
-    if (!matchedOpt && /yes|authorized|male/i.test(valStr)) {
-      matchedOpt = options.find(o => /yes|agree|male|authorized/i.test(o.text));
+
+    // 10. Affirmative / Negative match (Yes/No)
+    if (!matchedOpt && /^(yes|true|authorized|eligible|agree|citizen|male)$/i.test(valStr)) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = o.text.toLowerCase();
+        if (isPlaceholder(oText, o.value)) return false;
+        return /^(yes|agree|male|authorized|citizen|eligible)$/i.test(oText) || oText.startsWith('yes');
+      });
+    } else if (!matchedOpt && /^(no|false|none|zero|0)$/i.test(valStr)) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = o.text.toLowerCase();
+        if (isPlaceholder(oText, o.value)) return false;
+        return /^(no|none|zero|false)$/i.test(oText) || oText.startsWith('no');
+      });
     }
 
     if (matchedOpt) {
       selectOrCombobox.value = matchedOpt.value;
+      selectOrCombobox.selectedIndex = options.indexOf(matchedOpt);
       selectOrCombobox.dispatchEvent(new Event('input', { bubbles: true }));
       selectOrCombobox.dispatchEvent(new Event('change', { bubbles: true }));
       highlightFilledElement(selectOrCombobox);
@@ -317,7 +529,7 @@ function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
   const candidateOptions = Array.from(
     container.querySelectorAll('div[role="option"], .quantumWizMenuPaperselectOption, .gf-dropdown-option, [data-value]')
   ).concat(
-    Array.from(document.querySelectorAll('.exportSelectPopup div[role="option"], .quantumWizMenuPaperselectPopup div[role="option"]'))
+    Array.from(document.querySelectorAll('.exportSelectPopup div[role="option"], .quantumWizMenuPaperselectPopup div[role="option"], .OA0dhb div[role="option"]'))
   );
 
   let targetOpt = candidateOptions.find(opt => {
@@ -334,13 +546,16 @@ function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
   }
 
   if (targetOpt) {
+    targetOpt.focus();
+    targetOpt.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+    targetOpt.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
     targetOpt.click();
     targetOpt.setAttribute('aria-selected', 'true');
     targetOpt.classList.add('selected');
 
-    const displayLabel = listbox.querySelector('.gf-select-text, .quantumWizMenuPaperselectContent, .vRMGwf') || listbox;
-    if (displayLabel) {
-      displayLabel.textContent = targetOpt.innerText.trim() || targetOpt.getAttribute('data-value');
+    const simLabel = listbox.querySelector('.gf-select-text');
+    if (simLabel) {
+      simLabel.textContent = (targetOpt.innerText || targetOpt.getAttribute('data-value') || '').trim();
     }
     listbox.setAttribute('aria-expanded', 'false');
     highlightFilledElement(listbox);
@@ -350,79 +565,444 @@ function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
   return false;
 }
 
-// 7. Google Forms Adapter
+// Helper: Clear Google Forms validation error states without destructively hiding question containers
+function clearGoogleFormItemError(item) {
+  if (!item) return;
+  item.classList.remove('NPEfkd', 'RHiWh', 'hasError', 'is-invalid');
+  item.querySelectorAll('.geS5n, .Qr7Oae, [role="listitem"]').forEach(el => {
+    el.classList.remove('RHiWh', 'NPEfkd');
+  });
+  // Restore response wrappers if previously hidden by any script
+  item.querySelectorAll('.t9kgXb, .AgroKb, .vQx30e').forEach(el => {
+    el.style.display = '';
+  });
+  // Only hide actual role="alert" message bubbles
+  item.querySelectorAll('div[role="alert"], .spb5kn').forEach(alertEl => {
+    if (!alertEl.classList.contains('t9kgXb') && !alertEl.querySelector('input, select, [role="listbox"]')) {
+      alertEl.style.display = 'none';
+    }
+  });
+}
+
+// 7.1 Dedicated Google Forms Material Dropdown Listbox Engine
+async function fillGoogleFormsDropdown(listboxEl, targetValue, questionText = '') {
+  if (!listboxEl) return { success: false, aiUsed: false };
+  const valStr = (targetValue || '').toString().trim().toLowerCase();
+  const item = listboxEl.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem') || listboxEl.parentElement || document.body;
+
+  console.log(`[AutoApply Pro] Processing dropdown for: "${questionText}" (Target: "${targetValue}")`);
+
+  // Helper: Detect placeholder
+  function isPlaceholder(text, val) {
+    const t = (text || '').trim().toLowerCase();
+    const v = (val || '').trim().toLowerCase();
+    if (!t && !v) return true;
+    if (v === '0' || v === '-1' || v === 'none' || v === 'select' || v === 'no_selection') return true;
+    return /^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(t) ||
+           /^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(v);
+  }
+
+  function getOptText(el) {
+    if (!el) return '';
+    return (el.getAttribute('data-value') || el.querySelector('.vRMGwf')?.textContent || el.innerText || el.textContent || '').trim();
+  }
+
+  // 1. Check if candidate options already exist in the item before clicking
+  let candidateOptions = Array.from(item.querySelectorAll(
+    'div[role="option"], .quantumWizMenuPaperselectOption, .gf-dropdown-option, .MocG8c, [data-value]'
+  )).filter(opt => {
+    const text = getOptText(opt);
+    return text && !isPlaceholder(text, opt.getAttribute('data-value'));
+  });
+
+  // 2. If options not found, click listbox once to open menu
+  if (candidateOptions.length === 0) {
+    listboxEl.focus();
+    if (listboxEl.getAttribute('aria-expanded') !== 'true') {
+      listboxEl.click();
+    }
+    await new Promise(r => setTimeout(r, 150));
+
+    // Search in item again after click
+    candidateOptions = Array.from(item.querySelectorAll(
+      'div[role="option"], .quantumWizMenuPaperselectOption, .gf-dropdown-option, .MocG8c, [data-value]'
+    )).filter(opt => {
+      const text = getOptText(opt);
+      return text && !isPlaceholder(text, opt.getAttribute('data-value'));
+    });
+  }
+
+  // If not inside item, find active unhidden popup in document body
+  if (candidateOptions.length === 0) {
+    const popups = Array.from(document.querySelectorAll(
+      '.exportSelectPopup, .quantumWizMenuPaperselectPopup, .OA0dhb, .ncFHdd, div[role="listbox"][aria-expanded="true"]'
+    )).filter(p => p.style.display !== 'none' && p.getAttribute('aria-hidden') !== 'true');
+
+    for (const popup of popups) {
+      const opts = Array.from(popup.querySelectorAll('div[role="option"], .MocG8c, [data-value]')).filter(opt => {
+        const text = getOptText(opt);
+        return text && !isPlaceholder(text, opt.getAttribute('data-value'));
+      });
+      if (opts.length > 0) {
+        candidateOptions = opts;
+        break;
+      }
+    }
+  }
+
+  // Fallback to all options if still empty
+  if (candidateOptions.length === 0) {
+    candidateOptions = Array.from(document.querySelectorAll(
+      '.exportSelectPopup div[role="option"], .quantumWizMenuPaperselectPopup div[role="option"], .OA0dhb div[role="option"], div[role="listbox"] div[role="option"], .MocG8c, div[role="option"][data-value], .gf-dropdown-option'
+    )).filter(opt => {
+      const text = getOptText(opt);
+      return text && !isPlaceholder(text, opt.getAttribute('data-value'));
+    });
+  }
+
+  console.log(`[AutoApply Pro] Found ${candidateOptions.length} candidate options for "${questionText}":`, candidateOptions.map(o => getOptText(o)));
+
+  let targetOpt = null;
+  let isAiUsed = false;
+
+  // ==========================================
+  // Domain Matchers (Strict Priority Ordering)
+  // ==========================================
+
+  // 1. PPO Interest: "Yes"
+  if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      return /^(yes|definitely|interested|positive)\b/i.test(t);
+    });
+  }
+
+  // 2. Stipend & Program Details: "Yes"
+  else if (/stipend|program.*structure|gone.*through.*program|clear.*stipend/i.test(questionText)) {
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      return /^(yes|definitely|clear|positive|agree)\b/i.test(t);
+    });
+  }
+
+  // 3. Months of work experience: 10 months (Priority: 6-12 months, 6 to 12, 10, 1 year, 1-2 years)
+  else if (/experience|month.*work|work.*experience/i.test(questionText) || (/month/i.test(questionText) && !/course|degree|grad/i.test(questionText))) {
+    // Priority 1: Range containing 10 months (6-12 months, 6 to 12, 10, 1-2 years, 1 year)
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      return t.includes('6-12') || t.includes('6 to 12') || t.includes('10') || t.includes('1-2') || t.includes('1 to 2') || t.includes('1 year');
+    });
+    // Priority 2: Fresher or 0-6 if no higher option exists
+    if (!targetOpt) {
+      targetOpt = candidateOptions.find(o => {
+        const t = getOptText(o).toLowerCase();
+        return t.includes('0-6') || t.includes('1-6') || t.includes('fresher') || t.includes('0-1');
+      });
+    }
+  }
+
+  // 4. Year of Graduation: "2026"
+  else if (/year.*graduation|graduation.*year|batch/i.test(questionText) || /2026/.test(valStr)) {
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).trim();
+      return t === '2026' || t.includes('2026');
+    });
+  }
+
+  // 5. Course Name / Degree: Plain "BE/B.Tech" or "B.Tech" (Exclude + MBA, Dual, Integrated)
+  else if (/course|degree|qualification|highest.*education/i.test(questionText) || valStr.includes('b.tech') || valStr.includes('btech') || valStr.includes('be/b.tech')) {
+    // Priority 1: Pure B.Tech / BE/B.Tech (No MBA, No Dual, No Integrated, No +)
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      const isPureBtech = (t.includes('b.tech') || t.includes('btech') || t.includes('be/b.tech') || t.includes('b.e.') || t.includes('bachelor of technology') || t.includes('bachelor in technology') || t.includes('bachelor of engineering')) &&
+                          !t.includes('mba') && !t.includes('dual') && !t.includes('integrated') && !t.includes('+');
+      return isPureBtech;
+    });
+
+    // Priority 2: Standard BE/B.Tech if pure wasn't isolated
+    if (!targetOpt) {
+      targetOpt = candidateOptions.find(o => {
+        const t = getOptText(o).toLowerCase();
+        return (t.includes('b.tech') || t.includes('btech') || t.includes('be/b.tech') || t.includes('bachelor') || t.includes('b.e.')) && !t.includes('mba');
+      });
+    }
+
+    // Priority 3: Any tech degree
+    if (!targetOpt) {
+      targetOpt = candidateOptions.find(o => {
+        const t = getOptText(o).toLowerCase();
+        return t.includes('engineering') || t.includes('computer') || t.includes('artificial');
+      });
+    }
+  }
+
+  // 6. Generic Affirmative / Negative
+  if (!targetOpt && /^(yes|agree|positive|authorized|eligible)$/i.test(valStr)) {
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      return /^(yes|agree|positive)\b/i.test(t);
+    });
+  } else if (!targetOpt && /^(no|false|none|zero|0)$/i.test(valStr)) {
+    targetOpt = candidateOptions.find(o => {
+      const t = getOptText(o).toLowerCase();
+      return /^(no|none|zero|false)\b/i.test(t);
+    });
+  }
+
+  // 7. Exact match (case insensitive)
+  if (!targetOpt && valStr) {
+    targetOpt = candidateOptions.find(opt => {
+      const text = getOptText(opt).toLowerCase();
+      return text === valStr;
+    });
+  }
+
+  // 8. Substring match
+  if (!targetOpt && valStr) {
+    targetOpt = candidateOptions.find(opt => {
+      const text = getOptText(opt).toLowerCase();
+      return text.includes(valStr) || valStr.includes(text);
+    });
+  }
+
+  // 9. Token match
+  if (!targetOpt && valStr) {
+    const tokens = valStr.split(/[\s/,-]+/).filter(t => t.length > 2);
+    targetOpt = candidateOptions.find(opt => {
+      const text = getOptText(opt).toLowerCase();
+      return tokens.some(tok => text.includes(tok));
+    });
+  }
+
+  // 10. UNIVERSAL GEMINI AI FALLBACK FOR DROPDOWN
+  if (!targetOpt && candidateOptions.length > 0) {
+    const visibleOptionStrings = candidateOptions.map(opt => getOptText(opt)).filter(t => t && !isPlaceholder(t, t));
+
+    if (visibleOptionStrings.length > 0) {
+      try {
+        highlightElementThinking(listboxEl);
+        const aiChosen = await sendInferFieldAiRequest({
+          label: questionText,
+          options: visibleOptionStrings,
+          tag: 'select'
+        });
+
+        if (aiChosen && aiChosen.trim()) {
+          const aiChoiceClean = aiChosen.trim().toLowerCase();
+          targetOpt = candidateOptions.find(opt => {
+            const t = getOptText(opt).toLowerCase();
+            return t === aiChoiceClean || t.includes(aiChoiceClean) || aiChoiceClean.includes(t);
+          });
+          if (targetOpt) {
+            isAiUsed = true;
+          }
+        }
+      } catch (err) {
+        console.warn('[AutoApply Pro] Gemini AI dropdown inference failed:', err);
+      }
+    }
+  }
+
+  // Dispatch selection on target option & let Google Forms manage its internal state
+  if (targetOpt) {
+    const optValue = targetOpt.getAttribute('data-value') || getOptText(targetOpt);
+
+    targetOpt.focus();
+    targetOpt.click();
+    targetOpt.setAttribute('aria-selected', 'true');
+    targetOpt.classList.add('selected');
+
+    // Update display label in dropdown trigger
+    const displayLabel = listboxEl.querySelector('.vRMGwf, .quantumWizMenuPaperselectContent, .gf-select-text, span[jsname="V67aGc"]');
+    if (displayLabel) {
+      displayLabel.textContent = optValue;
+    }
+
+    // Set all hidden/text inputs inside this question item to satisfy Google Forms validation
+    const questionInputs = item.querySelectorAll('input[type="hidden"], input[name^="entry."], input[jsname="L9xktb"], input.quantumWizMenuPaperselectInput');
+    for (const qInput of questionInputs) {
+      setNativeValue(qInput, optValue);
+    }
+
+    // Clear "This is a required question" error UI on the item safely
+    clearGoogleFormItemError(item);
+
+    highlightFilledElement(listboxEl);
+
+    // Wait 120ms for Google Forms Closure engine to complete state mutation
+    await new Promise(r => setTimeout(r, 120));
+
+    return { success: true, aiUsed: isAiUsed };
+  }
+
+  return { success: false, aiUsed: false };
+}
+
+// 7. Google Forms Adapter (2-Step Scanning: Local Heuristics -> Universal Gemini AI Fallback)
 async function fillGoogleForms(profile, options = { aiAnswers: false }) {
   let filledCount = 0;
   let aiCount = 0;
 
-  const listItems = document.querySelectorAll('div[role="listitem"]');
+  // Auto-expand any collapsed sections
+  expandAllCollapsedSections();
 
+  // Deduplicate question items so child containers (e.g. .geS5n inside .Qr7Oae) don't run twice
+  const rawItems = Array.from(document.querySelectorAll('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem'));
+  const listItems = rawItems.filter(el => {
+    const parent = el.parentElement?.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem');
+    return !parent;
+  });
+
+  const unfilledItemsForAi = [];
+
+  // ==========================================
+  // PHASE 1: Scan & Fill with Local Heuristics
+  // ==========================================
   for (const item of listItems) {
-    const headerEl = item.querySelector('.M7eMe, [role="heading"], .dir-ltr');
+    const headerEl = item.querySelector('.M7eMe, [role="heading"], .dir-ltr, .HoPnR, .F9vfv');
     const questionText = headerEl ? headerEl.innerText.trim() : '';
     if (!questionText) continue;
 
-    // 1. Text & Number inputs
-    const input = item.querySelector('input.whsOnd, input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], input[type="url"], input[type="password"]');
-    if (input && !input.value) {
+    let itemFilled = false;
+
+    // 1. Check for Radio Buttons first
+    const radios = item.querySelectorAll('div[role="radio"], input[type="radio"]');
+    if (radios.length > 0) {
+      let targetValue = null;
+      for (const pattern of FIELD_PATTERNS) {
+        if (pattern.regex.test(questionText)) {
+          if (pattern.exclude && pattern.exclude.test(questionText)) continue;
+          targetValue = pattern.getValue(profile, item);
+          if (targetValue) break;
+        }
+      }
+
+      if (!targetValue) {
+        if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
+          targetValue = "Yes";
+        } else if (/stipend|program.*structure|gone.*through.*program|clear.*stipend/i.test(questionText)) {
+          targetValue = "Yes";
+        } else if (/month.*experience|work.*experience|how many months/i.test(questionText)) {
+          targetValue = "10";
+        } else {
+          targetValue = resolveBooleanQuestion(questionText);
+        }
+      }
+
+      const tLower = (targetValue || '').toString().toLowerCase();
+      let matchedRadio = null;
+
+      // Special domain matches for radio options
+      if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText) || /stipend|program.*structure|gone.*through/i.test(questionText)) {
+        matchedRadio = Array.from(radios).find(r => {
+          const lbl = (r.getAttribute('aria-label') || r.getAttribute('data-value') || r.innerText || '').toLowerCase();
+          return /^(yes|definitely|clear|interested|positive|agree)\b/i.test(lbl);
+        });
+      } else if (/month.*experience|work.*experience|how many months/i.test(questionText)) {
+        matchedRadio = Array.from(radios).find(r => {
+          const lbl = (r.getAttribute('aria-label') || r.getAttribute('data-value') || r.innerText || '').toLowerCase();
+          return lbl.includes('6-12') || lbl.includes('6 to 12') || lbl.includes('10') || lbl.includes('1-2') || lbl.includes('1 year');
+        });
+        if (!matchedRadio) {
+          matchedRadio = Array.from(radios).find(r => {
+            const lbl = (r.getAttribute('aria-label') || r.getAttribute('data-value') || r.innerText || '').toLowerCase();
+            return lbl.includes('0-6') || lbl.includes('fresher');
+          });
+        }
+      }
+
+      if (!matchedRadio) {
+        for (const radio of radios) {
+          const radioLabel = (radio.getAttribute('aria-label') || radio.getAttribute('data-value') || radio.innerText || '').trim().toLowerCase();
+          const isTargetNegative = /^(0|no|false|none|nil|zero)$/i.test(tLower);
+          const isRadioNegative = /\b(no|not|false|none|zero|0|nil)\b/i.test(radioLabel);
+          const isTargetPositive = /^(1|yes|true|authorized|eligible|agree)$/i.test(tLower);
+          const isRadioPositive = /\b(yes|authorized|eligible|true|agree)\b/i.test(radioLabel);
+
+          let isMatch = radioLabel === tLower || radioLabel.includes(tLower) || tLower.includes(radioLabel);
+          if (isTargetPositive && isRadioPositive) isMatch = true;
+          if (isTargetNegative && isRadioNegative) isMatch = true;
+          if (tLower === 'male' && /\b(male|man)\b/i.test(radioLabel)) isMatch = true;
+          if (tLower === 'female' && /\b(female|woman)\b/i.test(radioLabel)) isMatch = true;
+
+          if (isMatch) {
+            matchedRadio = radio;
+            break;
+          }
+        }
+      }
+
+      if (matchedRadio) {
+        const group = matchedRadio.closest('.gf-radio-group, div[role="radiogroup"]') || item;
+        group.querySelectorAll('div[role="radio"]').forEach(r => {
+          r.classList.remove('selected');
+          r.setAttribute('aria-checked', 'false');
+        });
+
+        matchedRadio.focus();
+        try {
+          matchedRadio.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, view: window, composed: true, buttons: 1 }));
+        } catch (e) {}
+        matchedRadio.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window, composed: true, buttons: 1, button: 0 }));
+        try {
+          matchedRadio.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, view: window, composed: true }));
+        } catch (e) {}
+        matchedRadio.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window, composed: true, button: 0 }));
+        matchedRadio.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, composed: true, button: 0 }));
+        try {
+          matchedRadio.click();
+        } catch (e) {}
+
+        matchedRadio.classList.add('selected');
+        matchedRadio.setAttribute('aria-checked', 'true');
+
+        // Sync hidden input in question container
+        const radioVal = matchedRadio.getAttribute('data-value') || (matchedRadio.getAttribute('aria-label') || matchedRadio.innerText || '').trim();
+        const hiddenInputs = item.querySelectorAll('input[type="hidden"], input[name^="entry."], input[jsname="L9xktb"]');
+        for (const hInput of hiddenInputs) {
+          setNativeValue(hInput, radioVal);
+        }
+
+        // Clear error state safely
+        clearGoogleFormItemError(item);
+
+        console.log(`[AutoApply Pro] Selected radio option "${radioVal}" for "${questionText}"`);
+        highlightFilledElement(matchedRadio);
+        filledCount++;
+        itemFilled = true;
+      }
+
+      if (itemFilled) continue;
+    }
+
+    // 2. Dropdowns & Listboxes
+    const selectEl = item.querySelector('select');
+    const listboxEl = item.querySelector('div[role="listbox"], div[role="combobox"], .quantumWizMenuPaperselectEl, .ry3kXd, .jgvuAb, .vQx30e div[role="listbox"], .vQx30e div[jsname], div[jscontroller="e2G2jd"], .gf-custom-select, [aria-haspopup="listbox"]');
+
+    if (selectEl || listboxEl) {
+      if (isElementAlreadyFilled(selectEl || listboxEl)) continue;
+
       let matchedVal = null;
       for (const pattern of FIELD_PATTERNS) {
         if (pattern.regex.test(questionText)) {
           if (pattern.exclude && pattern.exclude.test(questionText)) continue;
-          matchedVal = pattern.getValue(profile, input);
-          if (matchedVal) break;
-        }
-      }
-
-      if (matchedVal) {
-        if (setNativeValue(input, matchedVal)) filledCount++;
-      }
-    }
-
-    // 2. Textareas (AI answers or Heuristic)
-    const textarea = item.querySelector('textarea.KHxj8b, textarea');
-    if (textarea && !textarea.value) {
-      if (options.aiAnswers && (isOpenEndedQuestion(questionText) || textarea.rows > 2)) {
-        try {
-          highlightElementThinking(textarea);
-          const aiResponse = await sendAiRequest(questionText);
-          if (aiResponse && setNativeValue(textarea, aiResponse)) {
-            aiCount++;
-          }
-        } catch (e) {
-          console.error("AI Answering error on Google Forms item:", e);
-          textarea.style.outline = '';
-          textarea.style.boxShadow = '';
-        }
-      } else {
-        let matchedVal = null;
-        for (const pattern of FIELD_PATTERNS) {
-          if (pattern.regex.test(questionText)) {
-            matchedVal = pattern.getValue(profile, textarea);
-            if (matchedVal) break;
-          }
-        }
-        if (matchedVal && setNativeValue(textarea, matchedVal)) filledCount++;
-      }
-    }
-
-    // 3. Dropdowns & Listboxes
-    const selectEl = item.querySelector('select');
-    const listboxEl = item.querySelector('div[role="listbox"], .quantumWizMenuPaperselectEl, .gf-custom-select, div[aria-haspopup="listbox"]');
-
-    if (selectEl || listboxEl) {
-      let matchedVal = null;
-      for (const pattern of FIELD_PATTERNS) {
-        if (pattern.regex.test(questionText)) {
           matchedVal = pattern.getValue(profile, selectEl || listboxEl);
           if (matchedVal) break;
         }
       }
 
-      // Domain intelligent fallbacks for dropdowns
+      // Domain intelligent fallbacks for Google Forms dropdowns
       if (!matchedVal) {
-        if (/qualification|degree|education|course/i.test(questionText)) {
+        if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
+          matchedVal = "Yes";
+        } else if (/stipend|program.*structure|gone.*through.*program|clear.*stipend/i.test(questionText)) {
+          matchedVal = "Yes";
+        } else if (/month.*experience|work.*experience|how many months/i.test(questionText)) {
+          matchedVal = "10";
+        } else if (/course|qualification|degree|highest.*education/i.test(questionText) && !/stipend|structure|ppo|internship/i.test(questionText)) {
           matchedVal = profile.academics?.graduation?.degree || "B.Tech";
+        } else if (/year.*graduation|graduation.*year|batch/i.test(questionText)) {
+          matchedVal = profile.academics?.graduation?.passingYear || "2026";
         } else if (/state|region|province/i.test(questionText)) {
           matchedVal = profile.address?.state || "Maharashtra";
         } else if (/country|citizenship/i.test(questionText)) {
@@ -431,68 +1011,31 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
           matchedVal = profile.personal?.gender || "Male";
         } else if (/notice|join/i.test(questionText)) {
           matchedVal = "Immediate";
-        } else if (/category|quota/i.test(questionText)) {
-          matchedVal = "General";
+        } else {
+          matchedVal = resolveBooleanQuestion(questionText);
         }
       }
 
-      if (matchedVal && fillCustomComboboxOrSelect(selectEl || listboxEl, matchedVal)) {
-        filledCount++;
-      }
-    }
-
-    // 4. Radio Buttons
-    const radios = item.querySelectorAll('div[role="radio"], input[type="radio"]');
-    if (radios.length > 0) {
-      let targetValue = null;
-      for (const pattern of FIELD_PATTERNS) {
-        if (pattern.regex.test(questionText)) {
-          targetValue = pattern.getValue(profile, item);
-          if (targetValue) break;
-        }
-      }
-
-      if (!targetValue) {
-        targetValue = resolveBooleanQuestion(questionText);
-      }
-
-      for (const radio of radios) {
-        const radioLabel = (radio.getAttribute('aria-label') || radio.getAttribute('data-value') || radio.innerText || '').trim().toLowerCase();
-        const tLower = targetValue.toString().toLowerCase();
-
-        const isTargetNegative = /^(0|no|false|none|nil|zero)$/i.test(tLower);
-        const isRadioNegative = /\b(no|not|false|none|zero|0|nil)\b/i.test(radioLabel);
-        const isTargetPositive = /^(1|yes|true|authorized|eligible|agree)$/i.test(tLower);
-        const isRadioPositive = /\b(yes|authorized|eligible|true|agree)\b/i.test(radioLabel);
-
-        let isMatch = radioLabel.includes(tLower) || tLower.includes(radioLabel);
-        if (isTargetPositive && isRadioPositive) isMatch = true;
-        if (isTargetNegative && isRadioNegative) isMatch = true;
-        if (tLower === 'male' && /\b(male|man)\b/i.test(radioLabel)) isMatch = true;
-        if (tLower === 'female' && /\b(female|woman)\b/i.test(radioLabel)) isMatch = true;
-
-        if (isMatch) {
-          const group = radio.closest('.gf-radio-group') || item;
-          group.querySelectorAll('div[role="radio"]').forEach(r => {
-            r.classList.remove('selected');
-            r.setAttribute('aria-checked', 'false');
-          });
-
-          if (radio.tagName.toLowerCase() === 'input') {
-            setNativeCheckboxOrRadio(radio, true);
-          } else {
-            radio.click();
-            radio.classList.add('selected');
-            radio.setAttribute('aria-checked', 'true');
-            highlightFilledElement(radio);
-          }
+      if (selectEl) {
+        if (fillCustomComboboxOrSelect(selectEl, matchedVal)) {
           filledCount++;
-          break;
+          itemFilled = true;
+        }
+      } else if (listboxEl) {
+        const result = await fillGoogleFormsDropdown(listboxEl, matchedVal, questionText);
+        if (result.success) {
+          filledCount++;
+          if (result.aiUsed) aiCount++;
+          itemFilled = true;
         }
       }
+
+      if (itemFilled) continue;
     }
 
-    // 5. Checkboxes
+
+
+    // 3. Checkboxes
     const checkboxes = item.querySelectorAll('div[role="checkbox"], input[type="checkbox"]');
     if (checkboxes.length > 0) {
       const skillsList = extractCandidateSkills(profile);
@@ -509,35 +1052,213 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
           if (cb.tagName.toLowerCase() === 'input') {
             setNativeCheckboxOrRadio(cb, true);
           } else {
+            cb.focus();
+            cb.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+            cb.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
             cb.click();
             cb.classList.add('selected');
             cb.setAttribute('aria-checked', 'true');
             highlightFilledElement(cb);
           }
           filledCount++;
+          itemFilled = true;
+        }
+      }
+
+      if (itemFilled) continue;
+    }
+
+    // 4. Text Inputs & Textareas (Handles single-line input.whsOnd and multi-line textarea.KHxj8b)
+    const input = item.querySelector('input.whsOnd, input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], input[type="url"], input[type="password"]');
+    const textarea = item.querySelector('textarea.KHxj8b, textarea');
+    const targetField = textarea || input;
+
+    if (targetField && !isElementAlreadyFilled(targetField)) {
+      // If open ended and AI Fill option is triggered
+      if (options.aiAnswers && isOpenEndedQuestion(questionText)) {
+        try {
+          highlightElementThinking(targetField);
+          const aiResponse = await sendAiRequest(questionText);
+          if (aiResponse && setNativeValue(targetField, aiResponse)) {
+            aiCount++;
+            filledCount++;
+            continue;
+          }
+        } catch (e) {
+          console.error("AI Answering error on Google Forms item:", e);
+          targetField.style.outline = '';
+          targetField.style.boxShadow = '';
+        }
+      }
+
+      // Standard heuristic match
+      let matchedVal = null;
+      for (const pattern of FIELD_PATTERNS) {
+        if (pattern.regex.test(questionText)) {
+          if (pattern.exclude && pattern.exclude.test(questionText)) continue;
+          matchedVal = pattern.getValue(profile, targetField);
+          if (matchedVal) break;
+        }
+      }
+
+      // Domain intelligent fallbacks for Google Forms text inputs
+      if (!matchedVal) {
+        if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
+          matchedVal = "Yes";
+        } else if (/stipend|program.*structure|program.*details|gone.*through.*program|clear.*stipend/i.test(questionText)) {
+          matchedVal = "Yes";
+        } else if (/how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?/i.test(questionText)) {
+          matchedVal = "10";
+        } else if (/relocat|willing.*relocate/i.test(questionText)) {
+          matchedVal = "Yes";
+        } else if (/notice|availability/i.test(questionText)) {
+          matchedVal = "Immediate";
+        }
+      }
+
+      // If open-ended question (like projects/internships) and no direct pattern, use rich instant candidate fallback
+      if (!matchedVal && isOpenEndedQuestion(questionText)) {
+        matchedVal = generateInstantFallbackAnswer(questionText, profile);
+      }
+
+      if (matchedVal) {
+        if (setNativeValue(targetField, matchedVal)) {
+          clearGoogleFormItemError(item);
+          console.log(`[AutoApply Pro] Filled "${questionText}" with "${matchedVal}"`);
+          filledCount++;
+          itemFilled = true;
         }
       }
     }
+
+    // If item could not be filled by heuristics, queue for Phase 2 (Universal Gemini AI Fallback)
+    if (!itemFilled) {
+      unfilledItemsForAi.push({ item, questionText, selectEl, listboxEl, radios, checkboxes, targetField });
+    }
+  }
+
+  // ========================================================
+  // PHASE 2: Universal Gemini AI Fallback for Unfilled Items
+  // ========================================================
+  for (const entry of unfilledItemsForAi) {
+    const { item, questionText, listboxEl, radios, checkboxes, targetField } = entry;
+
+    // A. Unfilled Dropdown / Listbox -> Gemini AI Option Selector
+    if (listboxEl && !isElementAlreadyFilled(listboxEl)) {
+      try {
+        highlightElementThinking(listboxEl);
+        const res = await fillGoogleFormsDropdown(listboxEl, null, questionText);
+        if (res.success) {
+          clearGoogleFormItemError(item);
+          filledCount++;
+          aiCount++;
+          continue;
+        }
+      } catch (e) {}
+    }
+
+    // B. Unfilled Radio Buttons -> Gemini AI Choice
+    if (radios && radios.length > 0) {
+      const radioLabels = Array.from(radios).map(r => (r.getAttribute('aria-label') || r.getAttribute('data-value') || r.innerText || '').trim()).filter(Boolean);
+      if (radioLabels.length > 0) {
+        try {
+          const aiChoice = await sendInferFieldAiRequest({
+            label: questionText,
+            options: radioLabels,
+            tag: 'radio'
+          });
+
+          if (aiChoice && aiChoice.trim()) {
+            const aiClean = aiChoice.trim().toLowerCase();
+            const matchedRadio = Array.from(radios).find(r => {
+              const lbl = (r.getAttribute('aria-label') || r.getAttribute('data-value') || r.innerText || '').toLowerCase();
+              return lbl === aiClean || lbl.includes(aiClean) || aiClean.includes(lbl);
+            });
+
+            if (matchedRadio) {
+              matchedRadio.focus();
+              matchedRadio.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+              matchedRadio.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+              matchedRadio.click();
+              matchedRadio.classList.add('selected');
+              matchedRadio.setAttribute('aria-checked', 'true');
+              clearGoogleFormItemError(item);
+              highlightFilledElement(matchedRadio);
+              filledCount++;
+              aiCount++;
+              continue;
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    // C. Unfilled Single-line or Multi-line Input -> Gemini AI Inference
+    if (targetField && !isElementAlreadyFilled(targetField)) {
+      try {
+        highlightElementThinking(targetField);
+        let aiVal = null;
+        if (targetField.tagName.toLowerCase() === 'textarea' || isOpenEndedQuestion(questionText)) {
+          aiVal = await sendAiRequest(questionText);
+        } else {
+          aiVal = await sendInferFieldAiRequest({
+            label: questionText,
+            tag: targetField.tagName.toLowerCase(),
+            type: targetField.type || 'text',
+            placeholder: targetField.placeholder || ''
+          });
+        }
+
+        if (aiVal && aiVal.trim()) {
+          if (setNativeValue(targetField, aiVal.trim())) {
+            clearGoogleFormItemError(item);
+            console.log(`[AutoApply Pro] AI Filled "${questionText}" with "${aiVal.trim()}"`);
+            filledCount++;
+            aiCount++;
+          }
+        }
+      } catch (e) {
+        targetField.style.outline = '';
+        targetField.style.boxShadow = '';
+      }
+    }
+  }
+
+  // ========================================================
+  // PHASE 3: Automated Resume Attachment
+  // ========================================================
+  if (typeof autoUploadResume === 'function') {
+    try {
+      await autoUploadResume();
+    } catch (e) {}
   }
 
   return { filledCount, aiCount, platform: 'Google Forms' };
 }
 
-// 8. TCS / Infosys Enterprise Adapter
+// 8. TCS / Infosys Enterprise Adapter (2-Step Scanning: Heuristics First -> Gemini AI Fallback)
 async function fillTcsInfosysEnterprise(profile, options = { aiAnswers: false }) {
   let filledCount = 0;
   let aiCount = 0;
 
-  // Process all inputs in enterprise tables and form fields
-  const elements = document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea');
+  // Step 0: Auto-expand collapsed accordion sections & multi-step containers
+  expandAllCollapsedSections();
 
+  // Process all inputs in enterprise tables and form fields
+  const elements = document.querySelectorAll(
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, textarea, [contenteditable="true"]'
+  );
+
+  const unfilledForAi = [];
+
+  // Step 1: Scan & Fill with Local Heuristics (Candidate Bio & Direct Rules)
   for (const el of elements) {
-    if (el.value && el.value.trim().length > 0 && el.type !== 'radio' && el.type !== 'checkbox') continue;
+    if (isElementAlreadyFilled(el)) continue;
 
     const labelText = getElementLabel(el);
     const tag = el.tagName.toLowerCase();
 
-    // AI question detection
+    // AI custom essay answer detection
     if (options.aiAnswers && tag === 'textarea' && isOpenEndedQuestion(labelText)) {
       try {
         highlightElementThinking(el);
@@ -559,27 +1280,88 @@ async function fillTcsInfosysEnterprise(profile, options = { aiAnswers: false })
       } else if (el.type === 'radio') {
         if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
       } else if (el.type === 'checkbox') {
-        const isAffirmative = /yes|true|1|agree/i.test(matchedVal.toString());
+        const isAffirmative = /yes|true|1|agree|confirm|citizen/i.test(matchedVal.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, matchedVal)) filledCount++;
       }
+    } else {
+      if (!isElementAlreadyFilled(el) && labelText) {
+        unfilledForAi.push({ el, labelText, tag });
+      }
+    }
+  }
+
+  // Step 2: Pass unknown / unmapped fields to Gemini AI to infer
+  for (const item of unfilledForAi) {
+    const { el, labelText, tag } = item;
+    if (isElementAlreadyFilled(el)) continue;
+
+    let dropdownOptions = [];
+    if (tag === 'select') {
+      dropdownOptions = Array.from(el.options || [])
+        .map(o => (o.text || o.value || '').trim())
+        .filter(t => t && !/^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(t));
+    }
+
+    const placeholder = el.placeholder || '';
+    const type = el.type || 'text';
+    const section = el.closest('fieldset, section, .form-section, .accordion-body, .panel-body, form, table')?.querySelector('legend, h1, h2, h3, h4, .section-title, th')?.innerText || '';
+
+    try {
+      highlightElementThinking(el);
+      const aiValue = await sendInferFieldAiRequest({
+        label: labelText,
+        tag,
+        type,
+        options: dropdownOptions,
+        sectionContext: section,
+        placeholder
+      });
+
+      if (aiValue && aiValue.trim()) {
+        let filled = false;
+        if (tag === 'select') {
+          filled = fillCustomComboboxOrSelect(el, aiValue);
+        } else if (type === 'radio') {
+          filled = fillNativeRadioGroup(el, aiValue);
+        } else if (type === 'checkbox') {
+          const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(aiValue);
+          filled = setNativeCheckboxOrRadio(el, isAffirmative);
+        } else {
+          filled = setNativeValue(el, aiValue);
+        }
+
+        if (filled) {
+          filledCount++;
+          aiCount++;
+        }
+      }
+    } catch (err) {
+      console.warn(`[AutoApply Pro] Gemini AI inference failed for enterprise field "${labelText}":`, err);
     }
   }
 
   return { filledCount, aiCount, platform: 'TCS / Infosys Enterprise' };
 }
 
-// 9. LinkedIn Easy Apply Adapter
+// 9. LinkedIn Easy Apply Adapter (2-Step Scanning: Heuristics First -> Gemini AI Fallback)
 async function fillLinkedInEasyApply(profile, options = { aiAnswers: false }) {
   let filledCount = 0;
   let aiCount = 0;
 
-  const modal = document.querySelector('.jobs-easy-apply-modal, [data-test-modal], .jobs-easy-apply-content') || document;
-  const inputs = modal.querySelectorAll('input:not([type="hidden"]), select, textarea');
+  expandAllCollapsedSections();
 
+  const modal = document.querySelector('.jobs-easy-apply-modal, [data-test-modal], .jobs-easy-apply-content') || document;
+  const inputs = modal.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, textarea');
+
+  const unfilledForAi = [];
+
+  // Step 1: Scan & Fill Heuristics
   for (const el of inputs) {
+    if (isElementAlreadyFilled(el)) continue;
     const label = getElementLabel(el);
+    const tag = el.tagName.toLowerCase();
 
     // LinkedIn-specific: "How many years of work experience do you have with [Skill]?"
     const skillMatch = label.match(/how many years of.*experience.*with\s+([A-Za-z0-9#+.\s-]+)\??/i) ||
@@ -604,13 +1386,13 @@ async function fillLinkedInEasyApply(profile, options = { aiAnswers: false }) {
 
     // Standard heuristic match
     const val = matchValueFromProfile(el, profile);
-    if (val && !el.value) {
-      if (el.tagName.toLowerCase() === 'select') {
+    if (val && !isElementAlreadyFilled(el)) {
+      if (tag === 'select') {
         if (fillCustomComboboxOrSelect(el, val)) filledCount++;
       } else if (el.type === 'radio') {
         if (fillNativeRadioGroup(el, val)) filledCount++;
       } else if (el.type === 'checkbox') {
-        const isAffirmative = /yes|true|1|agree/i.test(val.toString());
+        const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(val.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, val)) filledCount++;
@@ -619,27 +1401,85 @@ async function fillLinkedInEasyApply(profile, options = { aiAnswers: false }) {
     }
 
     // AI custom answers for textareas
-    if (options.aiAnswers && el.tagName.toLowerCase() === 'textarea' && !el.value) {
+    if (options.aiAnswers && tag === 'textarea' && !isElementAlreadyFilled(el)) {
       highlightElementThinking(el);
       const answer = await sendAiRequest(label);
-      if (answer && setNativeValue(el, answer)) aiCount++;
+      if (answer && setNativeValue(el, answer)) {
+        aiCount++;
+        continue;
+      }
     }
+
+    if (!isElementAlreadyFilled(el) && label) {
+      unfilledForAi.push({ el, labelText: label, tag });
+    }
+  }
+
+  // Step 2: Gemini AI Fallback for remaining unknown fields
+  for (const item of unfilledForAi) {
+    const { el, labelText, tag } = item;
+    if (isElementAlreadyFilled(el)) continue;
+
+    let dropdownOptions = [];
+    if (tag === 'select') {
+      dropdownOptions = Array.from(el.options || [])
+        .map(o => (o.text || o.value || '').trim())
+        .filter(t => t && !/^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(t));
+    }
+
+    try {
+      highlightElementThinking(el);
+      const aiValue = await sendInferFieldAiRequest({
+        label: labelText,
+        tag,
+        type: el.type || 'text',
+        options: dropdownOptions,
+        sectionContext: 'LinkedIn Easy Apply',
+        placeholder: el.placeholder || ''
+      });
+
+      if (aiValue && aiValue.trim()) {
+        let filled = false;
+        if (tag === 'select') {
+          filled = fillCustomComboboxOrSelect(el, aiValue);
+        } else if (el.type === 'radio') {
+          filled = fillNativeRadioGroup(el, aiValue);
+        } else if (el.type === 'checkbox') {
+          const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(aiValue);
+          filled = setNativeCheckboxOrRadio(el, isAffirmative);
+        } else {
+          filled = setNativeValue(el, aiValue);
+        }
+
+        if (filled) {
+          filledCount++;
+          aiCount++;
+        }
+      }
+    } catch (e) {}
   }
 
   return { filledCount, aiCount, platform: 'LinkedIn Easy Apply' };
 }
 
 // 10. Universal Generic Form Filler (Workday, Greenhouse, Lever, Ashby, ATS)
+// Step-by-Step Pipeline: Expand -> Heuristics Match -> Gemini AI Unknown Field Fallback
 async function fillGenericForm(profile, options = { aiAnswers: false }) {
   let filledCount = 0;
   let aiCount = 0;
 
+  // Step 0: Auto-expand collapsed accordion sections & multi-step containers
+  expandAllCollapsedSections();
+
   const elements = document.querySelectorAll(
-    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea, [contenteditable="true"], div[role="combobox"], div[role="listbox"]'
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, textarea, [contenteditable="true"], div[role="combobox"], div[role="listbox"]'
   );
 
+  const unfilledForAi = [];
+
+  // Step 1: Scan & Fill with Local Heuristics (Candidate Bio & Direct Rules)
   for (const el of elements) {
-    if (el.value && el.value.trim().length > 0 && el.type !== 'radio' && el.type !== 'checkbox') continue;
+    if (isElementAlreadyFilled(el)) continue;
 
     const labelText = getElementLabel(el);
     const tag = el.tagName.toLowerCase();
@@ -668,11 +1508,66 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
       } else if (el.type === 'radio') {
         if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
       } else if (el.type === 'checkbox') {
-        const isAffirmative = /yes|true|1|agree/i.test(matchedVal.toString());
+        const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(matchedVal.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, matchedVal)) filledCount++;
       }
+    } else {
+      // If we don't have direct heuristic data -> queue for Step 2 (Gemini AI Inference)
+      if (!isElementAlreadyFilled(el) && labelText) {
+        unfilledForAi.push({ el, labelText, tag });
+      }
+    }
+  }
+
+  // Step 2: For any remaining unfilled/unknown/unique fields, pass to Gemini AI to deduce
+  for (const item of unfilledForAi) {
+    const { el, labelText, tag } = item;
+    if (isElementAlreadyFilled(el)) continue;
+
+    let dropdownOptions = [];
+    if (tag === 'select') {
+      dropdownOptions = Array.from(el.options || [])
+        .map(o => (o.text || o.value || '').trim())
+        .filter(t => t && !/^(-|--|select|choose|none|default|please|no\s*selection|--select--|- select -|\+?\s*select)/i.test(t));
+    }
+
+    const placeholder = el.placeholder || '';
+    const type = el.type || 'text';
+    const section = el.closest('fieldset, section, .form-section, .accordion-body, .panel-body, form')?.querySelector('legend, h1, h2, h3, h4, .section-title')?.innerText || '';
+
+    try {
+      highlightElementThinking(el);
+      const aiValue = await sendInferFieldAiRequest({
+        label: labelText,
+        tag,
+        type,
+        options: dropdownOptions,
+        sectionContext: section,
+        placeholder
+      });
+
+      if (aiValue && aiValue.trim()) {
+        let filled = false;
+        if (tag === 'select' || el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox') {
+          filled = fillCustomComboboxOrSelect(el, aiValue);
+        } else if (type === 'radio') {
+          filled = fillNativeRadioGroup(el, aiValue);
+        } else if (type === 'checkbox') {
+          const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(aiValue);
+          filled = setNativeCheckboxOrRadio(el, isAffirmative);
+        } else {
+          filled = setNativeValue(el, aiValue);
+        }
+
+        if (filled) {
+          filledCount++;
+          aiCount++;
+        }
+      }
+    } catch (err) {
+      console.warn(`[AutoApply Pro] Gemini AI inference failed for field "${labelText}":`, err);
     }
   }
 
@@ -682,7 +1577,7 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
 // 11. Visual Field Inspector Diagnostic Scanner
 function inspectFormFields(profile) {
   const elements = document.querySelectorAll(
-    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea, [contenteditable="true"]'
+    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, textarea, [contenteditable="true"]'
   );
 
   const inspected = [];
@@ -751,7 +1646,7 @@ function extractCandidateSkills(profile) {
   return Array.from(skills);
 }
 
-// 13. Communication with Background Worker for AI Generation
+// 13. Communication with Background Worker for AI Essay Generation
 function sendAiRequest(question) {
   return new Promise((resolve, reject) => {
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
@@ -779,10 +1674,41 @@ function sendAiRequest(question) {
   });
 }
 
-// 14. Master Dispatcher
+// 14. Communication with Background Worker for AI Field Inference (Unknown/Unique Fields)
+function sendInferFieldAiRequest({ label, tag = "input", type = "text", options = [], sectionContext = "", placeholder = "" }) {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+      chrome.runtime.sendMessage({
+        action: "INFER_FIELD_AI",
+        payload: { label, tag, type, options, sectionContext, placeholder }
+      }, (res) => {
+        if (chrome.runtime.lastError || !res || !res.success) {
+          if (typeof inferFieldWithGemini === 'function') {
+            const p = window.DEFAULT_PROFILE || {};
+            inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
+          } else {
+            resolve("");
+          }
+        } else {
+          resolve(res.answer || "");
+        }
+      });
+    } else if (typeof inferFieldWithGemini === 'function') {
+      const p = window.DEFAULT_PROFILE || {};
+      inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
+    } else {
+      resolve("");
+    }
+  });
+}
+
+// 15. Master Dispatcher (Step-by-Step AutoApply Runner)
 async function runAutoApply(profile, options = { aiAnswers: false }) {
   const platform = detectCurrentPlatform();
   console.log(`[AutoApply Pro] Running on detected platform: ${platform}`);
+
+  // Auto-expand all collapsed sections & accordions upfront
+  expandAllCollapsedSections();
 
   let result;
   if (platform === 'Google Forms') {
@@ -803,6 +1729,9 @@ async function runAutoApply(profile, options = { aiAnswers: false }) {
         result.resumeUploaded = true;
         result.resumeFilename = resumeRes.filename;
         console.log(`[AutoApply Pro] Attached resume: ${resumeRes.filename}`);
+      } else if (resumeRes && resumeRes.openedDialog) {
+        result.openedResumeDialog = true;
+        console.log(`[AutoApply Pro] Opened Google Forms resume file upload dialog.`);
       }
     } catch (e) {
       console.warn('[AutoApply Pro] Auto-upload resume failed:', e);
@@ -812,14 +1741,189 @@ async function runAutoApply(profile, options = { aiAnswers: false }) {
   return result;
 }
 
+// 16. Field Suggestion Engine for On-Demand Interactive Popup
+function getFieldSuggestions(element, customLabel = '', profile = {}) {
+  const p = profile && Object.keys(profile).length > 0 ? profile : (typeof window !== 'undefined' ? window.DEFAULT_PROFILE : {});
+  const label = (customLabel || (element ? getElementLabel(element) : '') || '').trim();
+  const lLower = label.toLowerCase();
+  const tag = element ? element.tagName.toLowerCase() : 'input';
+  const type = element ? (element.type || 'text').toLowerCase() : 'text';
+
+  const _isOpenEndedFn = (typeof isOpenEndedQuestion === 'function') ? isOpenEndedQuestion : _heuristics.isOpenEndedQuestion;
+  const isResume = /resume|cv\b|curriculum|biodata|upload.*file|file.*upload|add.*file/i.test(lLower) || type === 'file';
+  const isOpenEnded = typeof _isOpenEndedFn === 'function' ? _isOpenEndedFn(label) : false;
+
+  const suggestions = [];
+
+  // 1. Personal Identity
+  if (/full[_\s-]?name|candidate[_\s-]?name|^name$|your[_\s-]?name/i.test(lLower) && !/first|last|middle|father|mother|college|company/i.test(lLower)) {
+    suggestions.push({ label: "Full Name", value: p.personal?.fullName || "Mohammad Danish Khan Naeem Khan" });
+    suggestions.push({ label: "Certificate Name", value: p.personal?.certificateName || "Mohammad Danish Khan" });
+    suggestions.push({ label: "Short Name", value: p.personal?.shortName || "Danish Khan" });
+  } else if (/first[_\s-]?name|given[_\s-]?name|fname/i.test(lLower)) {
+    suggestions.push({ label: "First Name", value: p.personal?.firstName || "Mohammad Danish" });
+    suggestions.push({ label: "Full Name", value: p.personal?.fullName || "Mohammad Danish Khan Naeem Khan" });
+  } else if (/last[_\s-]?name|surname|family[_\s-]?name|lname/i.test(lLower)) {
+    suggestions.push({ label: "Last Name", value: p.personal?.lastName || "Khan" });
+    suggestions.push({ label: "Father Name as Surname", value: p.personal?.fatherName || "Naeem Khan" });
+  } else if (/e?mail/i.test(lLower)) {
+    suggestions.push({ label: "Primary Email", value: p.personal?.email || "danishkhan.jsx@gmail.com" });
+    suggestions.push({ label: "College Email", value: p.personal?.altEmail || "danish.khan@ghrcem.raisoni.net" });
+  } else if (/phone|mobile|contact[_\s-]?no|cell/i.test(lLower)) {
+    suggestions.push({ label: "Phone (Plain)", value: p.personal?.phonePlain || "9172928551" });
+    suggestions.push({ label: "Phone (+91)", value: p.personal?.phone || "+91 91729 28551" });
+    suggestions.push({ label: "Country Code", value: p.personal?.phoneCountryCode || "+91" });
+  } else if (/dob|birth/i.test(lLower)) {
+    suggestions.push({ label: "DOB (DD/MM/YYYY)", value: p.personal?.dobFormatted || "01/06/2005" });
+    suggestions.push({ label: "DOB (YYYY-MM-DD)", value: p.personal?.dob || "2005-06-01" });
+  } else if (/gender|sex/i.test(lLower)) {
+    suggestions.push({ label: "Gender", value: p.personal?.gender || "Male" });
+  }
+
+  // 2. Screening & Work Authorization
+  else if (/ppo|pre[_\s-]?placement|post.*internship/i.test(lLower)) {
+    suggestions.push({ label: "Interested in PPO", value: "Yes" });
+    suggestions.push({ label: "Alternative", value: "No" });
+  } else if (/stipend|program[_\s-]?structure|program[_\s-]?details|gone.*through/i.test(lLower)) {
+    suggestions.push({ label: "Acknowledge Details", value: "Yes" });
+  } else if (/how many months|months? of (work )?experience|month(s)?.*experience|experience in months/i.test(lLower)) {
+    suggestions.push({ label: "Internship Experience (Months)", value: "10" });
+    suggestions.push({ label: "Experience Range", value: "6-12 months" });
+    suggestions.push({ label: "Total Career Experience", value: "21" });
+    suggestions.push({ label: "Alternative", value: "0-6 months" });
+  } else if (/relocat/i.test(lLower)) {
+    suggestions.push({ label: "Willing to Relocate", value: "Yes" });
+    suggestions.push({ label: "Preferred Location", value: "Pune / Bengaluru / Mumbai" });
+  } else if (/shifts?|travel/i.test(lLower)) {
+    suggestions.push({ label: "Rotational Shifts / Travel", value: "Yes" });
+  } else if (/work.*auth|authorized.*work|legal.*work/i.test(lLower)) {
+    suggestions.push({ label: "Work Authorized in India", value: "Yes" });
+  } else if (/sponsorship/i.test(lLower)) {
+    suggestions.push({ label: "Require Sponsorship in India", value: "No" });
+    suggestions.push({ label: "Require Sponsorship in US", value: "Yes" });
+  } else if (/backlog|arrear/i.test(lLower)) {
+    suggestions.push({ label: "Active Backlogs", value: "No" });
+    suggestions.push({ label: "Count", value: "0" });
+  }
+
+  // 3. Academics
+  else if (/degree|qualification|course/i.test(lLower)) {
+    suggestions.push({ label: "Degree", value: p.academics?.graduation?.degree || "B.Tech" });
+    suggestions.push({ label: "BE/B.Tech", value: "BE/B.Tech" });
+    suggestions.push({ label: "Branch", value: p.academics?.graduation?.branch || "Artificial Intelligence" });
+    suggestions.push({ label: "Course Full", value: p.academics?.graduation?.courseName || "B.Tech in Artificial Intelligence" });
+  } else if (/cgpa|gpa|marks|grade/i.test(lLower)) {
+    suggestions.push({ label: "Graduation CGPA", value: p.academics?.graduation?.cgpa || "7.79" });
+    suggestions.push({ label: "Percentage", value: p.academics?.graduation?.percentage || "77.9%" });
+    suggestions.push({ label: "12th Percentage", value: p.academics?.hsc_12th?.percentage || "76.33%" });
+    suggestions.push({ label: "10th Percentage", value: p.academics?.ssc_10th?.percentage || "83.60%" });
+  } else if (/year.*grad|grad.*year|passing.*year|batch/i.test(lLower)) {
+    suggestions.push({ label: "Graduation Year", value: p.academics?.graduation?.passingYear || "2026" });
+  } else if (/college|institute|university/i.test(lLower)) {
+    suggestions.push({ label: "College Name", value: p.academics?.graduation?.college || "G H Raisoni College of Engineering and Management" });
+    suggestions.push({ label: "University", value: p.academics?.graduation?.university || "KBC North Maharashtra University" });
+  }
+
+  // 4. Address & Socials
+  else if (/city/i.test(lLower)) {
+    suggestions.push({ label: "Current City", value: p.address?.city || "Bhusawal" });
+    suggestions.push({ label: "Preferred City", value: "Pune" });
+  } else if (/state|province/i.test(lLower)) {
+    suggestions.push({ label: "State", value: p.address?.state || "Maharashtra" });
+  } else if (/country/i.test(lLower)) {
+    suggestions.push({ label: "Country", value: p.address?.country || "India" });
+  } else if (/pin|postal|zip/i.test(lLower)) {
+    suggestions.push({ label: "Pincode", value: p.address?.pincode || "425201" });
+  } else if (/linkedin/i.test(lLower)) {
+    suggestions.push({ label: "LinkedIn URL", value: p.socials?.linkedin || "https://linkedin.com/in/danishkhan-tech" });
+  } else if (/github/i.test(lLower)) {
+    suggestions.push({ label: "GitHub URL", value: p.socials?.github || "https://github.com/DanishKhan0" });
+  } else if (/portfolio|website/i.test(lLower)) {
+    suggestions.push({ label: "Portfolio URL", value: p.socials?.portfolio || "https://danishkhan.tech" });
+  }
+
+  // Fallback to general heuristics if still empty
+  const _fieldPatterns = (typeof FIELD_PATTERNS !== 'undefined') ? FIELD_PATTERNS : (_heuristics.FIELD_PATTERNS || []);
+  if (suggestions.length === 0 && _fieldPatterns.length > 0) {
+    for (const pattern of _fieldPatterns) {
+      if (pattern.regex.test(label)) {
+        if (pattern.exclude && pattern.exclude.test(label)) continue;
+        const val = pattern.getValue(p, element);
+        if (val) {
+          suggestions.push({ label: pattern.key.split('.').pop(), value: val.toString() });
+          break;
+        }
+      }
+    }
+  }
+
+  // Fallback to matchValueFromProfile engine
+  if (suggestions.length === 0 && typeof matchValueFromProfile === 'function' && element) {
+    const matched = matchValueFromProfile(element, p);
+    if (matched) {
+      suggestions.push({ label: "Profile Match", value: matched.toString() });
+    }
+  }
+
+  // Fallback to Boolean Question resolver
+  const _resolveBoolFn = (typeof resolveBooleanQuestion === 'function') ? resolveBooleanQuestion : _heuristics.resolveBooleanQuestion;
+  if (suggestions.length === 0 && typeof _resolveBoolFn === 'function' && (/\?|whether|confirm|agree|declare|are you|do you|will you|have you/i.test(label) || (element && (element.type === 'radio' || element.type === 'checkbox')))) {
+    const boolAns = _resolveBoolFn(label);
+    suggestions.push({ label: "Screening Match", value: boolAns });
+    suggestions.push({ label: "Alternative", value: boolAns === "Yes" ? "No" : "Yes" });
+  }
+
+  return {
+    label,
+    primary: suggestions[0] || null,
+    alternatives: suggestions.slice(1),
+    isOpenEnded,
+    isResume
+  };
+}
+
 if (typeof window !== 'undefined') {
   window.runAutoApply = runAutoApply;
   window.detectCurrentPlatform = detectCurrentPlatform;
   window.setNativeValue = setNativeValue;
   window.setNativeCheckboxOrRadio = setNativeCheckboxOrRadio;
   window.fillCustomComboboxOrSelect = fillCustomComboboxOrSelect;
+  window.isElementAlreadyFilled = isElementAlreadyFilled;
   window.getElementLabel = getElementLabel;
   window.matchValueFromProfile = matchValueFromProfile;
   window.inspectFormFields = inspectFormFields;
   window.sendAiRequest = sendAiRequest;
+  window.sendInferFieldAiRequest = sendInferFieldAiRequest;
+  window.expandAllCollapsedSections = expandAllCollapsedSections;
+  window.clearGoogleFormItemError = clearGoogleFormItemError;
+  window.fillGoogleFormsDropdown = fillGoogleFormsDropdown;
+  window.getFieldSuggestions = getFieldSuggestions;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    setNativeValue,
+    setNativeCheckboxOrRadio,
+    fillNativeRadioGroup,
+    highlightFilledElement,
+    highlightElementThinking,
+    detectCurrentPlatform,
+    expandAllCollapsedSections,
+    clearGoogleFormItemError,
+    isElementAlreadyFilled,
+    getElementLabel,
+    matchValueFromProfile,
+    fillCustomComboboxOrSelect,
+    fillGoogleForms,
+    fillGoogleFormsDropdown,
+    fillTcsInfosysEnterprise,
+    fillLinkedInEasyApply,
+    fillGenericForm,
+    inspectFormFields,
+    extractCandidateSkills,
+    sendAiRequest,
+    sendInferFieldAiRequest,
+    runAutoApply,
+    getFieldSuggestions
+  };
 }

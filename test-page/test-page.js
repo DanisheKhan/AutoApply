@@ -52,7 +52,7 @@ function initTestPage() {
   // Handle URL hash navigation (e.g. index.html#tab-enterprise)
   if (window.location.hash) {
     const hash = window.location.hash.replace('#', '');
-    if (['tab-google', 'tab-enterprise', 'tab-modern', 'tab-edgecases'].includes(hash)) {
+    if (['tab-google', 'tab-enterprise', 'tab-modern', 'tab-edgecases', 'tab-accordions'].includes(hash)) {
       switchTab(hash);
     }
   }
@@ -140,7 +140,96 @@ function initTestPage() {
     document.querySelectorAll('.gf-custom-select, div[role="listbox"]').forEach(lb => lb.setAttribute('aria-expanded', 'false'));
   });
 
-  // 5. Form Clearing Helper
+  // 5. Accordions & Collapsible Sections Handling
+  document.querySelectorAll('.accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const card = header.closest('.accordion-card');
+      const body = card ? card.querySelector('.accordion-body') : null;
+      if (!body) return;
+
+      const isCollapsed = header.classList.contains('collapsed') || header.getAttribute('aria-expanded') === 'false';
+      if (isCollapsed) {
+        header.classList.remove('collapsed');
+        header.setAttribute('aria-expanded', 'true');
+        body.style.display = 'block';
+        const arrow = header.querySelector('.accordion-arrow');
+        if (arrow) arrow.textContent = 'Click to collapse';
+      } else {
+        header.classList.add('collapsed');
+        header.setAttribute('aria-expanded', 'false');
+        body.style.display = 'none';
+        const arrow = header.querySelector('.accordion-arrow');
+        if (arrow) arrow.textContent = 'Click to expand';
+      }
+    });
+  });
+
+  // "+ Expand all sections" Button
+  const expandAllBtn = document.getElementById('btn-expand-all');
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('.accordion-header').forEach(header => {
+        header.classList.remove('collapsed');
+        header.setAttribute('aria-expanded', 'true');
+        const card = header.closest('.accordion-card');
+        const body = card ? card.querySelector('.accordion-body') : null;
+        if (body) body.style.display = 'block';
+        const arrow = header.querySelector('.accordion-arrow');
+        if (arrow) arrow.textContent = 'Click to collapse';
+      });
+    });
+  }
+
+  // Enterprise Resume Upload Trigger & Modal Popup
+  const uploadResumeTrigger = document.getElementById('btn-upload-resume-trigger');
+  const uploadPopupModal = document.getElementById('upload-popup-modal');
+  const uploadFromDeviceBtn = document.getElementById('btn-upload-from-device');
+  const enterpriseResumeInput = document.getElementById('enterprise-resume-input');
+  const accordionResumeStatus = document.getElementById('accordion-resume-status');
+
+  if (uploadResumeTrigger && uploadPopupModal) {
+    uploadResumeTrigger.addEventListener('click', () => {
+      uploadPopupModal.style.display = 'block';
+    });
+  }
+
+  if (uploadFromDeviceBtn && enterpriseResumeInput) {
+    uploadFromDeviceBtn.addEventListener('click', () => {
+      enterpriseResumeInput.click();
+    });
+  }
+
+  if (enterpriseResumeInput && accordionResumeStatus) {
+    enterpriseResumeInput.addEventListener('change', () => {
+      if (enterpriseResumeInput.files && enterpriseResumeInput.files[0]) {
+        const file = enterpriseResumeInput.files[0];
+        accordionResumeStatus.style.display = 'inline-block';
+        accordionResumeStatus.innerHTML = `✓ Attached: <strong>${file.name}</strong>`;
+        if (uploadPopupModal) uploadPopupModal.style.display = 'none';
+      }
+    });
+  }
+
+  // Google Forms Resume Upload Add file Button
+  const gfAddFileBtn = document.getElementById('gf-add-file-button');
+  const gfFileInput = document.getElementById('gf-file-input');
+  const gfUploadedTag = document.getElementById('gf-uploaded-tag');
+
+  if (gfAddFileBtn && gfFileInput) {
+    gfAddFileBtn.addEventListener('click', () => {
+      gfFileInput.click();
+    });
+  }
+
+  if (gfFileInput && gfUploadedTag) {
+    gfFileInput.addEventListener('change', () => {
+      if (gfFileInput.files && gfFileInput.files[0]) {
+        gfUploadedTag.style.display = 'block';
+      }
+    });
+  }
+
+  // 6. Form Clearing Helper
   function clearCurrentForm(formId) {
     const form = document.getElementById(formId);
     if (!form) return;
@@ -165,6 +254,11 @@ function initTestPage() {
         el.value = '';
       }
     });
+    form.querySelectorAll('select').forEach(sel => {
+      sel.selectedIndex = 0;
+    });
+    const gfTag = form.querySelector('.gf-uploaded-file-tag');
+    if (gfTag) gfTag.style.display = 'none';
   }
 
   // Clear Form Buttons
@@ -188,7 +282,12 @@ function initTestPage() {
     clearEdgecasesBtn.addEventListener('click', () => clearCurrentForm('edgecases-form-mock'));
   }
 
-  // 6. Resume file dropzone interactions
+  const clearAccordionsBtn = document.getElementById('btn-clear-accordions');
+  if (clearAccordionsBtn) {
+    clearAccordionsBtn.addEventListener('click', () => clearCurrentForm('accordions-form-mock'));
+  }
+
+  // 7. Resume file dropzone interactions
   const resumeDropzone = document.getElementById('test-resume-dropzone');
   const resumeInput = document.getElementById('test-resume-input');
   const resumeStatus = document.getElementById('test-resume-status');

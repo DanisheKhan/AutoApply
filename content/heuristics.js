@@ -32,15 +32,15 @@ const FIELD_PATTERNS = [
     key: "personal.firstName",
     regex: /\b(first[_\s-]?name|fname|given[_\s-]?name|forename|applicant[_\s-]?first[_\s-]?name)\b/i,
     getValue: (p, el) => {
-      // Smart detection: if surrounding form/container contains a middle name field, return 3-field first name ("Mohammad Danish")
-      if (el && typeof document !== 'undefined') {
+      // Smart detection: if surrounding form/section/card contains a middle name field, return 3-field first name ("Mohammad Danish")
+      if (el) {
         const formOrContainer = (typeof el.closest === 'function')
-          ? (el.closest('form') || el.closest('[role="form"]') || el.closest('.form-card') || el.parentElement?.parentElement)
-          : null;
+          ? (el.closest('form') || el.closest('[role="form"]') || el.closest('.form-card') || el.closest('.tab-content') || el.closest('.accordion-body') || el.closest('.section-content') || el.closest('table') || el.closest('fieldset') || el.parentElement?.parentElement?.parentElement?.parentElement || el)
+          : (typeof document !== 'undefined' ? document.body : null);
         if (formOrContainer) {
-          const hasMiddle = formOrContainer.querySelector?.('input[name*="middle" i], input[id*="middle" i], input[placeholder*="middle" i], input[aria-label*="middle" i]') ||
-            Array.from(formOrContainer.querySelectorAll?.('label, div') || []).some(l => /\bmiddle[_\s-]?name\b/i.test(l.textContent || ''));
-          if (hasMiddle) {
+          const hasMiddleInput = formOrContainer.querySelector?.('input[name*="middle" i], input[id*="middle" i], input[placeholder*="middle" i], input[aria-label*="middle" i], input[data-qa*="middle" i]');
+          const hasMiddleLabel = Array.from(formOrContainer.querySelectorAll?.('label, th, span, div, p') || []).some(l => /\bmiddle[_\s-]?name\b/i.test(l.textContent || ''));
+          if (hasMiddleInput || hasMiddleLabel) {
             return p.personal?.firstName3Field || "Mohammad Danish";
           }
         }
@@ -56,7 +56,12 @@ const FIELD_PATTERNS = [
   {
     key: "personal.lastName",
     regex: /\b(last[_\s-]?name|lname|surname|family[_\s-]?name|applicant[_\s-]?last[_\s-]?name)\b/i,
-    getValue: (p) => p.personal?.lastName || "Naeem Khan"
+    getValue: (p) => {
+      if (p.personal?.lastName && p.personal?.lastName !== "Khan") {
+        return p.personal.lastName;
+      }
+      return "Naeem Khan";
+    }
   },
   {
     key: "personal.email",
@@ -66,7 +71,7 @@ const FIELD_PATTERNS = [
   },
   {
     key: "personal.phoneCountryCode",
-    regex: /\b(country[_\s-]?code|isd[_\s-]?code|dial[_\s-]?code|phone[_\s-]?code)\b/i,
+    regex: /\b(country([_\s-]?\/?[_\s-]?(region|territory))?[_\s-]?code|phone([_\s-]?\/?[_\s-]?(region|country))?[_\s-]?code|isd[_\s-]?code|dial(ing)?[_\s-]?code|phone[_\s-]?code|mobile[_\s-]?code|calling[_\s-]?code|phone[_\s-]?prefix)\b/i,
     getValue: () => "+91"
   },
   {
@@ -180,19 +185,36 @@ const FIELD_PATTERNS = [
   },
   {
     key: "identification.aadhaarNumber",
-    regex: /\b(aadhaar|aadhar|uidai|adhaar[_\s-]?no|aadhaar[_\s-]?number|aadhaar[_\s-]?card)\b/i,
+    regex: /\b(aadhaar|aadhar|uidai|adhaar[_\s-]?no|aadhaar[_\s-]?number|aadhaar[_\s-]?card|national[_\s-]?id)\b/i,
+    exclude: /confirm|match|declaration|check|agree/i,
     getValue: (p, el) => {
+      let label = "";
+      try {
+        if (typeof getElementLabel === 'function' && el) label = getElementLabel(el);
+        if (!label && el) label = `${el.getAttribute('aria-label') || ''} ${el.name || ''} ${el.id || ''} ${el.placeholder || ''}`;
+      } catch (e) {}
+
+      const lLower = label.toLowerCase();
+      const raw = p.identification?.aadhaarNumber || "270883622036";
+
+      if (/last[_\s-]?8/i.test(lLower)) {
+        return raw.slice(-8); // "83622036"
+      }
+      if (/last[_\s-]?4/i.test(lLower)) {
+        return raw.slice(-4); // "2036"
+      }
+
       const ph = (el && el.placeholder ? el.placeholder : "");
       if (ph.includes(" ") || ph.includes("-")) {
         return p.identification?.aadhaarFormatted || "2708 8362 2036";
       }
-      return p.identification?.aadhaarNumber || "270883622036";
+      return raw;
     }
   },
   {
     key: "identification.passportNumber",
-    regex: /\b(passport[_\s-]?no|passport[_\s-]?number|passport)\b/i,
-    exclude: /issue|expiry|place|valid/i,
+    regex: /\b(passport[_\s-]?no|passport[_\s-]?number|if[_\s-]?yes\s*,?\s*passport[_\s-]?no|passport)\b/i,
+    exclude: /issue|expiry|place|valid\b|hold/i,
     getValue: (p) => p.identification?.passportNumber || "AH927400"
   },
   {
@@ -202,8 +224,13 @@ const FIELD_PATTERNS = [
   },
   {
     key: "identification.passportExpiryDate",
-    regex: /\b(passport[_\s-]?expir(y|ation)[_\s-]?date|passport[_\s-]?valid[_\s-]?until)\b/i,
-    getValue: (p) => p.identification?.passportExpiryDate || "2035-09-29"
+    regex: /\b(expiry[_\s-]?date[_\s-]?of[_\s-]?passport|passport[_\s-]?expir(y|ation)[_\s-]?date|passport[_\s-]?valid[_\s-]?until)\b/i,
+    getValue: (p, el) => {
+      const ph = (el && el.placeholder ? el.placeholder.toLowerCase() : "");
+      if (ph.includes("mm/dd/yyyy")) return "09/29/2035";
+      if (ph.includes("dd/mm/yyyy")) return "29/09/2035";
+      return p.identification?.passportExpiryDate || "2035-09-29";
+    }
   },
   {
     key: "identification.passportPlaceOfIssue",
@@ -232,14 +259,30 @@ const FIELD_PATTERNS = [
   // --- Location & Address ---
   {
     key: "address.pincode",
-    regex: /\b(pin|pincode|postal[_\s-]?code|zip|zip[_\s-]?code|area[_\s-]?code)\b/i,
+    regex: /\b(pin|pincode|postal[_\s-]?code|zip|zip[_\s-]?code|zip\/postal[_\s-]?code|area[_\s-]?code)\b/i,
     exclude: /phone|isd|dial/i,
     getValue: (p) => p.address?.pincode || "425201"
   },
   {
+    key: "address.currentLocation",
+    regex: /\b(current[_\s-]?location|present[_\s-]?location|your[_\s-]?location|work[_\s-]?location|base[_\s-]?location)\b/i,
+    exclude: /permanent|preference|preferred/i,
+    getValue: (p) => p.address?.city || "Bhusawal"
+  },
+  {
+    key: "address.permanentCity",
+    regex: /\b(permanent[_\s-]?address[-_\s]?city|permanent[_\s-]?city|native[_\s-]?city|home[_\s-]?city)\b/i,
+    getValue: (p) => p.address?.city || "Bhusawal"
+  },
+  {
+    key: "address.permanentState",
+    regex: /\b(permanent[_\s-]?address[-_\s]?state|permanent[_\s-]?state|native[_\s-]?state|home[_\s-]?state)\b/i,
+    getValue: (p) => p.address?.state || "Maharashtra"
+  },
+  {
     key: "address.city",
-    regex: /\b(city|town|district|current[_\s-]?city|present[_\s-]?city|permanent[_\s-]?city)\b/i,
-    exclude: /state|country|address|street|birth/i,
+    regex: /\b(city|town|district|current[_\s-]?city|present[_\s-]?city)\b/i,
+    exclude: /state|country|address|street|birth|permanent/i,
     getValue: (p) => p.address?.city || "Bhusawal"
   },
   {
@@ -248,14 +291,16 @@ const FIELD_PATTERNS = [
     getValue: (p) => p.address?.district || "Jalgaon"
   },
   {
-    key: "address.state",
-    regex: /\b(state|province|region|current[_\s-]?state|permanent[_\s-]?state|state[_\s-]?\/[_\s-]?ut)\b/i,
-    getValue: (p) => p.address?.state || "Maharashtra"
+    key: "address.country",
+    regex: /\b(country([_\s-]?\/?[_\s-]?(region|territory))?([_\s-]?of[_\s-]?residence)?|residence[_\s-]?country|permanent[_\s-]?country|residential[_\s-]?country|nation|citizenship|nationality)\b/i,
+    exclude: /code|isd|dial|prefix|county/i,
+    getValue: (p) => p.address?.country || "India"
   },
   {
-    key: "address.country",
-    regex: /\b(country|nation|current[_\s-]?country|permanent[_\s-]?country)\b/i,
-    getValue: (p) => p.address?.country || "India"
+    key: "address.state",
+    regex: /\b(state|province|state[_\s-]?\/[_\s-]?ut|current[_\s-]?state|region)\b/i,
+    exclude: /country|nation|citizenship|code|isd|dial|prefix|county|permanent/i,
+    getValue: (p) => p.address?.state || "Maharashtra"
   },
   {
     key: "address.domicilePlace",
@@ -264,12 +309,12 @@ const FIELD_PATTERNS = [
   },
   {
     key: "address.streetAddress1",
-    regex: /\b(address[_\s-]?line[_\s-]?1|street[_\s-]?address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building[_\s-]?name|plot[_\s-]?no)\b/i,
+    regex: /\b(address[_\s-]?\(?line[_\s-]?1\)?|street[_\s-]?address[_\s-]?1|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building[_\s-]?name|plot[_\s-]?no)\b/i,
     getValue: () => "Near Mujib Members House, Khadka, New Eidgah Colony"
   },
   {
     key: "address.streetAddress2",
-    regex: /\b(address[_\s-]?line[_\s-]?2|street[_\s-]?address[_\s-]?2|colony|landmark|locality|area|street)\b/i,
+    regex: /\b(address[_\s-]?\(?line[_\s-]?2\)?|street[_\s-]?address[_\s-]?2|address[_\s-]?2|colony|landmark|locality|area|street)\b/i,
     getValue: () => "Bhusawal (Rural), Dist. Jalgaon"
   },
   {
@@ -416,7 +461,20 @@ const FIELD_PATTERNS = [
   {
     key: "academics.graduation.degree",
     regex: /\b(degree|qualification|graduation[_\s-]?course|highest[_\s-]?qualification|highest[_\s-]?degree|education[_\s-]?level|undergraduate[_\s-]?degree)\b/i,
+    exclude: /10th|12th|ssc|hsc|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
     getValue: (p) => p.academics?.graduation?.degree || "Bachelor of Technology (B.Tech)"
+  },
+  {
+    key: "academics.graduation.courseName",
+    regex: /\b(course[_\s-]?name|degree[_\s-]?name|program[_\s-]?name|graduation[_\s-]?course|course)\b/i,
+    exclude: /10th|12th|ssc|hsc|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
+    getValue: (p) => p.academics?.graduation?.degree || "Bachelor of Technology (B.Tech)"
+  },
+  {
+    key: "profile.projectsDetails",
+    regex: /\b(share.*details.*projects?|projects?.*internships?|details.*projects?|significant.*projects?|notable.*projects?|major.*projects?|key.*projects?|portfolio.*projects?|describe.*projects?)\b/i,
+    exclude: /file|resume|cv|upload|document|attachment/i,
+    getValue: () => "1. CodeRace: Full-Stack DSA tracking platform (React, Node.js, Express, PostgreSQL/Supabase, live leaderboard & streak calculations).\n2. Madina Perfumes: Production E-commerce web application (React, Express, Razorpay HMAC SHA256 webhook verification, Shiprocket API dispatch).\n3. Full Stack Intern at Meet Bros: Developed and deployed 3 responsive web applications, streamlining frontend workflow by 25%."
   },
   {
     key: "academics.graduation.branch",
@@ -571,8 +629,43 @@ const FIELD_PATTERNS = [
     getValue: () => "No"
   },
   {
+    key: "career.interestedInPpo",
+    regex: /\b(ppo|pre[_\s-]?placement|post.*internship|full[_\s-]?time[_\s-]?offer|convert.*full[_\s-]?time)\b/i,
+    getValue: () => "Yes"
+  },
+  {
+    key: "career.programDetailsStipend",
+    regex: /\b(stipend|program[_\s-]?structure|program[_\s-]?details|gone[_\s-]?through.*program|clear.*stipend|understand.*stipend|stipend.*structure)\b/i,
+    getValue: () => "Yes"
+  },
+  {
+    key: "career.workExperienceMonths",
+    regex: /\b(how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?|total.*months.*exp|experience in months)\b/i,
+    getValue: () => "10"
+  },
+  {
+    key: "career.interviewedBefore",
+    regex: /\b(interviewed.*(last|\d|prior|before)|applied.*(last|\d|prior|before)|interviewed[_\s-]?in[_\s-]?[a-z0-9]+\b.*months?)\b/i,
+    getValue: () => "No"
+  },
+  {
     key: "career.validPassport",
-    regex: /\b(have.*valid[_\s-]?passport|do[_\s-]?you[_\s-]?hold.*passport|possess.*passport)\b/i,
+    regex: /\b(valid[_\s-]?passport|have.*valid[_\s-]?passport|do[_\s-]?you[_\s-]?hold.*passport|possess.*passport|hold.*passport)\b/i,
+    getValue: () => "Yes"
+  },
+  {
+    key: "career.immigrationStatus",
+    regex: /\b(immigration[_\s-]?status|residency[_\s-]?status|citizenship[_\s-]?status|alien[_\s-]?status)\b/i,
+    getValue: () => "Citizen"
+  },
+  {
+    key: "career.nationalIdConfirm",
+    regex: /\b(i[_\s-]?confirm.*national[_\s-]?id|national[_\s-]?id.*correct|id.*provided.*correct|confirm.*official[_\s-]?records)\b/i,
+    getValue: () => "Yes"
+  },
+  {
+    key: "career.readAndUnderstood",
+    regex: /\b(read[_\s-]?and[_\s-]?understood|read[_\s-]?&[_\s-]?understood|understood.*policies|read.*declaration)\b/i,
     getValue: () => "Yes"
   },
   {
@@ -643,7 +736,7 @@ const FIELD_PATTERNS = [
  */
 function isOpenEndedQuestion(text) {
   if (!text || text.length < 10) return false;
-  return /\b(why|describe|explain|tell us|what makes|biggest|accomplishment|challenge|project|experience with|motivation|strengths?|weakness(es)?|interests?|cover letter|additional information|briefly describe|summary of experience|about yourself|vision|proudest)\b/i.test(text);
+  return /\b(why|describe|explain|tell us|what makes|biggest|accomplishment|challenge|project|internship|experience with|motivation|strengths?|weakness(es)?|interests?|cover letter|additional information|briefly describe|summary of experience|about yourself|vision|proudest|share.*details|significant|details on)\b/i.test(text);
 }
 
 /**
@@ -661,8 +754,8 @@ function resolveBooleanQuestion(text) {
     return "No";
   }
 
-  // Affirmative questions (Work auth, relocation, shift work, valid passport, certifications, full-time availability)
-  if (/\b(authoriz|permit|eligible|relocat|shift|travel|passport|agree|certify|consent|immediate|full[_\s-]?time|confirm|accept)\b/i.test(t)) {
+  // Affirmative questions (Work auth, relocation, shift work, valid passport, certifications, full-time availability, PPO, stipend)
+  if (/\b(authoriz|permit|eligible|relocat|shift|travel|passport|agree|certify|consent|immediate|full[_\s-]?time|confirm|accept|ppo|pre[_\s-]?placement|stipend|structure|program)\b/i.test(t)) {
     return "Yes";
   }
 

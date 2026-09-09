@@ -13,7 +13,7 @@
       <h1>⚡ AutoApply Pro Test Suite</h1>
       <p>Simulate and test 1-click autofill across Google Forms, TCS iON, Infosys, and Modern Tech ATS.</p>
       <div class="instructions-callout">
-        💡 <strong>How to test:</strong> Click the floating <strong>⚡ Autofill</strong> button at the bottom-right (or press <code>Alt+Shift+F</code>) to fill standard fields, or <strong>✨ AI Fill</strong> to generate answers with Gemini!
+        💡 <strong>How to test:</strong> Click or focus <strong>any form field</strong> to open the new <strong>Interactive Quick-Fill Popover</strong> with instant bio-data chips! Or click the floating <strong>⚡ Autofill</strong> button at the bottom-right (or press <code>Alt+Shift+F</code>), or <strong>✨ AI Fill</strong> to generate answers with Gemini!
       </div>
     </div>
 
@@ -23,6 +23,7 @@
       <button type="button" class="tab-btn" data-target="tab-enterprise">🏢 2. TCS / Infosys Enterprise</button>
       <button type="button" class="tab-btn" data-target="tab-modern">🚀 3. Modern Tech ATS & AI Firms</button>
       <button type="button" class="tab-btn" data-target="tab-edgecases">⚡ 4. Layouts & Edge Cases Sandbox</button>
+      <button type="button" class="tab-btn" data-target="tab-accordions">🏛️ 5. Enterprise Portal (Accordions &amp; Uploads)</button>
     </div>
 
     <!-- ================= 1. GOOGLE FORMS SIMULATOR ================= -->
@@ -83,9 +84,9 @@
           </div>
         </div>
 
-        <!-- Question 8: Dropdown - Highest Qualification -->
+        <!-- Question 8: Dropdown - Course Name -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Select your Highest Qualification / Degree <span class="req">*</span></div>
+          <div class="M7eMe">Course Name <span class="req">*</span></div>
           <div class="gf-select-container">
             <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
               <span class="gf-select-text">Choose</span>
@@ -97,6 +98,35 @@
               <div role="option" data-value="BCA" tabindex="0" class="gf-dropdown-option">BCA / Computer Applications</div>
               <div role="option" data-value="MCA" tabindex="0" class="gf-dropdown-option">MCA / Master of Computer Applications</div>
               <div role="option" data-value="Diploma" tabindex="0" class="gf-dropdown-option">Diploma in Engineering</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 8.1: CGPA -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Please enter your CGPA (Normalise to 10) <span class="req">*</span></div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="e.g. 7.79">
+        </div>
+
+        <!-- Question 8.2: Projects / Internships -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Please share some details on some significant projects/internships you have worked on <span class="req">*</span></div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="Your answer">
+        </div>
+
+        <!-- Question 8.3: Dropdown - Year of Graduation -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Year of Graduation <span class="req">*</span></div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="2024" tabindex="0" class="gf-dropdown-option">2024</div>
+              <div role="option" data-value="2025" tabindex="0" class="gf-dropdown-option">2025</div>
+              <div role="option" data-value="2026" tabindex="0" class="gf-dropdown-option">2026</div>
+              <div role="option" data-value="2027" tabindex="0" class="gf-dropdown-option">2027</div>
             </div>
           </div>
         </div>
@@ -152,15 +182,62 @@
 
         <!-- Question 12: Radio - Willing to Relocate -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Are you willing to relocate to Bangalore / Pune / Hyderabad / Gurgaon? <span class="req">*</span></div>
+          <div class="M7eMe">Willing to relocate to Banglore <span class="req">*</span></div>
           <div class="gf-radio-group">
             <div role="radio" aria-label="Yes" aria-checked="false" tabindex="0">
               <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
-              <span class="gf-radio-label">Yes, open to relocate</span>
+              <span class="gf-radio-label">Yes</span>
             </div>
             <div role="radio" aria-label="No" aria-checked="false" tabindex="0">
               <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
-              <span class="gf-radio-label">No</span>
+              <span class="gf-radio-label">NO</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 12.1: Dropdown - PPO Interest -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Are you interested in a PPO (pre-placement offer) post the internship completion ? <span class="req">*</span></div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="Yes" tabindex="0" class="gf-dropdown-option">Yes</div>
+              <div role="option" data-value="No" tabindex="0" class="gf-dropdown-option">No</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 12.2: Dropdown - Stipend & Program Details -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Have you gone through the program details? Are you clear about the stipend and the program structure? <span class="req">*</span></div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="Yes" tabindex="0" class="gf-dropdown-option">Yes</div>
+              <div role="option" data-value="No" tabindex="0" class="gf-dropdown-option">No</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 12.3: Dropdown - Months of work experience -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">How many months of work experience do you have ? <span class="req">*</span></div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="0-6 months" tabindex="0" class="gf-dropdown-option">0-6 months</div>
+              <div role="option" data-value="6-12 months" tabindex="0" class="gf-dropdown-option">6-12 months</div>
+              <div role="option" data-value="1-2 years" tabindex="0" class="gf-dropdown-option">1-2 years</div>
+              <div role="option" data-value="2+ years" tabindex="0" class="gf-dropdown-option">2+ years</div>
             </div>
           </div>
         </div>
@@ -227,6 +304,22 @@
         <div class="gf-listitem" role="listitem">
           <div class="M7eMe">Describe a key technical project you architected and engineering obstacles you conquered (AI Question)</div>
           <textarea class="KHxj8b" rows="4" placeholder="Your answer... (Click '✨ AI Fill' to answer automatically with Gemini)"></textarea>
+        </div>
+
+        <!-- Question 17: Google Forms File Upload Widget -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Please upload your resume <span class="req">*</span></div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Upload 1 supported file: PDF or image. Max 10 MB.</div>
+          <div class="gf-file-upload-container">
+            <div role="button" aria-label="Add file" class="gf-add-file-btn" id="gf-add-file-button" tabindex="0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <span>Add file</span>
+            </div>
+            <input type="file" class="gf-hidden-file-input" id="gf-file-input" style="display: none;" accept=".pdf,.doc,.docx,image/*">
+            <div class="gf-uploaded-file-tag" id="gf-uploaded-tag" style="display: none; margin-top: 10px; font-size: 13px; color: var(--primary);">
+              📄 <span class="gf-uploaded-filename">DanishKhan_Resume.pdf</span> <span style="color: #10b981; font-weight: 600;">(Attached)</span>
+            </div>
+          </div>
         </div>
 
         <div class="action-controls">
@@ -738,8 +831,244 @@
           </div>
         </div>
 
+        <!-- Country / Region Code & Residence Dropdown Stress Tester -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Country/Region Code & Country of Residence Dropdown Tests</span>
+            <span style="font-size: 11px; color: var(--text-muted);">Unfilled "- Select -" Handling</span>
+          </div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="edge-country-code">Country/Region Code: <span style="color: #f87171;">*</span></label>
+              <select id="edge-country-code" name="country_region_code">
+                <option value="- Select -">- Select -</option>
+                <option value="+91">India (+91)</option>
+                <option value="+1">United States (+1)</option>
+                <option value="+44">United Kingdom (+44)</option>
+                <option value="+61">Australia (+61)</option>
+                <option value="+49">Germany (+49)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="edge-phone">Phone Number: <span style="color: #f87171;">*</span></label>
+              <input type="tel" id="edge-phone" name="applicant_phone_number" placeholder="9322990946">
+            </div>
+            <div class="form-group">
+              <label for="edge-country-residence">Country/Region of Residence: <span style="color: #f87171;">*</span></label>
+              <select id="edge-country-residence" name="country_of_residence">
+                <option value="select">- Select -</option>
+                <option value="India">India</option>
+                <option value="United States">United States</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Canada">Canada</option>
+                <option value="Australia">Australia</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="action-controls">
           <button type="button" class="btn-test btn-test-clear" id="btn-clear-edgecases">Clear Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ================= 5. ENTERPRISE PORTAL ACCORDIONS & UPLOADS ================= -->
+    <div class="tab-content" id="tab-accordions">
+      <form id="accordions-form-mock">
+        <!-- Top Toolbar with Expand All Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h2 style="font-size: 16px; font-weight: 600; color: var(--text-primary);">Taleo / Birlasoft Enterprise Portal</h2>
+            <p style="font-size: 12px; color: var(--text-muted);">Simulates collapsed accordion sections, "Upload from Device" popups, and "No Selection" dropdowns.</p>
+          </div>
+          <button type="button" class="btn-test" id="btn-expand-all" style="color: var(--blue-primary); border-color: rgba(168, 199, 250, 0.4);">
+            + Expand all sections
+          </button>
+        </div>
+
+        <!-- Section 1: My Documents (Accordion) -->
+        <div class="form-card accordion-card" style="padding: 0; overflow: hidden; margin-bottom: 16px;">
+          <div class="accordion-header collapsed" style="padding: 16px 20px; background: var(--bg-pill); cursor: pointer; display: flex; justify-content: space-between; align-items: center;" aria-expanded="false">
+            <span style="font-weight: 600; font-size: 14px;">&gt; My Documents</span>
+            <span class="accordion-arrow" style="font-size: 12px; color: var(--text-muted);">Click to expand</span>
+          </div>
+          <div class="accordion-body" style="display: none; padding: 20px;">
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">Attach your CV / Resume for automated parsing and consideration.</p>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-test" id="btn-upload-resume-trigger" style="background: var(--blue-primary); color: #131314; font-weight: 600;">
+                + Upload a Resume
+              </button>
+              <span id="accordion-resume-status" style="font-size: 12.5px; color: var(--green-accent); display: none;"></span>
+            </div>
+            <!-- Upload Modal / Popup Container (hidden by default) -->
+            <div id="upload-popup-modal" style="display: none; margin-top: 14px; padding: 14px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px;">
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Choose upload source:</p>
+              <button type="button" class="btn-test" id="btn-upload-from-device" style="background: var(--bg-pill); color: var(--text-primary);">
+                📁 Upload from Device
+              </button>
+              <input type="file" id="enterprise-resume-input" name="resume" accept=".pdf,.docx,.doc" style="display: none;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Profile Information (Accordion) -->
+        <div class="form-card accordion-card" style="padding: 0; overflow: hidden; margin-bottom: 16px;">
+          <div class="accordion-header collapsed" style="padding: 16px 20px; background: var(--bg-pill); cursor: pointer; display: flex; justify-content: space-between; align-items: center;" aria-expanded="false">
+            <span style="font-weight: 600; font-size: 14px;">&gt; Profile Information</span>
+            <span class="accordion-arrow" style="font-size: 12px; color: var(--text-muted);">Click to expand</span>
+          </div>
+          <div class="accordion-body" style="display: none; padding: 20px;">
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="acc-prefix">Prefix (?)</label>
+                <select id="acc-prefix" name="prefix">
+                  <option value="no_selection">No Selection</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Dr.">Dr.</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-fname">First Name <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-fname" name="first_name" placeholder="First Name">
+              </div>
+              <div class="form-group">
+                <label for="acc-mname">Middle Name</label>
+                <input type="text" id="acc-mname" name="middle_name" placeholder="Middle Name">
+              </div>
+              <div class="form-group">
+                <label for="acc-lname">Last Name / Surname <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-lname" name="last_name" placeholder="Last Name">
+              </div>
+            </div>
+
+            <div class="form-grid-2" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="acc-addr1">Address (Line 1) <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-addr1" name="address_line_1" placeholder="Building, Colony, Street">
+              </div>
+              <div class="form-group">
+                <label for="acc-addr2">Address (Line 2)</label>
+                <input type="text" id="acc-addr2" name="address_line_2" placeholder="Locality, Landmark">
+              </div>
+            </div>
+
+            <div class="form-grid-3" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="acc-city">Permanent Address-City <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-city" name="permanent_address_city" placeholder="City">
+              </div>
+              <div class="form-group">
+                <label for="acc-state">Permanent Address-State <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-state" name="permanent_address_state" placeholder="State">
+              </div>
+              <div class="form-group">
+                <label for="acc-curr-loc">Current Location</label>
+                <input type="text" id="acc-curr-loc" name="current_location" placeholder="Current Location">
+              </div>
+            </div>
+
+            <div class="form-grid-4" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="acc-nationality">Nationality <span style="color: #f87171;">*</span></label>
+                <select id="acc-nationality" name="nationality">
+                  <option value="no_selection">No Selection</option>
+                  <option value="Indian">Indian</option>
+                  <option value="American">American</option>
+                  <option value="British">British</option>
+                  <option value="Canadian">Canadian</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-marital">Marital Status <span style="color: #f87171;">*</span></label>
+                <select id="acc-marital" name="marital_status">
+                  <option value="no_selection">No Selection</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-dob">Date Of Birth <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-dob" name="date_of_birth" placeholder="MM/DD/YYYY">
+              </div>
+              <div class="form-group">
+                <label for="acc-aadhaar-last8">Aadhaar Number(Last 8 digit) <span style="color: #f87171;">*</span></label>
+                <input type="text" id="acc-aadhaar-last8" name="aadhaar_number_last_8_digit" placeholder="83622036" maxlength="8">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Job-Specific Information (Accordion) -->
+        <div class="form-card accordion-card" style="padding: 0; overflow: hidden; margin-bottom: 16px;">
+          <div class="accordion-header collapsed" style="padding: 16px 20px; background: var(--bg-pill); cursor: pointer; display: flex; justify-content: space-between; align-items: center;" aria-expanded="false">
+            <span style="font-weight: 600; font-size: 14px;">&gt; Job-Specific Information</span>
+            <span class="accordion-arrow" style="font-size: 12px; color: var(--text-muted);">Click to expand</span>
+          </div>
+          <div class="accordion-body" style="display: none; padding: 20px;">
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="acc-degree">Highest Education Degree <span style="color: #f87171;">*</span></label>
+                <select id="acc-degree" name="highest_education_degree">
+                  <option value="no_selection">No Selection</option>
+                  <option value="B.Tech">B.Tech / Bachelor of Technology</option>
+                  <option value="M.Tech">M.Tech / Master of Technology</option>
+                  <option value="BCA">BCA / Computer Applications</option>
+                  <option value="MCA">MCA / Master of Computer Applications</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-passport-valid">Valid Passport <span style="color: #f87171;">*</span></label>
+                <select id="acc-passport-valid" name="valid_passport">
+                  <option value="no_selection">No Selection</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-passport-exp">Passport Expiry Date</label>
+                <input type="text" id="acc-passport-exp" name="passport_expiry_date" placeholder="MM/DD/YYYY">
+              </div>
+            </div>
+
+            <div class="form-grid-2" style="margin-top: 10px;">
+              <div class="form-group">
+                <label for="acc-immigration">Immigration Status <span style="color: #f87171;">*</span></label>
+                <select id="acc-immigration" name="immigration_status">
+                  <option value="no_selection">No Selection</option>
+                  <option value="Citizen">Citizen</option>
+                  <option value="Permanent Resident">Permanent Resident</option>
+                  <option value="Work Permit">Work Permit</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="acc-interviewed-6m">Have you been interviewed in last 6 months? <span style="color: #f87171;">*</span></label>
+                <select id="acc-interviewed-6m" name="interviewed_last_6_months">
+                  <option value="no_selection">No Selection</option>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 13px; color: var(--text-primary);">
+                <input type="checkbox" id="acc-cb-id-confirm" name="national_id_confirmation" style="width: 16px; height: 16px;">
+                <span>I confirm that the National ID (Aadhaar / PAN) details provided by me are true and accurate to the best of my knowledge.</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 13px; color: var(--text-primary);">
+                <input type="checkbox" id="acc-cb-policies" name="read_and_understood" style="width: 16px; height: 16px;">
+                <span>I have read and understood all recruitment conditions and company confidentiality guidelines.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-controls">
+          <button type="button" class="btn-test btn-test-clear" id="btn-clear-accordions">Clear Form</button>
         </div>
       </form>
     </div>
@@ -755,6 +1084,7 @@
   <script src="../content/resume-uploader.js"></script>
   <script src="../content/adapters.js"></script>
   <script src="../content/floating-widget.js"></script>
+  <script src="../content/field-popup.js"></script>
   <script src="../content/content.js"></script>
 </body>
 </html>

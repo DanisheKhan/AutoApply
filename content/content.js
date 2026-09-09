@@ -49,19 +49,12 @@
     return await runAutoApply(candidateProfile, { aiAnswers: true });
   };
 
-  // 3. Mount In-Page Floating Widget
-  if (window.self === window.top) {
-    mountFloatingWidget(candidateProfile, handleAutofill, handleAiFill);
+  // 3. Initialize In-Field Quick Fill Popover (Floating bar removed per user request)
+  const existingHud = document.getElementById('autoapply-pro-root');
+  if (existingHud) existingHud.remove();
 
-    // Initial check from storage
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['floatingWidgetEnabled'], (data) => {
-        if (data && data.floatingWidgetEnabled === false) {
-          const root = document.getElementById('autoapply-pro-root');
-          if (root) root.style.display = 'none';
-        }
-      });
-    }
+  if (typeof initFieldPopup === 'function') {
+    initFieldPopup(candidateProfile);
   }
 
   // Listen for storage changes across tabs

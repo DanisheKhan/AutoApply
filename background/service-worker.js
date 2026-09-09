@@ -9,6 +9,34 @@ try {
   console.error("Error importing scripts in service worker:", e);
 }
 
+function normalizeCandidateProfile(profile) {
+  if (!profile || typeof profile !== 'object') return profile;
+  
+  if (!profile.personal) profile.personal = {};
+  
+  // Legacy migration for 2-field vs 3-field name
+  if (profile.personal.lastName === "Khan" || !profile.personal.lastName) {
+    profile.personal.lastName = "Naeem Khan";
+  }
+  if (!profile.personal.firstName2Field) {
+    profile.personal.firstName2Field = "Mohammad Danish Khan";
+  }
+  if (!profile.personal.firstName3Field) {
+    profile.personal.firstName3Field = "Mohammad Danish";
+  }
+  if (!profile.personal.middleName) {
+    profile.personal.middleName = "Khan";
+  }
+  if (profile.personal.firstName === "Mohammad Danish" || !profile.personal.firstName) {
+    profile.personal.firstName = "Mohammad Danish Khan";
+  }
+  if (!profile.personal.phonePlain) {
+    profile.personal.phonePlain = "9322990946";
+  }
+
+  return profile;
+}
+
 // 1. Extension Lifecycle: Install & Seed Default Bio-Data
 chrome.runtime.onInstalled.addListener(async (details) => {
   console.log("AutoApply Pro installed/updated:", details.reason);
@@ -23,13 +51,14 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     });
     console.log("Seeded master bio-data for Mohammad Danish Khan into chrome.storage.local");
   } else if (profile && typeof DEFAULT_PROFILE !== 'undefined') {
+    profile = normalizeCandidateProfile(profile);
     // Backfill any missing gemini key
     if (!profile.gemini || !profile.gemini.apiKey || profile.gemini.apiKey.trim() === '') {
       profile.gemini = profile.gemini || {};
       profile.gemini.apiKey = data.geminiApiKey || DEFAULT_PROFILE.gemini?.apiKey || '';
       profile.gemini.model = profile.gemini.model || DEFAULT_PROFILE.gemini?.model || 'gemini-flash-lite-latest';
-      await chrome.storage.local.set({ candidateProfile: profile });
     }
+    await chrome.storage.local.set({ candidateProfile: profile });
   }
 });
 
@@ -43,6 +72,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!p && typeof DEFAULT_PROFILE !== 'undefined') {
         p = JSON.parse(JSON.stringify(DEFAULT_PROFILE));
       } else if (p && typeof DEFAULT_PROFILE !== 'undefined') {
+        p = normalizeCandidateProfile(p);
         p.gemini = p.gemini || {};
         if (!p.gemini.apiKey || p.gemini.apiKey.trim() === '') {
           p.gemini.apiKey = res.geminiApiKey || DEFAULT_PROFILE.gemini?.apiKey || '';
@@ -83,6 +113,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const profile = res.candidateProfile || DEFAULT_PROFILE;
       try {
         const answer = await generateAnswerWithGemini(payload, profile);
+        sendResponse({ success: true, answer });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    }).catch((err) => {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  }
+
+  if (action === "INFER_FIELD_AI") {
+    chrome.storage.local.get(['candidateProfile']).then(async (res) => {
+      const profile = res.candidateProfile || DEFAULT_PROFILE;
+      try {
+        const answer = await inferFieldWithGemini(payload, profile);
         sendResponse({ success: true, answer });
       } catch (err) {
         sendResponse({ success: false, error: err.message });

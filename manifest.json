@@ -43,10 +43,8 @@
         "content/resume-uploader.js",
         "content/adapters.js",
         "content/floating-widget.js",
+        "content/field-popup.js",
         "content/content.js"
-      ],
-      "css": [
-        "content/floating-widget.css"
       ],
       "run_at": "document_idle"
     }

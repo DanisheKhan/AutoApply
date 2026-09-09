@@ -3,6 +3,7 @@ const { DEFAULT_PROFILE } = require('../default-profile.js');
 const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion } = require('../content/heuristics.js');
 const { generateInstantFallbackAnswer } = require('../background/gemini-client.js');
 const { RESUME_DATA } = require('../assets/resume-data.js');
+const { getFieldSuggestions } = require('../content/adapters.js');
 
 async function runVerification() {
   console.log("==================================================");
@@ -136,6 +137,37 @@ async function runVerification() {
     { label: "Disability / PwD Status", expectedKey: "career.disabilityStatus" },
     { label: "Race / Ethnicity", expectedKey: "career.raceEthnicity" },
 
+    // Country Code & Residence Variations
+    { label: "Country/Region Code:*", expectedKey: "personal.phoneCountryCode" },
+    { label: "Phone Country Code", expectedKey: "personal.phoneCountryCode" },
+    { label: "ISD / Dialing Code", expectedKey: "personal.phoneCountryCode" },
+    { label: "Country/Region of Residence:*", expectedKey: "address.country" },
+    { label: "Residential Country", expectedKey: "address.country" },
+    { label: "Permanent Country", expectedKey: "address.country" },
+
+    // Enterprise Portal Specific Fields (Screenshots Verification)
+    { label: "Prefix (?)", expectedKey: "personal.salutation" },
+    { label: "Address (Line 1) *", expectedKey: "address.streetAddress1" },
+    { label: "Address (Line 2)", expectedKey: "address.streetAddress2" },
+    { label: "Permanent Address-City *", expectedKey: "address.permanentCity" },
+    { label: "Permanent Address-State *", expectedKey: "address.permanentState" },
+    { label: "Current Location", expectedKey: "address.currentLocation" },
+    { label: "Highest Education Degree *", expectedKey: "academics.graduation.degree" },
+    { label: "Valid Passport *", expectedKey: "career.validPassport" },
+    { label: "Passport Expiry Date", expectedKey: "identification.passportExpiryDate" },
+    { label: "Immigration Status *", expectedKey: "career.immigrationStatus" },
+    { label: "Have you been interviewed in last 6 months *", expectedKey: "career.interviewedBefore" },
+    { label: "I confirm that the National ID card number entered by me is correct", expectedKey: "career.nationalIdConfirm" },
+    { label: "I have read and understood the company privacy and recruitment policies", expectedKey: "career.readAndUnderstood" },
+
+    // Google Forms Elevate Internship Program Questions
+    { label: "Course Name *", expectedKey: "academics.graduation.courseName" },
+    { label: "Please share some details on some significant projects/internships you have worked on", expectedKey: "profile.projectsDetails" },
+    { label: "Year of Graduation *", expectedKey: "academics.graduation.passingYear" },
+    { label: "Are you interested in a PPO (pre-placement offer) post the internship completion ? *", expectedKey: "career.interestedInPpo" },
+    { label: "Have you gone through the program details? Are you clear about the stipend and the program structure? *", expectedKey: "career.programDetailsStipend" },
+    { label: "How many months of work experience do you have ? *", expectedKey: "career.workExperienceMonths" },
+
     // Technology Skill Years Experience
     { label: "REACT.JS / FRONTEND", expectedKey: "skills.react" },
     { label: "NODE.JS / EXPRESS", expectedKey: "skills.node" },
@@ -148,6 +180,49 @@ async function runVerification() {
     assert(match && match.key === expectedKey, `Label "${label}" matched to "${expectedKey}" [Got: ${match?.key || 'NONE'}]`);
   });
 
+  // Verify Dynamic Aadhaar Slicing (Last 8 digits vs Last 4 digits vs Full 12 digits)
+  console.log("\n[3.0] Testing Dynamic Aadhaar Slicing Logic:");
+  const aadhaarPattern = FIELD_PATTERNS.find(p => p.key === "identification.aadhaarNumber");
+  
+  const mockAadhaarLast8 = { getAttribute: () => "Aadhaar Number(Last 8 digit) *" };
+  const last8Val = aadhaarPattern.getValue(DEFAULT_PROFILE, mockAadhaarLast8);
+  assert(last8Val === "83622036", `Aadhaar Last 8 digits -> "83622036" [Got: "${last8Val}"]`);
+
+  const mockAadhaarLast4 = { getAttribute: () => "Aadhaar Number (Last 4 digit)" };
+  const last4Val = aadhaarPattern.getValue(DEFAULT_PROFILE, mockAadhaarLast4);
+  assert(last4Val === "2036", `Aadhaar Last 4 digits -> "2036" [Got: "${last4Val}"]`);
+
+  const mockAadhaarFull = { getAttribute: () => "Aadhaar Number (12 digit)" };
+  const fullVal = aadhaarPattern.getValue(DEFAULT_PROFILE, mockAadhaarFull);
+  assert(fullVal === "270883622036", `Aadhaar Full 12 digits -> "270883622036" [Got: "${fullVal}"]`);
+
+  // Verify Name Variations (2-field vs 3-field)
+  console.log("\n[3.1] Testing 2-Field vs 3-Field Name Heuristic Logic:");
+  const firstNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.firstName");
+  const middleNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.middleName");
+  const lastNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.lastName");
+
+  // 2-field simulation (no middle name field present in container)
+  const twoFieldName = firstNamePattern.getValue(DEFAULT_PROFILE, {});
+  const twoFieldLastName = lastNamePattern.getValue(DEFAULT_PROFILE, {});
+  assert(twoFieldName === "Mohammad Danish Khan", `2-Field Form: First Name -> "Mohammad Danish Khan" [Got: "${twoFieldName}"]`);
+  assert(twoFieldLastName === "Naeem Khan", `2-Field Form: Last Name -> "Naeem Khan" [Got: "${twoFieldLastName}"]`);
+
+  // 3-field simulation (mock element inside container with middle name)
+  const mockContainerWithMiddle = {
+    querySelector: (sel) => sel.includes('middle') ? {} : null,
+    querySelectorAll: () => []
+  };
+  const mockElement = {
+    closest: () => mockContainerWithMiddle
+  };
+  const threeFieldName = firstNamePattern.getValue(DEFAULT_PROFILE, mockElement);
+  const threeFieldMiddle = middleNamePattern.getValue(DEFAULT_PROFILE, mockElement);
+  const threeFieldLastName = lastNamePattern.getValue(DEFAULT_PROFILE, mockElement);
+  assert(threeFieldName === "Mohammad Danish", `3-Field Form: First Name -> "Mohammad Danish" [Got: "${threeFieldName}"]`);
+  assert(threeFieldMiddle === "Khan", `3-Field Form: Middle Name -> "Khan" [Got: "${threeFieldMiddle}"]`);
+  assert(threeFieldLastName === "Naeem Khan", `3-Field Form: Last Name -> "Naeem Khan" [Got: "${threeFieldLastName}"]`);
+
   // 4. Boolean Question Classifier Tests
   console.log("\n[4] Testing Smart Boolean (Yes/No) Classifier:");
   assert(resolveBooleanQuestion("Are you legally authorized to work in India?") === "Yes", "Work auth question -> Yes");
@@ -157,6 +232,8 @@ async function runVerification() {
   assert(resolveBooleanQuestion("Are you willing to relocate to Pune or Bengaluru?") === "Yes", "Relocation -> Yes");
   assert(resolveBooleanQuestion("Are you comfortable working in rotational shifts?") === "Yes", "Shift work -> Yes");
   assert(resolveBooleanQuestion("Do you agree to the terms and conditions?") === "Yes", "Consent -> Yes");
+  assert(resolveBooleanQuestion("Are you interested in a PPO (pre-placement offer) post the internship completion ?") === "Yes", "PPO interest -> Yes");
+  assert(resolveBooleanQuestion("Have you gone through the program details? Are you clear about the stipend and the program structure?") === "Yes", "Stipend & structure -> Yes");
 
   // 5. Open-Ended AI Question Detector & Instant Fallback Generator Tests
   console.log("\n[5] Testing AI Open-Ended Question Detector & Instant Fallbacks:");
@@ -171,6 +248,62 @@ async function runVerification() {
 
   const fallbackProject = generateInstantFallbackAnswer("Tell us about a challenging project.");
   assert(fallbackProject.includes("CodeRace") || fallbackProject.includes("Madina Perfumes"), "Instant fallback references real projects (CodeRace / Madina)");
+
+  // 6. Test AI Field Inference Fallback Engine
+  console.log("\n[6] Testing Gemini AI Field Inference Engine:");
+  const { inferFieldWithGemini } = require('../background/gemini-client.js');
+  const inferredPrefix = await inferFieldWithGemini({ label: "Prefix (?)", tag: "select", options: ["No Selection", "Mr.", "Ms.", "Mrs."] }, DEFAULT_PROFILE);
+  assert(inferredPrefix === "Mr.", `AI Inferred Prefix: "${inferredPrefix}" [Expected: "Mr."]`);
+
+  const inferredPassport = await inferFieldWithGemini({ label: "Valid Passport *", tag: "select", options: ["No Selection", "Yes", "No"] }, DEFAULT_PROFILE);
+  assert(inferredPassport === "Yes", `AI Inferred Passport: "${inferredPassport}" [Expected: "Yes"]`);
+
+  const inferredImmigration = await inferFieldWithGemini({ label: "Immigration Status", tag: "select", options: ["No Selection", "Citizen", "Alien"] }, DEFAULT_PROFILE);
+  assert(inferredImmigration === "Citizen", `AI Inferred Immigration: "${inferredImmigration}" [Expected: "Citizen"]`);
+
+  const inferredPpo = await inferFieldWithGemini({ label: "Are you interested in a PPO (pre-placement offer) post the internship completion ?", tag: "select", options: ["Choose", "Yes", "NO"] }, DEFAULT_PROFILE);
+  assert(inferredPpo === "Yes", `AI Inferred PPO dropdown: "${inferredPpo}" [Expected: "Yes"]`);
+
+  const inferredPpoInput = await inferFieldWithGemini({ label: "Are you interested in a PPO (pre-placement offer) post the internship completion ?", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredPpoInput === "Yes", `AI Inferred PPO text input: "${inferredPpoInput}" [Expected: "Yes"]`);
+
+  const inferredStipend = await inferFieldWithGemini({ label: "Have you gone through the program details? Are you clear about the stipend and the program structure?", tag: "select", options: ["Choose", "Yes", "NO"] }, DEFAULT_PROFILE);
+  assert(inferredStipend === "Yes", `AI Inferred Stipend & structure dropdown: "${inferredStipend}" [Expected: "Yes"]`);
+
+  const inferredStipendInput = await inferFieldWithGemini({ label: "Have you gone through the program details? Are you clear about the stipend and the program structure?", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredStipendInput === "Yes", `AI Inferred Stipend & structure text input: "${inferredStipendInput}" [Expected: "Yes"]`);
+
+  const inferredExpDropdown = await inferFieldWithGemini({ label: "How many months of work experience do you have ?", tag: "select", options: ["0-6 months", "6-12 months", "1-2 years"] }, DEFAULT_PROFILE);
+  assert(inferredExpDropdown === "6-12 months", `AI Inferred Experience dropdown: "${inferredExpDropdown}" [Expected: "6-12 months"]`);
+
+  const inferredExpInput = await inferFieldWithGemini({ label: "How many months of work experience do you have ?", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredExpInput === "10", `AI Inferred Experience text input: "${inferredExpInput}" [Expected: "10"]`);
+
+  // 7. Test Field-Level Quick Fill Suggestions Engine
+  console.log("\n[7] Testing Field-Level Quick Fill Suggestions Engine:");
+  const nameSugg = getFieldSuggestions(null, "Full Name *", DEFAULT_PROFILE);
+  assert(nameSugg.primary && nameSugg.primary.value.includes("Mohammad Danish Khan"), `Full Name Suggestion -> "${nameSugg.primary?.value}"`);
+  assert(nameSugg.alternatives.length > 0, `Full Name has alternative chips (${nameSugg.alternatives.length})`);
+
+  const emailSugg = getFieldSuggestions(null, "Email Address *", DEFAULT_PROFILE);
+  assert(emailSugg.primary && emailSugg.primary.value === "danishkhan.jsx@gmail.com", `Email Suggestion -> "${emailSugg.primary?.value}"`);
+
+  const ppoSugg = getFieldSuggestions(null, "Are you interested in a PPO (pre-placement offer) post the internship completion ? *", DEFAULT_PROFILE);
+  assert(ppoSugg.primary && ppoSugg.primary.value === "Yes", `PPO Suggestion -> "${ppoSugg.primary?.value}" [Expected: "Yes"]`);
+  assert(ppoSugg.alternatives.some(a => a.value === "No"), "PPO has alternative chip 'No'");
+
+  const stipendSugg = getFieldSuggestions(null, "Have you gone through the program details? Are you clear about the stipend and the program structure? *", DEFAULT_PROFILE);
+  assert(stipendSugg.primary && stipendSugg.primary.value === "Yes", `Stipend Suggestion -> "${stipendSugg.primary?.value}" [Expected: "Yes"]`);
+
+  const expSugg = getFieldSuggestions(null, "How many months of work experience do you have ? *", DEFAULT_PROFILE);
+  assert(expSugg.primary && expSugg.primary.value === "10", `Work Experience Months Suggestion -> "${expSugg.primary?.value}" [Expected: "10"]`);
+  assert(expSugg.alternatives.some(a => a.value.includes("6-12")), "Experience has range alternative '6-12 months'");
+
+  const resumeSugg = getFieldSuggestions(null, "Upload Resume / CV *", DEFAULT_PROFILE);
+  assert(resumeSugg.isResume === true, "Resume / File upload field detected correctly");
+
+  const openEndedSugg = getFieldSuggestions(null, "Why do you want to join our company?", DEFAULT_PROFILE);
+  assert(openEndedSugg.isOpenEnded === true, "Open-ended question detected for AI generation");
 
   console.log("\n==================================================");
   console.log(`Master Verification Results: ${passed} passed, ${failed} failed`);

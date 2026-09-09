@@ -341,9 +341,11 @@ function extractFormData() {
 
   // Personal
   p.personal = p.personal || {};
-  p.personal.fullName = getVal('personal-fullName');
-  p.personal.shortName = getVal('personal-shortName');
+  p.personal.fullName = getVal('personal-fullName') || "Mohammad Danish Khan Naeem Khan";
+  p.personal.shortName = getVal('personal-shortName') || "Danish Khan";
   p.personal.firstName = getVal('personal-firstName') || "Mohammad Danish Khan";
+  p.personal.firstName2Field = "Mohammad Danish Khan";
+  p.personal.firstName3Field = "Mohammad Danish";
   p.personal.middleName = getVal('personal-middleName') || "Khan";
   p.personal.lastName = getVal('personal-lastName') || "Naeem Khan";
   p.personal.gender = getVal('personal-gender');
