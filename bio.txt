@@ -1,0 +1,220 @@
+================================================================================
+                           COMPREHENSIVE MASTER BIO-DATA
+================================================================================
+
+[PERSONAL DETAILS]
+Full Name            : Mohammad Danish Khan Naeem Khan
+Certificate Name     : Mohammad Danish Khan
+Resume / Short Name  : Danish Khan[cite: 1]
+Other Formats Listed : MD Danish Khan Naeem Khn, Mohammad D Khan
+Hindi / Marathi Name : मोहम्मद दानिश खान नईम खान
+Father's Name        : Naeem Khan 
+Mother's Name        : Yasmeen / Yasmeen Bano (Yasmin Bano Naim Khan / यास्मीन बानो नईम खान)
+Date of Birth        : 01/06/2005 (First June Two Thousand Five)
+                       
+Place of Birth       : Bhusawal, Taluka Bhusawal, District Jalgaon, Maharashtra, India
+Gender               : Male
+Blood Group          : O+
+Nationality          : Indian
+Mother Tongue        : Urdu
+Religion & Caste     : Islam, Musalman (Sub-Caste: Khan)
+Category             : Open / Economically Weaker Section (EWS)
+Minority Status      : Religious Minority (Muslim) | Linguistic Minority (Urdu)
+
+[PROFESSIONAL HEADLINE & SUMMARY]
+LinkedIn Headline    : Full-Stack Web Developer | React, Node.js, MongoDB, Express,
+                       Next.js, TypeScript, JavaScript | Strong in DSA using Java |
+                       Building Scalable & Modern Web Applications | Never Stop Building
+Core Domain          : Full-Stack Web Development, UI/UX Design, Data Structures & Algorithms
+
+[CONTACT & WEB PROFILES]
+Mobile Number        : +91 9322990946[cite: 1]
+Email Address        : danishkhan.jsx@gmail.com[cite: 1]
+Portfolio Website    : https://itsdanishkhan.me[cite: 1]
+LinkedIn Profile     : https://linkedin.com/in/danish-jsx[cite: 1]
+GitHub Profile       : https://github.com/Danishekhan[cite: 1]
+
+[ADDRESSES]
+Professional Loc.    : Bhusawal, Maharashtra, India (PIN: 425201)[cite: 1]
+Aadhaar Address      : Near Mujib Members House, Khadka, New Eidgah Colony,
+                       Bhusawal (Rural), Dist. Jalgaon,
+                       Maharashtra - 425201, India
+Correspondence Addr  : Maulana Azad Nagar, Near Raza Tower Beside Noori Ki,
+                       Azad Nagar, Bhusawal (Rural), Dist. Jalgaon,
+                       Maharashtra - 425201, India
+Alternative / Domicile: 777/1, New Eidgah Colony, Kabrasthan Road / Khadka Road,
+                       Azad Nagar, Bhusawal, Dist. Jalgaon,
+                       Maharashtra - 425201, India
+
+[GOVERNMENT IDENTIFICATION & CIVIL DOCUMENTS]
+Passport Number      : AH927400
+  - Type / Code      : P / IND
+  - Place of Issue   : Mumbai
+  - Date of Issue    : 30/09/2025
+  - Date of Expiry   : 29/09/2035
+Aadhaar Number       : 2708 8362 2036
+  - Aadhaar VID      : 9111 6123 2510 1424
+  - Enrolment No.    : 0000/00756/06770
+PAN Number           : NNPPK5977P
+Voter ID (EPIC No.)  : ZUT5583885 (Card) / ZUT5558416 (Helpline Record)
+  - Assembly Const.  : 12 - Bhusawal (SC)
+  - Parliamentary    : Raver
+  - Polling Station  : Aanganwadi, S.No. 13 Near Water Tank, Muslim Colony, Khadka
+  - Part No. / Name  : 259 / Khadka (Serial No: 1498)
+Ration Card Details  : 
+  - Card Number      : WG 342153 (Area Code: 134E)
+  - Head of Family   : Naeem Khan Isaak Khan
+  - Listed Family    : Naeem Khan, Yasmin Bee, Mo. Ahtesham, Humera Kausar, Danish
+
+[BANK ACCOUNT DETAILS]
+Bank Name            : Punjab National Bank (PNB)
+Branch               : Balaji Lane, Bhusawal
+Account Number       : 0079001500043441
+Customer ID          : ADA018025
+IFSC Code            : PUNB0007900
+MICR Code            : 425024002
+Account Type         : Self-Operated Savings Account (Opened: 09-08-2017)
+
+[TECHNICAL SKILLS & COMPETENCIES]
+Languages            : JavaScript (ES6+), TypeScript, Java, HTML / HTML5, CSS / CSS3, Python
+Frontend             : React.js, Next.js, React Router, Redux / Redux Toolkit, Tailwind CSS,
+                       Bootstrap, Framer Motion, Rendering Optimization, UI/UX Design
+Backend              : Node.js, Express.js, MongoDB, Supabase, PostgreSQL, REST API / RESTful APIs,
+                       JWT Authentication
+Cloud & Hosting      : Vercel (built-in CD), GitHub Actions (CI), Hostinger (FTP deploy),
+                       AWS (Cloud Practitioner & Solutions Architect path explored), Render, Netlify, Cloudinary
+Dev Tools & AI       : Git, GitHub, Docker, Postman, Chrome DevTools,
+                       Local AI coding (Ollama + qwen2.5-coder:7b + Continue extension in VS Code),
+                       ReportLab (Automated professional PDF proposals)
+Core Competencies    : Data Structures & Algorithms (DSA using Java), Problem Solving,
+                       MERN Stack Architecture, Dual-Track Freelancing & Product Development,
+                       Effective Communication, Team Collaboration, Time Management
+
+[WORK EXPERIENCE]
+Company              : Meet Bros
+Role                 : Website & UI/UX Designer & Developer Intern (Remote)
+Duration             : June 2025 – March 2026 (10 months)
+Key Contributions    :
+* Website & UI/UX Designer and Developer for client portals and internal presentation assets over a 10-month tenure.
+* Built and shipped 3 production-level web applications (Vegeta Star Film, Dynameet, HarryOm) using React.js, Node.js, Express.js, and Tailwind CSS.
+* Authored comprehensive college documentation: internship report, PPT, Chapter 5 docs, Company Introduction, and formal offer letter documents.
+* Designed and built a high-impact 10-slide AI presentation deck showcasing modern AI applications.
+* Utilized full-stack engineering practices reducing front-end development time by ~25%.
+* Engineered reusable UI components and achieved up to 30% faster page load times via code splitting, lazy loading, and asset optimization.
+* Managed version control and team-based integrations via Git/GitHub workflows across 3+ production releases.
+
+[CLIENT & FREELANCE PROJECTS]
+1. Madina Perfumes (madinaperfumes.in)
+   - Stack   : React.js, Vite, Supabase, Node.js, Tailwind CSS, Razorpay, Shiprocket
+   - Overview: Full-featured production e-commerce store with user authentication, product catalogs, cart workflows, and admin dashboard.
+   - Payment : Live Razorpay payment gateway integration with HMAC webhook signature verification.
+   - Logistics: Automated Shiprocket API order fulfillment via Supabase Edge Functions; deployed on Vercel with Cloudinary media optimization.
+
+2. Muskan Hospital (muskanhospital.in)
+   - Stack   : React.js / Modern Web Stack, Responsive CSS
+   - Overview: Public-facing hospital website built for a real healthcare client; includes departmental info, doctor schedules, and patient inquiry workflows.
+
+3. AURA Restauracja (Puławy, Poland)
+   - Stack   : Modern Web Stack, Responsive UI
+   - Overview: International restaurant website for a client in Puławy, Poland; showcases dining menus, aesthetic ambiance, and reservation contact points.
+
+4. Vega Star Entertainment (vega-star-entertainm.com)
+   - Stack   : Wix Platform + Custom HTML/CSS/JS
+   - Overview: Cinema & film production client site with luxury light aesthetic, gold accents, and Playfair Display typography. Built custom cinematic dark HTML/CSS/JS "What We Do" showcase page.
+
+5. Pinch Beverages Proposal
+   - Stack   : Python / ReportLab, Web Architecture
+   - Overview: Formulated and delivered professional freelance proposal with tiered technical offerings (₹17K static site / ₹38K full platform options) rendered via ReportLab PDF engine.
+
+[PERSONAL & PRODUCT VENTURES]
+1. Hospital Management System (HMS)
+   - Overview: Comprehensive subscription-model hospital product featuring full OPD workflow, patient admissions, clinical reports/analytics, staff management, Rx/prescription engine, and complete patient medical histories.
+
+2. CodeRace (coderace-danishkhan.vercel.app)
+   - Stack   : React.js, Supabase, PostgreSQL
+   - Overview: Full-stack DSA practice and progress tracking platform to compete with peers; tracks a 502-question DSA sheet with real-time leaderboards, streaks, and progress analytics.
+
+3. Gradify
+   - Stack   : Database schema design & Web Stack
+   - Overview: Student Result and Marksheet Portal engineered for automated marks aggregation, CGPA calculation, and result distribution.
+
+4. FocusFlow
+   - Stack   : Web Extensions API, JavaScript
+   - Overview: Browser productivity extension for focus tracking and distraction management.
+
+5. LocalBazaar / LocalPro
+   - Overview: Hyperlocal marketplace architecture and service provider directory planned for Jalgaon district.
+
+6. Womtra
+   - Overview: Multi-role e-commerce marketplace platform architecture.
+
+7. Home Share
+   - Stack   : React.js, Node.js, Express.js, MongoDB, Bootstrap
+   - Overview: Property listing and rental platform with JWT session management, full CRUD RESTful APIs, and optimized MongoDB queries.
+
+[JOB SEARCH & CAREER STRATEGY]
+- Target Roles       : Junior Developer / Full Stack Developer / React.js Developer
+- Active Platforms   : LinkedIn, Naukri, Wellfound, Unstop
+- Career Approach    : Dual-track strategy balancing rapid client freelance delivery with enterprise software engineering placements.
+- Interview Journey  : Selected for Accenture technical interview; actively applying across top engineering companies.
+
+[ACADEMIC PROFILE]
+
+1. Bachelor of Technology (B.Tech - Artificial Intelligence / Computer Science)
+   - Degree Status    : Successfully Completed (Graduated)
+   - Program Duration : 2022 to 2026 (4-Year Under Graduate Programme)
+   - Degree Issuing   : Kavayitri Bahinabai Chaudhari North Maharashtra University (KBC NMU), Jalgaon
+   - College / Inst.  : G H Raisoni College of Engineering and Management, Jalgaon (Autonomous)
+   - Provisional Cert : Ref No. 2025-2026/GHRCEM/EXAM/PC/0145
+   - Cert Issue Date  : 03-08-2026
+   - Final CGPA       : 7.79 / 10 (Completed in Summer 2026)[cite: 1]
+   - Registration No. : 22G0005AIG1057
+   - PRN / Enroll No. : 2022100101010928
+   - College Roll No. : 22111032
+   - MHT-CET App ID   : EN22130546 / 221253932 (CET Score: 22.4871071 PCM Percentile)
+   - Semester Breakdown (Recorded Grade Cards):
+     * Semester I   (Winter 2022-23) : Credits: 18 | SGPA: 7.94 | CGPA: 7.94
+     * Semester II  (Summer 2022-23) : Credits: 19 | SGPA: 8.21 | CGPA: 8.08
+     * Semester III (Winter 2023-24) : Credits: 22 | SGPA: 8.14 | CGPA: 8.10
+     * Semester IV  (Summer 2023-24) : Credits: 25 | SGPA: 7.48 | CGPA: 7.92
+     * Semester V   (Winter 2024)    : Credits: 22 | SGPA: 6.14 | CGPA: 7.55
+     * Semester VI  (Summer 2025)    : Credits: 21 | SGPA: 8.24 | CGPA: 7.66
+     * Final Degree (Summer 2026)    : Final Cumulative CGPA: 7.79[cite: 1]
+
+2. Higher Secondary Certificate (Class XII / HSC - Science Stream)
+   - Board            : Maharashtra State Board (Nashik Divisional Board)
+   - Junior College   : Shri D. L. Hindi Junior College, Bhusawal
+   - Examination Date : March 2022[cite: 1]
+   - Seat No.         : S058734 | Centre No: 0750
+   - Certificate / Sr : H227103753 (Sr. No. 103753)
+   - Marks Obtained   : 423 / 600 (70.50% / 70% on Resume) - Result: Pass[cite: 1]
+   - Subject Breakdown:
+     * English                   : 051 / 100
+     * Mathematics & Statistics  : 085 / 100
+     * Physics                   : 070 / 100
+     * Chemistry                 : 079 / 100
+     * Computer Science          : 138 / 200
+     * Env. Edu & Water Security : Grade A
+     * Health & Physical Edu     : Grade A
+   - Junior College LC: LC No: 2150 | GR No: 8004 (Leaving Date: 31-05-2022)
+
+3. Secondary School Certificate (Class X / SSC)
+   - Board            : Maharashtra State Board (Nashik Divisional Board)
+   - School Name      : B.Z. Urdu High School & Jr. College, Khadka Road, Bhusawal
+   - Examination Date : March 2020 (Cert Date: 29th July 2020 / Resume: May 2020)[cite: 1]
+   - Seat No.         : D174071 | Centre No: 3218
+   - Certificate No.  : CS207127217 (Sr. No. 127217)
+   - Statement No.    : S207136409 (Sr. No. 136409)
+   - Marks Obtained   : 448 / 500 (89.60%) - Result: Pass with Distinction[cite: 1]
+   - Subject Breakdown:
+     * Urdu (1st Lang)           : 92 / 100
+     * Marathi-Hindi (2/3 Lang)  : 70 / 100
+     * English (2/3 Lang)        : 90 / 100
+     * Mathematics               : 87 / 100
+     * Science & Technology      : 94 / 100
+     * Social Sciences           : 85 / 100
+     * Health & Physical Edu     : Grade A
+     * Scouting / Guiding        : Grade A
+     * Self Development & Art    : Grade A
+   - High School LC   : LC No: 778 | GR No: 11537 (Leaving Date: 31-05-2020)
+================================================================================

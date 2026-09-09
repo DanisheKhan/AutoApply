@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "AutoApply Pro - Universal Job Form Filler",
+  "version": "1.0.0",
+  "description": "Autofill job applications across Google Forms, TCS, Infosys, LinkedIn, Naukri, Greenhouse, Lever, and AI firms powered by Gemini AI.",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "AutoApply Pro",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options/options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "assets/resume-data.js",
+        "default-profile.js",
+        "content/heuristics.js",
+        "content/resume-uploader.js",
+        "content/adapters.js",
+        "content/floating-widget.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/floating-widget.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*.png",
+        "content/*.css",
+        "assets/*",
+        "DanishKhan_Resume.pdf"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}

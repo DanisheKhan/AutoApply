@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoApply Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" fill="url(#popup-sp-grad)" />
+            <defs>
+              <linearGradient id="popup-sp-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFFFFF" />
+                <stop offset="1" stop-color="#A1A1AA" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-title">AutoApply <span class="badge-pro">PRO</span></h1>
+          <p class="brand-subtitle">Mohammad Danish Khan</p>
+        </div>
+      </div>
+      <label class="floating-toggle-pill" id="floating-toggle-pill" title="Floating Box: Active (Click to deactivate)">
+        <span class="pulse-dot" id="widget-status-dot"></span>
+        <span class="status-text" id="widget-status-text">Active</span>
+        <input type="checkbox" id="widget-toggle" checked />
+        <span class="toggle-slider"></span>
+      </label>
+    </header>
+
+    <!-- Platform Detection Card -->
+    <div class="card platform-card">
+      <div class="card-header-row">
+        <span class="card-label">CURRENT TAB</span>
+        <span class="badge-tag" id="platform-tag">STANDBY</span>
+      </div>
+      <div class="platform-name-wrap">
+        <span class="platform-name" id="detected-platform">Scanning page...</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-group">
+      <button class="btn btn-primary" id="btn-autofill">
+        <div class="btn-icon-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="btn-text">
+          <strong>1-Click Autofill</strong>
+          <small>Fill fields, marks, CTC & resume</small>
+        </div>
+        <span class="key-shortcut">Alt+Shift+F</span>
+      </button>
+
+      <button class="btn btn-ai" id="btn-ai-fill">
+        <div class="btn-icon-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z"/>
+          </svg>
+        </div>
+        <div class="btn-text">
+          <strong>AI Question Solver</strong>
+          <small>Answer essay prompts with Gemini</small>
+        </div>
+        <div class="btn-action-indicator">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </button>
+
+      <button class="btn btn-resume" id="btn-upload-resume">
+        <div class="btn-icon-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="btn-text">
+          <strong>Upload Resume PDF</strong>
+          <small>Attach DanishKhan_Resume.pdf (340 KB)</small>
+        </div>
+        <div class="btn-action-indicator">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </button>
+    </div>
+
+    <!-- Status Toast / Log -->
+    <div class="status-message" id="status-message">
+      Ready to autofill on this page
+    </div>
+
+    <!-- Footer Links -->
+    <footer class="footer">
+      <button class="link-btn" id="btn-open-options">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Master Bio & Settings</span>
+      </button>
+      <button class="link-btn" id="btn-open-tests">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        <span>Test Suite</span>
+      </button>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

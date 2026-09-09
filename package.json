@@ -1,0 +1,24 @@
+{
+  "name": "autoapply-pro",
+  "version": "1.0.0",
+  "description": "Universal AI-powered job application form autofiller for Google Forms, TCS, Infosys, LinkedIn, Naukri, and Modern ATS.",
+  "main": "background/service-worker.js",
+  "scripts": {
+    "start": "node scripts/test-server.js",
+    "test-server": "node scripts/test-server.js",
+    "package": "node scripts/package-extension.js",
+    "generate-icons": "node generate-icons.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "autofill",
+    "gemini-ai",
+    "job-application",
+    "tcs",
+    "infosys",
+    "google-forms",
+    "linkedin-easy-apply"
+  ],
+  "author": "Mohammad Danish Khan <danishkhan.jsx@gmail.com>",
+  "license": "MIT"
+}

@@ -1,0 +1,124 @@
+/**
+ * AutoApply Pro - Main Content Script Coordinator
+ * Bridges DOM inspection, Profile data, and UI triggers.
+ */
+
+(async function initAutoApply() {
+  console.log("[AutoApply Pro] Content script loaded on:", window.location.href);
+
+  // 1. Fetch Candidate Profile from Storage / Background Worker
+  let candidateProfile = typeof DEFAULT_PROFILE !== 'undefined' ? DEFAULT_PROFILE : null;
+
+  try {
+    const res = await new Promise((resolve) => {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ action: "GET_PROFILE" }, (response) => {
+          if (chrome.runtime.lastError) {
+            resolve({ success: true, profile: candidateProfile });
+          } else {
+            resolve(response || { success: true, profile: candidateProfile });
+          }
+        });
+      } else {
+        resolve({ success: true, profile: candidateProfile });
+      }
+    });
+
+    if (res && res.success && res.profile) {
+      candidateProfile = res.profile;
+    }
+  } catch (e) {
+    console.warn("[AutoApply Pro] Using fallback default profile:", e);
+  }
+
+  if (!candidateProfile && typeof window.DEFAULT_PROFILE !== 'undefined') {
+    candidateProfile = window.DEFAULT_PROFILE;
+  }
+
+  if (!candidateProfile) {
+    console.error("[AutoApply Pro] Unable to load candidate profile.");
+    return;
+  }
+
+  // 2. Handlers for Autofill Actions
+  const handleAutofill = async () => {
+    return await runAutoApply(candidateProfile, { aiAnswers: false });
+  };
+
+  const handleAiFill = async () => {
+    return await runAutoApply(candidateProfile, { aiAnswers: true });
+  };
+
+  // 3. Mount In-Page Floating Widget
+  if (window.self === window.top) {
+    mountFloatingWidget(candidateProfile, handleAutofill, handleAiFill);
+
+    // Initial check from storage
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['floatingWidgetEnabled'], (data) => {
+        if (data && data.floatingWidgetEnabled === false) {
+          const root = document.getElementById('autoapply-pro-root');
+          if (root) root.style.display = 'none';
+        }
+      });
+    }
+  }
+
+  // Listen for storage changes across tabs
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes.floatingWidgetEnabled !== undefined) {
+        const root = document.getElementById('autoapply-pro-root');
+        if (root) {
+          root.style.display = changes.floatingWidgetEnabled.newValue === false ? 'none' : '';
+        }
+      }
+    });
+  }
+
+  // 4. Listen for Messages from Popup or Background
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.action === "SET_WIDGET_VISIBILITY") {
+        const root = document.getElementById('autoapply-pro-root');
+        if (root) {
+          root.style.display = request.enabled ? '' : 'none';
+        }
+        sendResponse({ success: true, enabled: request.enabled });
+        return false;
+      }
+
+      if (request.action === "TRIGGER_AUTOFILL") {
+        handleAutofill().then(res => sendResponse({ success: true, result: res })).catch(err => sendResponse({ success: false, error: err.message }));
+        return true;
+      }
+
+      if (request.action === "TRIGGER_AI_FILL") {
+        handleAiFill().then(res => sendResponse({ success: true, result: res })).catch(err => sendResponse({ success: false, error: err.message }));
+        return true;
+      }
+
+      if (request.action === "TRIGGER_UPLOAD_RESUME") {
+        if (typeof autoUploadResume === 'function') {
+          autoUploadResume().then(res => sendResponse({ success: true, result: res })).catch(err => sendResponse({ success: false, error: err.message }));
+          return true;
+        } else {
+          sendResponse({ success: false, error: "Resume uploader not loaded" });
+          return false;
+        }
+      }
+
+      if (request.action === "GET_PAGE_STATUS") {
+        const root = document.getElementById('autoapply-pro-root');
+        sendResponse({
+          platform: detectCurrentPlatform(),
+          url: window.location.href,
+          title: document.title,
+          widgetVisible: root ? root.style.display !== 'none' : true
+        });
+        return false;
+      }
+    });
+  }
+
+})();

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoApply Pro | Settings</title>
+  <link rel="stylesheet" href="options.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-top">
+        <div class="studio-brand">
+          <svg class="gemini-sparkle" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L14.2 9.8L22 12L14.2 14.2L12 22L9.8 14.2L2 12L9.8 9.8L12 2Z" fill="url(#sparkle-grad)" />
+            <defs>
+              <linearGradient id="sparkle-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#A8C7FA" />
+                <stop offset="0.5" stop-color="#D3E3FD" />
+                <stop offset="1" stop-color="#7CACF8" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="studio-brand-text">AutoApply Pro</span>
+        </div>
+      </div>
+
+      <div class="sidebar-scroll">
+        <div class="section-title">CONFIGURATION</div>
+        <div class="nav-group">
+          <button type="button" class="studio-nav-item active" data-tab="tab-gemini">
+            <svg class="nav-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+            <span class="nav-label">Gemini AI Settings</span>
+          </button>
+        </div>
+
+        <div class="section-title">CANDIDATE PROFILE</div>
+        <div class="nav-group">
+          <button type="button" class="studio-nav-item" data-tab="tab-personal">
+            <svg class="nav-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="nav-label">Personal & IDs</span>
+          </button>
+
+          <button type="button" class="studio-nav-item" data-tab="tab-academics">
+            <svg class="nav-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+            <span class="nav-label">Academic Records</span>
+          </button>
+
+          <button type="button" class="studio-nav-item" data-tab="tab-career">
+            <svg class="nav-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            <span class="nav-label">Career & CTC</span>
+          </button>
+
+          <button type="button" class="studio-nav-item" data-tab="tab-projects">
+            <svg class="nav-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <span class="nav-label">Projects & Resume</span>
+          </button>
+        </div>
+
+        <div class="sidebar-footer-links">
+          <a href="../test-page/index.html" target="_blank" class="footer-link">
+            <span>🧪 Test Suite</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- User Chip -->
+      <div class="sidebar-user">
+        <div class="user-avatar-google">DK</div>
+        <div class="user-info">
+          <span class="user-name">Danish Khan</span>
+          <span class="user-email">danishkhan.jsx@gmail.com</span>
+        </div>
+        <span class="pro-badge">PRO</span>
+      </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="studio-main">
+      <div class="studio-container">
+        <!-- Header with Single Clear Action -->
+        <div class="studio-header">
+          <h1 class="page-title" id="page-title">Gemini AI Settings</h1>
+          <div class="header-actions">
+            <button type="button" class="btn-google-primary" id="btn-save-all">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>Save Changes</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="studio-toast" id="toast-banner"></div>
+
+      <!-- Forms -->
+      <form id="profile-form">
+        <!-- ================= TAB: GEMINI AI ================= -->
+        <div class="tab-pane active" id="tab-gemini">
+          <div class="studio-card">
+            <div class="card-head">
+              <h2 class="card-title">Google Gemini Flash Engine</h2>
+              <p class="card-desc">Powers ultra-fast (< 1s) tailored answers for open-ended screening questions.</p>
+            </div>
+
+            <div class="input-grid-2">
+              <div class="field-item">
+                <label for="gemini-api-key">GEMINI API KEY</label>
+                <div class="input-action-box">
+                  <input type="password" id="gemini-api-key" class="studio-input font-mono">
+                  <button type="button" class="btn-pill-subtle" id="btn-toggle-key">Show</button>
+                  <button type="button" class="btn-pill-action" id="btn-test-key">Test Key</button>
+                </div>
+                <span class="field-caption">Saved locally in your browser storage.</span>
+              </div>
+
+              <div class="field-item">
+                <label for="gemini-model">MODEL ENGINE</label>
+                <select id="gemini-model" class="studio-input font-mono">
+                  <option value="gemini-flash-lite-latest" selected>models/gemini-flash-lite-latest (Ultra-Fast &lt; 1s • Recommended)</option>
+                  <option value="gemini-3.5-flash-lite">models/gemini-3.5-flash-lite (Ultra-Fast)</option>
+                  <option value="gemini-3.7-flash">models/gemini-3.7-flash (Gemini 3.7 Flash)</option>
+                  <option value="gemini-3.6-flash">models/gemini-3.6-flash (Gemini 3.6 Flash)</option>
+                  <option value="gemini-flash-latest">models/gemini-flash-latest</option>
+                </select>
+                <span class="field-caption">Active model responding from Google Generative Language API.</span>
+              </div>
+            </div>
+
+            <div class="field-item" style="margin-top: 16px;">
+              <label for="gemini-custom-instructions">AI INSTRUCTIONS & TONE DIRECTIVES</label>
+              <textarea id="gemini-custom-instructions" rows="3" class="studio-input"></textarea>
+            </div>
+
+            <div class="console-box" id="gemini-test-result">
+              &gt; Gemini Flash-Lite ready. Click "Test Key" to verify live connection.
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB: PERSONAL & CIVIL IDS ================= -->
+        <div class="tab-pane" id="tab-personal">
+          <div class="studio-card">
+            <div class="card-head">
+              <h2 class="card-title">Personal Details</h2>
+              <p class="card-desc">Used across Google Forms, TCS iON, Infosys, and global ATS applications.</p>
+            </div>
+
+            <div class="input-grid-3">
+              <div class="field-item">
+                <label for="personal-fullName">FULL NAME</label>
+                <input type="text" id="personal-fullName" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="personal-shortName">SHORT NAME</label>
+                <input type="text" id="personal-shortName" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="personal-gender">GENDER</label>
+                <select id="personal-gender" class="studio-input">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-grid-3" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="personal-fatherName">FATHER'S NAME</label>
+                <input type="text" id="personal-fatherName" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="personal-motherName">MOTHER'S NAME</label>
+                <input type="text" id="personal-motherName" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="personal-dob">DATE OF BIRTH</label>
+                <input type="date" id="personal-dob" class="studio-input font-mono">
+              </div>
+            </div>
+
+            <div class="input-grid-3" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="personal-email">EMAIL ADDRESS</label>
+                <input type="email" id="personal-email" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="personal-phone">PHONE NUMBER</label>
+                <input type="text" id="personal-phone" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="personal-phonePlain">PHONE (PLAIN 10 DIGITS)</label>
+                <input type="text" id="personal-phonePlain" class="studio-input font-mono">
+              </div>
+            </div>
+          </div>
+
+          <!-- Civil IDs & Credentials -->
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">Government IDs & Portal Registration Credentials</h2>
+            </div>
+
+            <div class="input-grid-4">
+              <div class="field-item">
+                <label for="id-panNumber">PAN NUMBER</label>
+                <input type="text" id="id-panNumber" class="studio-input font-mono uppercase">
+              </div>
+              <div class="field-item">
+                <label for="id-aadhaarNumber">AADHAAR NUMBER</label>
+                <input type="text" id="id-aadhaarNumber" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="id-passportNumber">PASSPORT NUMBER</label>
+                <input type="text" id="id-passportNumber" class="studio-input font-mono uppercase">
+              </div>
+              <div class="field-item">
+                <label for="cred-password">PORTAL PASSWORD</label>
+                <input type="text" id="cred-password" class="studio-input font-mono blue-accent" value="Danishe@1257">
+              </div>
+            </div>
+          </div>
+
+          <!-- Address & Links -->
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">Address & Web Links</h2>
+            </div>
+
+            <div class="input-grid-3">
+              <div class="field-item">
+                <label for="address-city">CITY</label>
+                <input type="text" id="address-city" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="address-state">STATE</label>
+                <input type="text" id="address-state" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="address-pincode">PINCODE</label>
+                <input type="text" id="address-pincode" class="studio-input font-mono">
+              </div>
+            </div>
+
+            <div class="field-item" style="margin-top: 14px;">
+              <label for="address-fullAddress">FULL ADDRESS</label>
+              <textarea id="address-fullAddress" rows="2" class="studio-input"></textarea>
+            </div>
+
+            <div class="input-grid-3" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="links-linkedin">LINKEDIN URL</label>
+                <input type="url" id="links-linkedin" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="links-github">GITHUB URL</label>
+                <input type="url" id="links-github" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="links-portfolio">PORTFOLIO URL</label>
+                <input type="url" id="links-portfolio" class="studio-input font-mono">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB: ACADEMIC RECORDS ================= -->
+        <div class="tab-pane" id="tab-academics">
+          <!-- B.Tech -->
+          <div class="studio-card">
+            <div class="card-head">
+              <h2 class="card-title">Undergraduate Degree — B.Tech (AI & CS)</h2>
+              <p class="card-desc">G H Raisoni College • KBC NMU University • Summer 2026 Graduated</p>
+            </div>
+
+            <div class="input-grid-2">
+              <div class="field-item">
+                <label for="acad-grad-college">COLLEGE NAME</label>
+                <input type="text" id="acad-grad-college" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-grad-university">UNIVERSITY</label>
+                <input type="text" id="acad-grad-university" class="studio-input">
+              </div>
+            </div>
+
+            <div class="input-grid-4" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="acad-grad-degree">DEGREE</label>
+                <input type="text" id="acad-grad-degree" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-grad-branch">BRANCH</label>
+                <input type="text" id="acad-grad-branch" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-grad-cgpa">FINAL CGPA</label>
+                <input type="text" id="acad-grad-cgpa" class="studio-input font-mono blue-accent">
+              </div>
+              <div class="field-item">
+                <label for="acad-grad-passingYear">PASSING YEAR</label>
+                <input type="text" id="acad-grad-passingYear" class="studio-input font-mono">
+              </div>
+            </div>
+
+            <div class="input-grid-2" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="acad-grad-prn">PRN / ENROLLMENT NO</label>
+                <input type="text" id="acad-grad-prn" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="acad-grad-backlogs">ACTIVE BACKLOGS</label>
+                <input type="text" id="acad-grad-backlogs" class="studio-input font-mono">
+              </div>
+            </div>
+          </div>
+
+          <!-- Class 12th -->
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">Class XII (HSC / Junior College) — Science</h2>
+              <p class="card-desc">Shri D. L. Hindi Junior College • Maharashtra State Board • March 2022</p>
+            </div>
+
+            <div class="input-grid-4">
+              <div class="field-item">
+                <label for="acad-12-college">JUNIOR COLLEGE</label>
+                <input type="text" id="acad-12-college" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-12-board">BOARD</label>
+                <input type="text" id="acad-12-board" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-12-percentage">PERCENTAGE (%)</label>
+                <input type="text" id="acad-12-percentage" class="studio-input font-mono blue-accent">
+              </div>
+              <div class="field-item">
+                <label for="acad-12-year">PASSING YEAR</label>
+                <input type="text" id="acad-12-year" class="studio-input font-mono">
+              </div>
+            </div>
+          </div>
+
+          <!-- Class 10th -->
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">Class X (SSC / High School) — Distinction</h2>
+              <p class="card-desc">B.Z. Urdu High School • Maharashtra State Board • March 2020</p>
+            </div>
+
+            <div class="input-grid-4">
+              <div class="field-item">
+                <label for="acad-10-school">HIGH SCHOOL</label>
+                <input type="text" id="acad-10-school" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-10-board">BOARD</label>
+                <input type="text" id="acad-10-board" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="acad-10-percentage">PERCENTAGE (%)</label>
+                <input type="text" id="acad-10-percentage" class="studio-input font-mono blue-accent">
+              </div>
+              <div class="field-item">
+                <label for="acad-10-year">PASSING YEAR</label>
+                <input type="text" id="acad-10-year" class="studio-input font-mono">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB: CAREER & CTC ================= -->
+        <div class="tab-pane" id="tab-career">
+          <div class="studio-card">
+            <div class="card-head">
+              <h2 class="card-title">Career & Compensation</h2>
+              <p class="card-desc">Auto-fills LinkedIn Easy Apply and Naukri questions.</p>
+            </div>
+
+            <div class="input-grid-4">
+              <div class="field-item">
+                <label for="career-currentCtc">CURRENT CTC (LPA)</label>
+                <input type="text" id="career-currentCtc" class="studio-input font-mono">
+              </div>
+              <div class="field-item">
+                <label for="career-expectedCtc">EXPECTED CTC (LPA)</label>
+                <input type="text" id="career-expectedCtc" class="studio-input font-mono blue-accent">
+              </div>
+              <div class="field-item">
+                <label for="career-noticePeriod">NOTICE PERIOD</label>
+                <input type="text" id="career-noticePeriod" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="career-totalExp">TOTAL EXPERIENCE</label>
+                <input type="text" id="career-totalExp" class="studio-input font-mono">
+              </div>
+            </div>
+
+            <div class="input-grid-2" style="margin-top: 14px;">
+              <div class="field-item">
+                <label for="career-currentCompany">CURRENT COMPANY</label>
+                <input type="text" id="career-currentCompany" class="studio-input">
+              </div>
+              <div class="field-item">
+                <label for="career-currentRole">JOB TITLE</label>
+                <input type="text" id="career-currentRole" class="studio-input">
+              </div>
+            </div>
+          </div>
+
+          <!-- Skill Experience Matrix -->
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">LinkedIn Skill Experience Years</h2>
+              <p class="card-desc">Auto-answers "How many years of work experience do you have with [Skill]?"</p>
+            </div>
+
+            <div class="input-grid-4" id="skill-years-container">
+              <!-- Dynamically populated via options.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB: PROJECTS & RESUME ================= -->
+        <div class="tab-pane" id="tab-projects">
+          <!-- Active PDF Resume Card -->
+          <div class="studio-card" style="margin-bottom: 20px;">
+            <div class="card-head">
+              <h2 class="card-title">Active PDF Resume (Auto-Upload)</h2>
+              <p class="card-desc">Automatically attaches to job application file dropzones (GlobalLogic, SmartRecruiters, Greenhouse, Lever, Workday).</p>
+            </div>
+
+            <div class="resume-upload-badge-box">
+              <div class="resume-file-info">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a8c7fa" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <div>
+                  <div class="resume-filename" id="resume-display-name">DanishKhan_Resume.pdf</div>
+                  <div class="resume-filesize font-mono" id="resume-display-size">340.1 KB • PDF • Ready for Auto-Upload</div>
+                </div>
+              </div>
+              <div class="resume-actions">
+                <input type="file" id="resume-file-picker" accept=".pdf" style="display: none;">
+                <button type="button" class="btn-pill-action" id="btn-replace-resume">Update Resume PDF</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="studio-card">
+            <div class="card-head">
+              <h2 class="card-title">Featured Production Projects</h2>
+              <p class="card-desc">Real architectures injected into Gemini's context window.</p>
+            </div>
+
+            <div class="projects-list-clean">
+              <div class="project-clean-item">
+                <div class="p-title-row">
+                  <span class="p-name">1. CodeRace</span>
+                  <span class="p-stack">React • Supabase • PostgreSQL</span>
+                </div>
+                <p class="p-desc">DSA Progress Tracking platform tracking 502 questions across users with streaks, topic progress bars, and a live competitive leaderboard.</p>
+              </div>
+
+              <div class="project-clean-item">
+                <div class="p-title-row">
+                  <span class="p-name">2. Madina Perfumes</span>
+                  <span class="p-stack">React • Vite • Node • Razorpay • Shiprocket</span>
+                </div>
+                <p class="p-desc">Full-featured e-commerce platform with live HMAC webhook payment verification, automated Shiprocket API order fulfillment via Supabase Edge Functions.</p>
+              </div>
+
+              <div class="project-clean-item">
+                <div class="p-title-row">
+                  <span class="p-name">3. Home Share</span>
+                  <span class="p-stack">React • Node • Express • MongoDB</span>
+                </div>
+                <p class="p-desc">Property rental application with JWT auth, CRUD REST APIs, interactive booking flows, and optimized MongoDB query architecture.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="studio-card" style="margin-top: 18px;">
+            <div class="card-head">
+              <h2 class="card-title">Master Resume Raw Context</h2>
+              <p class="card-desc">Full resume context passed to Gemini AI.</p>
+            </div>
+
+            <div class="field-item">
+              <textarea id="master-resume-text" rows="12" class="studio-input font-mono"></textarea>
+            </div>
+          </div>
+        </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assets/resume-data.js"></script>
+  <script src="../default-profile.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,601 @@
+/* ==========================================================================
+   AutoApply Pro - Test Harness Google AI Studio Dark Theme Stylesheet
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  --bg-page: #131314;
+  --bg-card: #1e1f20;
+  --bg-pill: #282a2c;
+  --bg-pill-hover: #37393b;
+  --bg-input: #131314;
+
+  --border: #282a2c;
+  --border-input: #37393b;
+  --border-focus: #a8c7fa;
+
+  --text-primary: #e3e3e3;
+  --text-secondary: #c4c7c5;
+  --text-muted: #8e918f;
+
+  --blue-primary: #a8c7fa;
+  --blue-hover: #d3e3fd;
+  --green-accent: #6dd58c;
+
+  --font-google: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+}
+
+/* Custom Sleek Dark Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d2f31;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444746;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #2d2f31 transparent;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-google);
+  font-size: 13.5px;
+  line-height: 1.5;
+  padding: 36px 24px 100px 24px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.test-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Banner */
+.test-hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.test-hero h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-primary);
+}
+
+.test-hero p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.instructions-callout {
+  background: rgba(168, 199, 250, 0.08);
+  border: 1px solid rgba(168, 199, 250, 0.25);
+  padding: 12px 20px;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  color: var(--blue-primary);
+  margin-top: 16px;
+  display: inline-block;
+  text-align: center;
+}
+
+/* Test Tabs */
+.tabs-nav {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  background-color: var(--bg-pill);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Common Form Cards */
+.form-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
+.form-card-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 18px;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+select,
+textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+/* Google Forms Mimic Styles */
+.gf-listitem {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.M7eMe {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.M7eMe .req {
+  color: #f28b82;
+  margin-left: 2px;
+}
+
+.whsOnd {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-input) !important;
+  border-radius: 8px !important;
+  padding: 10px 14px !important;
+  color: var(--text-primary) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  width: 100% !important;
+}
+
+.whsOnd:focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 1px var(--border-focus) !important;
+}
+
+/* Google Forms Radio Buttons */
+.gf-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+div[role="radio"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  width: fit-content;
+}
+
+div[role="radio"]:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.radio-circle,
+.radio-outer-circle {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #8e918f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, transform 0.15s ease;
+  position: relative;
+}
+
+.radio-circle::after,
+.radio-circle-dot,
+.radio-inner-dot {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: var(--blue-primary, #a8c7fa);
+  border-radius: 50%;
+  transform: scale(0);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+div[role="radio"].selected .radio-circle,
+div[role="radio"][aria-checked="true"] .radio-circle,
+div[role="radio"].selected .radio-outer-circle,
+div[role="radio"][aria-checked="true"] .radio-outer-circle {
+  border-color: var(--blue-primary, #a8c7fa);
+}
+
+div[role="radio"].selected .radio-circle::after,
+div[role="radio"][aria-checked="true"] .radio-circle::after,
+div[role="radio"].selected .radio-circle-dot,
+div[role="radio"][aria-checked="true"] .radio-circle-dot,
+div[role="radio"].selected .radio-inner-dot,
+div[role="radio"][aria-checked="true"] .radio-inner-dot {
+  transform: scale(1);
+}
+
+.gf-radio-label {
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+/* Google Forms Custom Select / Dropdown Listbox */
+.gf-select-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.gf-custom-select,
+div[role="listbox"].gf-custom-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.gf-custom-select:hover {
+  border-color: var(--text-muted);
+}
+
+.gf-custom-select:focus,
+.gf-custom-select[aria-expanded="true"] {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 1px var(--border-focus);
+}
+
+.gf-select-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gf-select-arrow {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.gf-custom-select[aria-expanded="true"] .gf-select-arrow {
+  transform: rotate(180deg);
+}
+
+.gf-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1e1f20;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 4px;
+}
+
+.gf-dropdown-option,
+div[role="option"].gf-dropdown-option {
+  padding: 9px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: background-color 0.12s ease, color 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gf-dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.gf-dropdown-option.selected,
+div[role="option"].selected {
+  background: rgba(168, 199, 250, 0.12);
+  color: var(--blue-primary);
+  font-weight: 500;
+}
+
+/* Google Forms Checkboxes */
+.gf-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+div[role="checkbox"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  width: fit-content;
+}
+
+div[role="checkbox"]:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.checkbox-box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #8e918f;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.check-icon {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.15s ease;
+}
+
+div[role="checkbox"].selected .checkbox-box,
+div[role="checkbox"][aria-checked="true"] .checkbox-box {
+  background-color: var(--blue-primary, #a8c7fa);
+  border-color: var(--blue-primary, #a8c7fa);
+}
+
+div[role="checkbox"].selected .check-icon,
+div[role="checkbox"][aria-checked="true"] .check-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.gf-checkbox-label {
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+/* Table Simulation for TCS iON */
+.tcs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.tcs-table th,
+.tcs-table td {
+  border: 1px solid var(--border-input);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12.5px;
+}
+
+.tcs-table th {
+  background: var(--bg-pill);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.tcs-table input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* ATS Styles */
+.ats-badge {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--bg-pill);
+  border: 1px solid var(--border-input);
+  color: var(--blue-primary);
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+/* Resume Dropzone Simulator */
+.resume-dropzone-test {
+  border: 2px dashed var(--border-input);
+  background: var(--bg-page);
+  border-radius: 10px;
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.resume-dropzone-test:hover {
+  border-color: var(--blue-primary);
+  background: rgba(168, 199, 250, 0.03);
+}
+
+.dropzone-text {
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.dropzone-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.resume-status-pill {
+  margin-top: 10px;
+  background: rgba(109, 213, 140, 0.12);
+  border: 1px solid rgba(109, 213, 140, 0.3);
+  color: var(--green-accent);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Action Controls & Clear Form Button */
+.action-controls {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-test {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-input);
+  color: var(--text-secondary);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-test:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4a4d51;
+  color: var(--text-primary);
+}
+
+.btn-test:active {
+  background: rgba(255, 255, 255, 0.12);
+}

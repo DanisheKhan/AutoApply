@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoApply Pro - Multi-Platform Test Harness</title>
+  <link rel="stylesheet" href="test-form.css">
+</head>
+<body>
+  <div class="test-container">
+    <!-- Hero Header -->
+    <div class="test-hero">
+      <h1>⚡ AutoApply Pro Test Suite</h1>
+      <p>Simulate and test 1-click autofill across Google Forms, TCS iON, Infosys, and Modern Tech ATS.</p>
+      <div class="instructions-callout">
+        💡 <strong>How to test:</strong> Click the floating <strong>⚡ Autofill</strong> button at the bottom-right (or press <code>Alt+Shift+F</code>) to fill standard fields, or <strong>✨ AI Fill</strong> to generate answers with Gemini!
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button type="button" class="tab-btn active" data-target="tab-google">📄 1. Google Forms Simulator</button>
+      <button type="button" class="tab-btn" data-target="tab-enterprise">🏢 2. TCS / Infosys Enterprise</button>
+      <button type="button" class="tab-btn" data-target="tab-modern">🚀 3. Modern Tech ATS & AI Firms</button>
+    </div>
+
+    <!-- ================= 1. GOOGLE FORMS SIMULATOR ================= -->
+    <div class="tab-content active" id="tab-google">
+      <form id="google-form-mock">
+        <!-- Question 1: Full Name -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Full Name *</div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="Your answer">
+        </div>
+
+        <!-- Question 2: Email -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Email Address *</div>
+          <input type="email" class="whsOnd gf-input-underline" placeholder="Your email">
+        </div>
+
+        <!-- Question 3: Phone -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Mobile Phone Number *</div>
+          <input type="tel" class="whsOnd gf-input-underline" placeholder="Your phone number">
+        </div>
+
+        <!-- Question 4: Undergrad CGPA -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Graduation / B.Tech CGPA (out of 10) *</div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="e.g. 7.79">
+        </div>
+
+        <!-- Question 5: Radio - Gender -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Gender *</div>
+          <div class="gf-radio-group">
+            <div role="radio" aria-label="Male" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Male</span>
+            </div>
+            <div role="radio" aria-label="Female" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Female</span>
+            </div>
+            <div role="radio" aria-label="Prefer not to say" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Prefer not to say</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 6: Dropdown - Highest Qualification -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Select your Highest Qualification / Degree *</div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="B.Tech" tabindex="0" class="gf-dropdown-option">B.Tech / Bachelor of Technology</div>
+              <div role="option" data-value="M.Tech" tabindex="0" class="gf-dropdown-option">M.Tech / Master of Technology</div>
+              <div role="option" data-value="BCA" tabindex="0" class="gf-dropdown-option">BCA / Computer Applications</div>
+              <div role="option" data-value="MCA" tabindex="0" class="gf-dropdown-option">MCA / Master of Computer Applications</div>
+              <div role="option" data-value="Diploma" tabindex="0" class="gf-dropdown-option">Diploma in Engineering</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 7: Dropdown - Residential State -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Residential State / Region *</div>
+          <div class="gf-select-container">
+            <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
+              <span class="gf-select-text">Choose</span>
+              <svg class="gf-select-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="gf-dropdown-menu" style="display: none;">
+              <div role="option" data-value="Maharashtra" tabindex="0" class="gf-dropdown-option">Maharashtra</div>
+              <div role="option" data-value="Karnataka" tabindex="0" class="gf-dropdown-option">Karnataka</div>
+              <div role="option" data-value="Delhi NCR" tabindex="0" class="gf-dropdown-option">Delhi NCR</div>
+              <div role="option" data-value="Telangana" tabindex="0" class="gf-dropdown-option">Telangana</div>
+              <div role="option" data-value="Tamil Nadu" tabindex="0" class="gf-dropdown-option">Tamil Nadu</div>
+              <div role="option" data-value="Other" tabindex="0" class="gf-dropdown-option">Other</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 8: Radio - Work Authorization -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Are you legally authorized to work in India? *</div>
+          <div class="gf-radio-group">
+            <div role="radio" aria-label="Yes" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Yes</span>
+            </div>
+            <div role="radio" aria-label="No" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">No</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 9: Radio - Backlogs -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Do you currently have any active backlogs? *</div>
+          <div class="gf-radio-group">
+            <div role="radio" aria-label="No, zero backlogs" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">No, zero backlogs</span>
+            </div>
+            <div role="radio" aria-label="Yes" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Yes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 10: Checkboxes - Tech Stack -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Primary Technical Skills (Select all that apply)</div>
+          <div class="gf-checkbox-group">
+            <div role="checkbox" aria-label="React.js" aria-checked="false" tabindex="0">
+              <span class="checkbox-box"><svg class="check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#131314" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              <span class="gf-checkbox-label">React.js</span>
+            </div>
+            <div role="checkbox" aria-label="Node.js & Express" aria-checked="false" tabindex="0">
+              <span class="checkbox-box"><svg class="check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#131314" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              <span class="gf-checkbox-label">Node.js & Express</span>
+            </div>
+            <div role="checkbox" aria-label="JavaScript (ES6+)" aria-checked="false" tabindex="0">
+              <span class="checkbox-box"><svg class="check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#131314" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              <span class="gf-checkbox-label">JavaScript (ES6+)</span>
+            </div>
+            <div role="checkbox" aria-label="Java & DSA" aria-checked="false" tabindex="0">
+              <span class="checkbox-box"><svg class="check-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#131314" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              <span class="gf-checkbox-label">Java & DSA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 11: AI Open-ended Essay -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Why do you want to join our engineering team and what makes you passionate about web development? (AI Question)</div>
+          <textarea class="KHxj8b" rows="4" placeholder="Your answer... (Click '✨ AI Fill' to answer automatically with Gemini)"></textarea>
+        </div>
+
+        <div class="action-controls">
+          <button type="button" class="btn-test btn-test-clear" id="btn-clear-google">Clear Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ================= 2. TCS / INFOSYS ENTERPRISE SIMULATOR ================= -->
+    <div class="tab-content" id="tab-enterprise">
+      <form id="enterprise-form-mock">
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Candidate Identification & Personal Particulars</span>
+            <span style="font-size: 11px; color: var(--text-muted);">TCS iON / NextStep Schema</span>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="tcs-fullname">Full Name (As on Certificate)</label>
+              <input type="text" id="tcs-fullname" name="applicant_name">
+            </div>
+            <div class="form-group">
+              <label for="tcs-father">Father's Name</label>
+              <input type="text" id="tcs-father" name="father_name">
+            </div>
+            <div class="form-group">
+              <label for="tcs-mother">Mother's Name</label>
+              <input type="text" id="tcs-mother" name="mother_name">
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="tcs-dob">Date of Birth</label>
+              <input type="date" id="tcs-dob" name="birth_date">
+            </div>
+            <div class="form-group">
+              <label for="tcs-gender">Gender</label>
+              <select id="tcs-gender" name="gender">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tcs-category">Category</label>
+              <input type="text" id="tcs-category" name="caste_category">
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="tcs-pan">PAN Number</label>
+              <input type="text" id="tcs-pan" name="pan_number" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label for="tcs-aadhaar">Aadhaar Card No</label>
+              <input type="text" id="tcs-aadhaar" name="aadhaar_number">
+            </div>
+            <div class="form-group">
+              <label for="tcs-passport">Passport Number</label>
+              <input type="text" id="tcs-passport" name="passport_number" style="text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="tcs-city">City</label>
+              <input type="text" id="tcs-city" name="residential_city">
+            </div>
+            <div class="form-group">
+              <label for="tcs-state">State</label>
+              <input type="text" id="tcs-state" name="state_region">
+            </div>
+            <div class="form-group">
+              <label for="tcs-pin">Pincode</label>
+              <input type="text" id="tcs-pin" name="pincode">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="tcs-password">Set Portal Password</label>
+              <input type="password" id="tcs-password" name="portal_password" placeholder="Create account password">
+            </div>
+            <div class="form-group">
+              <label for="tcs-confirm-password">Confirm Portal Password</label>
+              <input type="password" id="tcs-confirm-password" name="confirm_password" placeholder="Re-enter password">
+            </div>
+          </div>
+        </div>
+
+        <!-- Academic Marks Table -->
+        <div class="form-card">
+          <div class="form-card-title">Academic Qualifications & Percentage Record</div>
+
+          <table class="tcs-table">
+            <thead>
+              <tr>
+                <th>Standard</th>
+                <th>Institution Name</th>
+                <th>Board / University</th>
+                <th>Passing Year</th>
+                <th>Percentage / CGPA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>10th / SSC</strong></td>
+                <td><input type="text" name="10th_school" placeholder="School name"></td>
+                <td><input type="text" name="10th_board" placeholder="Board name"></td>
+                <td><input type="text" name="10th_passing_year" placeholder="Year"></td>
+                <td><input type="text" name="10th_percentage" placeholder="Percentage (%)"></td>
+              </tr>
+              <tr>
+                <td><strong>12th / HSC</strong></td>
+                <td><input type="text" name="12th_college" placeholder="College name"></td>
+                <td><input type="text" name="12th_board" placeholder="Board name"></td>
+                <td><input type="text" name="12th_passing_year" placeholder="Year"></td>
+                <td><input type="text" name="12th_percentage" placeholder="Percentage (%)"></td>
+              </tr>
+              <tr>
+                <td><strong>B.Tech / Degree</strong></td>
+                <td><input type="text" name="graduation_college" placeholder="College name"></td>
+                <td><input type="text" name="graduation_university" placeholder="University"></td>
+                <td><input type="text" name="graduation_year" placeholder="Year"></td>
+                <td><input type="text" name="graduation_cgpa" placeholder="CGPA"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="form-grid-3" style="margin-top: 16px;">
+            <div class="form-group">
+              <label for="tcs-prn">PRN / Registration Number</label>
+              <input type="text" id="tcs-prn" name="prn_number">
+            </div>
+            <div class="form-group">
+              <label for="tcs-backlogs">Active Backlogs</label>
+              <input type="text" id="tcs-backlogs" name="active_backlogs">
+            </div>
+            <div class="form-group">
+              <label for="tcs-notice">Notice Period</label>
+              <input type="text" id="tcs-notice" name="notice_period">
+            </div>
+          </div>
+        </div>
+
+        <div class="action-controls">
+          <button type="button" class="btn-test btn-test-clear" id="btn-clear-enterprise">Clear Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ================= 3. MODERN TECH ATS SIMULATOR ================= -->
+    <div class="tab-content" id="tab-modern">
+      <form id="modern-ats-mock">
+        <!-- Resume Upload (SmartRecruiters / GlobalLogic / Greenhouse style) -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Upload Resume / Share LinkedIn Profile *</span>
+            <span class="ats-badge">SMARTRECRUITERS / GREENHOUSE / ATS</span>
+          </div>
+
+          <div class="resume-dropzone-test" id="test-resume-dropzone">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#a8c7fa" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <p class="dropzone-text"><strong>Drag and drop your file here</strong> or click here to upload</p>
+            <p class="dropzone-sub">Only .docx, .rtf, .pdf formats allowed to a max size of 5 MB.</p>
+            <input type="file" id="test-resume-input" name="resume" accept=".pdf,.doc,.docx" style="display: none;">
+            <div id="test-resume-status" class="resume-status-pill" style="display: none;"></div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Software Engineer Application</span>
+            <span style="font-size: 11px; color: var(--text-muted);">Greenhouse / Lever Style</span>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="first_name">First Name *</label>
+              <input type="text" id="first_name" name="first_name">
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name *</label>
+              <input type="text" id="last_name" name="last_name">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input type="email" id="email" name="email">
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone *</label>
+              <input type="tel" id="phone" name="phone">
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="linkedin">LinkedIn Profile URL</label>
+              <input type="url" id="linkedin" name="job_application[answers_attributes][0][value]">
+            </div>
+            <div class="form-group">
+              <label for="github">GitHub Profile URL</label>
+              <input type="url" id="github" name="job_application[answers_attributes][1][value]">
+            </div>
+            <div class="form-group">
+              <label for="portfolio">Portfolio Website</label>
+              <input type="url" id="portfolio" name="job_application[answers_attributes][2][value]">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="current-company">Current Company</label>
+              <input type="text" id="current-company" name="company">
+            </div>
+            <div class="form-group">
+              <label for="expected-ctc">Salary Expectation (Expected CTC)</label>
+              <input type="text" id="expected-ctc" name="expected_salary">
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Screening Questions -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Employer Screening Questions</span>
+            <span style="font-size: 11px; color: #F59E0B;">✨ AI Candidate Prompts</span>
+          </div>
+
+          <div class="form-group">
+            <label for="q1">Why do you want to join our engineering team and how does your tech stack match our stack? (AI Question)</label>
+            <textarea id="q1" rows="4" placeholder="Click '✨ AI Fill' to answer automatically..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="q2">Describe a technical project you built (such as CodeRace or Madina Perfumes) and the key engineering challenges you solved. (AI Question)</label>
+            <textarea id="q2" rows="4" placeholder="Click '✨ AI Fill' to answer automatically..."></textarea>
+          </div>
+        </div>
+
+        <div class="action-controls">
+          <button type="button" class="btn-test btn-test-clear" id="btn-clear-modern">Clear Form</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="test-page.js"></script>
+
+  <!-- Load Extension Scripts for Local Testing without Extension Installed -->
+  <script src="../assets/resume-data.js"></script>
+  <script src="../default-profile.js"></script>
+  <script src="../background/gemini-client.js"></script>
+  <script src="../content/heuristics.js"></script>
+  <script src="../content/resume-uploader.js"></script>
+  <script src="../content/adapters.js"></script>
+  <script src="../content/floating-widget.js"></script>
+  <script src="../content/content.js"></script>
+</body>
+</html>
