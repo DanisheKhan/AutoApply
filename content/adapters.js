@@ -82,6 +82,39 @@ function setNativeCheckboxOrRadio(element, shouldCheck = true) {
   return true;
 }
 
+// 3. Native Radio Group Matcher
+function fillNativeRadioGroup(radioInput, targetValue) {
+  if (!radioInput || !radioInput.name || !targetValue) return false;
+  const form = radioInput.form || document;
+  let group;
+  try {
+    group = form.querySelectorAll(`input[type="radio"][name="${CSS.escape(radioInput.name)}"]`);
+  } catch (e) {
+    group = form.querySelectorAll(`input[type="radio"]`);
+  }
+  
+  const tLower = targetValue.toString().toLowerCase();
+  const isTargetNegative = /^(0|no|false|none|nil|zero)$/i.test(tLower);
+  const isTargetPositive = /^(1|yes|true|authorized|eligible|agree)$/i.test(tLower);
+
+  for (const r of group) {
+    const rLabel = (r.getAttribute('aria-label') || r.value || getElementLabel(r) || '').toLowerCase();
+    const isRadioNegative = /\b(no|not|false|none|zero|0|nil)\b/i.test(rLabel);
+    const isRadioPositive = /\b(yes|authorized|eligible|true|agree)\b/i.test(rLabel);
+
+    let isMatch = rLabel.includes(tLower) || tLower.includes(rLabel);
+    if (isTargetPositive && isRadioPositive) isMatch = true;
+    if (isTargetNegative && isRadioNegative) isMatch = true;
+    if (tLower === 'male' && /\b(male|man)\b/i.test(rLabel)) isMatch = true;
+    if (tLower === 'female' && /\b(female|woman)\b/i.test(rLabel)) isMatch = true;
+
+    if (isMatch) {
+      return setNativeCheckboxOrRadio(r, true);
+    }
+  }
+  return false;
+}
+
 function highlightFilledElement(element) {
   if (!element) return;
   const originalTransition = element.style.transition;
@@ -145,6 +178,9 @@ function detectCurrentPlatform() {
   }
   if (document.getElementById('modern-ats-mock') && document.getElementById('tab-modern')?.classList.contains('active')) {
     return 'Modern Tech ATS';
+  }
+  if (document.getElementById('edgecases-form-mock') && document.getElementById('tab-edgecases')?.classList.contains('active')) {
+    return 'Form Sandbox & Edge Cases';
   }
 
   return 'Generic Form';
@@ -227,6 +263,17 @@ function matchValueFromProfile(element, profile) {
   // Direct fallback for HTML password inputs
   if (element && element.type === 'password') {
     return profile.credentials?.defaultPassword || profile.personal?.password || "Danishe@1257";
+  }
+
+  // Dynamic skill years experience matcher
+  if (profile.skillYears && typeof profile.skillYears === 'object') {
+    const lLower = labelText.toLowerCase();
+    for (const [skillName, years] of Object.entries(profile.skillYears)) {
+      const skillRegex = new RegExp(`\\b${skillName.replace(/[.+]/g, '\\$&')}\\b`, 'i');
+      if (skillRegex.test(lLower)) {
+        return String(years);
+      }
+    }
   }
 
   return null;
@@ -413,10 +460,16 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
         const radioLabel = (radio.getAttribute('aria-label') || radio.getAttribute('data-value') || radio.innerText || '').trim().toLowerCase();
         const tLower = targetValue.toString().toLowerCase();
 
+        const isTargetNegative = /^(0|no|false|none|nil|zero)$/i.test(tLower);
+        const isRadioNegative = /\b(no|not|false|none|zero|0|nil)\b/i.test(radioLabel);
+        const isTargetPositive = /^(1|yes|true|authorized|eligible|agree)$/i.test(tLower);
+        const isRadioPositive = /\b(yes|authorized|eligible|true|agree)\b/i.test(radioLabel);
+
         let isMatch = radioLabel.includes(tLower) || tLower.includes(radioLabel);
-        if (tLower === 'yes' && /\b(yes|authorized|eligible|true|agree)\b/i.test(radioLabel)) isMatch = true;
-        if (tLower === 'no' && /\b(no|not|false|none|zero|0)\b/i.test(radioLabel)) isMatch = true;
+        if (isTargetPositive && isRadioPositive) isMatch = true;
+        if (isTargetNegative && isRadioNegative) isMatch = true;
         if (tLower === 'male' && /\b(male|man)\b/i.test(radioLabel)) isMatch = true;
+        if (tLower === 'female' && /\b(female|woman)\b/i.test(radioLabel)) isMatch = true;
 
         if (isMatch) {
           const group = radio.closest('.gf-radio-group') || item;
@@ -503,8 +556,10 @@ async function fillTcsInfosysEnterprise(profile, options = { aiAnswers: false })
     if (matchedVal !== null && matchedVal !== undefined) {
       if (tag === 'select') {
         if (fillCustomComboboxOrSelect(el, matchedVal)) filledCount++;
-      } else if (el.type === 'checkbox' || el.type === 'radio') {
-        const isAffirmative = /yes|true|1|male|agree/i.test(matchedVal.toString());
+      } else if (el.type === 'radio') {
+        if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
+      } else if (el.type === 'checkbox') {
+        const isAffirmative = /yes|true|1|agree/i.test(matchedVal.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, matchedVal)) filledCount++;
@@ -552,8 +607,10 @@ async function fillLinkedInEasyApply(profile, options = { aiAnswers: false }) {
     if (val && !el.value) {
       if (el.tagName.toLowerCase() === 'select') {
         if (fillCustomComboboxOrSelect(el, val)) filledCount++;
-      } else if (el.type === 'radio' || el.type === 'checkbox') {
-        const isAffirmative = /yes|true|1|male|agree/i.test(val.toString());
+      } else if (el.type === 'radio') {
+        if (fillNativeRadioGroup(el, val)) filledCount++;
+      } else if (el.type === 'checkbox') {
+        const isAffirmative = /yes|true|1|agree/i.test(val.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, val)) filledCount++;
@@ -608,8 +665,10 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
     if (matchedVal !== null && matchedVal !== undefined) {
       if (tag === 'select' || el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox') {
         if (fillCustomComboboxOrSelect(el, matchedVal)) filledCount++;
-      } else if (el.type === 'checkbox' || el.type === 'radio') {
-        const isAffirmative = /yes|true|1|male|agree/i.test(matchedVal.toString());
+      } else if (el.type === 'radio') {
+        if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
+      } else if (el.type === 'checkbox') {
+        const isAffirmative = /yes|true|1|agree/i.test(matchedVal.toString());
         if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
       } else {
         if (setNativeValue(el, matchedVal)) filledCount++;

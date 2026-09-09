@@ -22,6 +22,7 @@
       <button type="button" class="tab-btn active" data-target="tab-google">📄 1. Google Forms Simulator</button>
       <button type="button" class="tab-btn" data-target="tab-enterprise">🏢 2. TCS / Infosys Enterprise</button>
       <button type="button" class="tab-btn" data-target="tab-modern">🚀 3. Modern Tech ATS & AI Firms</button>
+      <button type="button" class="tab-btn" data-target="tab-edgecases">⚡ 4. Layouts & Edge Cases Sandbox</button>
     </div>
 
     <!-- ================= 1. GOOGLE FORMS SIMULATOR ================= -->
@@ -29,31 +30,43 @@
       <form id="google-form-mock">
         <!-- Question 1: Full Name -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Full Name *</div>
+          <div class="M7eMe">Full Name <span class="req">*</span></div>
           <input type="text" class="whsOnd gf-input-underline" placeholder="Your answer">
         </div>
 
         <!-- Question 2: Email -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Email Address *</div>
+          <div class="M7eMe">Email Address <span class="req">*</span></div>
           <input type="email" class="whsOnd gf-input-underline" placeholder="Your email">
         </div>
 
         <!-- Question 3: Phone -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Mobile Phone Number *</div>
-          <input type="tel" class="whsOnd gf-input-underline" placeholder="Your phone number">
+          <div class="M7eMe">Mobile Phone Number <span class="req">*</span></div>
+          <input type="tel" class="whsOnd gf-input-underline" placeholder="Your 10-digit phone number">
         </div>
 
-        <!-- Question 4: Undergrad CGPA -->
+        <!-- Question 4: Date of Birth -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Graduation / B.Tech CGPA (out of 10) *</div>
+          <div class="M7eMe">Date of Birth (DD/MM/YYYY) <span class="req">*</span></div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="e.g. 01/06/2005">
+        </div>
+
+        <!-- Question 5: Current City -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Current Residential City <span class="req">*</span></div>
+          <input type="text" class="whsOnd gf-input-underline" placeholder="e.g. Bhusawal / Pune">
+        </div>
+
+        <!-- Question 6: Undergrad CGPA -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Graduation / B.Tech CGPA (out of 10) <span class="req">*</span></div>
           <input type="text" class="whsOnd gf-input-underline" placeholder="e.g. 7.79">
         </div>
 
-        <!-- Question 5: Radio - Gender -->
+        <!-- Question 7: Radio - Gender -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Gender *</div>
+          <div class="M7eMe">Gender <span class="req">*</span></div>
           <div class="gf-radio-group">
             <div role="radio" aria-label="Male" aria-checked="false" tabindex="0">
               <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
@@ -70,9 +83,9 @@
           </div>
         </div>
 
-        <!-- Question 6: Dropdown - Highest Qualification -->
+        <!-- Question 8: Dropdown - Highest Qualification -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Select your Highest Qualification / Degree *</div>
+          <div class="M7eMe">Select your Highest Qualification / Degree <span class="req">*</span></div>
           <div class="gf-select-container">
             <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
               <span class="gf-select-text">Choose</span>
@@ -88,9 +101,9 @@
           </div>
         </div>
 
-        <!-- Question 7: Dropdown - Residential State -->
+        <!-- Question 9: Dropdown - Residential State -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Residential State / Region *</div>
+          <div class="M7eMe">Residential State / Region <span class="req">*</span></div>
           <div class="gf-select-container">
             <div role="listbox" aria-expanded="false" tabindex="0" class="gf-custom-select" data-placeholder="Choose">
               <span class="gf-select-text">Choose</span>
@@ -107,9 +120,9 @@
           </div>
         </div>
 
-        <!-- Question 8: Radio - Work Authorization -->
+        <!-- Question 10: Radio - Work Authorization -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Are you legally authorized to work in India? *</div>
+          <div class="M7eMe">Are you legally authorized to work in India? <span class="req">*</span></div>
           <div class="gf-radio-group">
             <div role="radio" aria-label="Yes" aria-checked="false" tabindex="0">
               <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
@@ -122,9 +135,9 @@
           </div>
         </div>
 
-        <!-- Question 9: Radio - Backlogs -->
+        <!-- Question 11: Radio - Backlogs (Negative Equivalence Match) -->
         <div class="gf-listitem" role="listitem">
-          <div class="M7eMe">Do you currently have any active backlogs? *</div>
+          <div class="M7eMe">Do you currently have any active backlogs? <span class="req">*</span></div>
           <div class="gf-radio-group">
             <div role="radio" aria-label="No, zero backlogs" aria-checked="false" tabindex="0">
               <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
@@ -137,7 +150,52 @@
           </div>
         </div>
 
-        <!-- Question 10: Checkboxes - Tech Stack -->
+        <!-- Question 12: Radio - Willing to Relocate -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Are you willing to relocate to Bangalore / Pune / Hyderabad / Gurgaon? <span class="req">*</span></div>
+          <div class="gf-radio-group">
+            <div role="radio" aria-label="Yes" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Yes, open to relocate</span>
+            </div>
+            <div role="radio" aria-label="No" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">No</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 13: Radio - Notice Period -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Notice Period / Joining Availability <span class="req">*</span></div>
+          <div class="gf-radio-group">
+            <div role="radio" aria-label="Immediate (0 Days)" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">Immediate (0 Days / Available Now)</span>
+            </div>
+            <div role="radio" aria-label="15 Days" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">15 Days</span>
+            </div>
+            <div role="radio" aria-label="30 Days" aria-checked="false" tabindex="0">
+              <span class="radio-outer-circle"><span class="radio-inner-dot"></span></span>
+              <span class="gf-radio-label">30 Days</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Question 14: URLs -->
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">LinkedIn Profile URL <span class="req">*</span></div>
+          <input type="url" class="whsOnd gf-input-underline" placeholder="https://linkedin.com/in/...">
+        </div>
+
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">GitHub Profile URL <span class="req">*</span></div>
+          <input type="url" class="whsOnd gf-input-underline" placeholder="https://github.com/...">
+        </div>
+
+        <!-- Question 15: Checkboxes - Tech Stack -->
         <div class="gf-listitem" role="listitem">
           <div class="M7eMe">Primary Technical Skills (Select all that apply)</div>
           <div class="gf-checkbox-group">
@@ -160,9 +218,14 @@
           </div>
         </div>
 
-        <!-- Question 11: AI Open-ended Essay -->
+        <!-- Question 16: AI Open-ended Essay -->
         <div class="gf-listitem" role="listitem">
           <div class="M7eMe">Why do you want to join our engineering team and what makes you passionate about web development? (AI Question)</div>
+          <textarea class="KHxj8b" rows="4" placeholder="Your answer... (Click '✨ AI Fill' to answer automatically with Gemini)"></textarea>
+        </div>
+
+        <div class="gf-listitem" role="listitem">
+          <div class="M7eMe">Describe a key technical project you architected and engineering obstacles you conquered (AI Question)</div>
           <textarea class="KHxj8b" rows="4" placeholder="Your answer... (Click '✨ AI Fill' to answer automatically with Gemini)"></textarea>
         </div>
 
@@ -181,17 +244,33 @@
             <span style="font-size: 11px; color: var(--text-muted);">TCS iON / NextStep Schema</span>
           </div>
 
+          <!-- 3-Field Name Layout: First, Middle, Last -->
           <div class="form-grid-3">
             <div class="form-group">
-              <label for="tcs-fullname">Full Name (As on Certificate)</label>
+              <label for="tcs-fname">First Name <span style="color: #f87171;">*</span></label>
+              <input type="text" id="tcs-fname" name="first_name" placeholder="First Name">
+            </div>
+            <div class="form-group">
+              <label for="tcs-mname">Middle Name</label>
+              <input type="text" id="tcs-mname" name="middle_name" placeholder="Middle Name">
+            </div>
+            <div class="form-group">
+              <label for="tcs-lname">Last Name / Surname <span style="color: #f87171;">*</span></label>
+              <input type="text" id="tcs-lname" name="last_name" placeholder="Last Name">
+            </div>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="tcs-fullname">Full Name (As on Official Certificate)</label>
               <input type="text" id="tcs-fullname" name="applicant_name">
             </div>
             <div class="form-group">
-              <label for="tcs-father">Father's Name</label>
+              <label for="tcs-father">Father's Full Name</label>
               <input type="text" id="tcs-father" name="father_name">
             </div>
             <div class="form-group">
-              <label for="tcs-mother">Mother's Name</label>
+              <label for="tcs-mother">Mother's Full Name</label>
               <input type="text" id="tcs-mother" name="mother_name">
             </div>
           </div>
@@ -210,18 +289,18 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="tcs-category">Category</label>
+              <label for="tcs-category">Caste / Category</label>
               <input type="text" id="tcs-category" name="caste_category">
             </div>
           </div>
 
           <div class="form-grid-3">
             <div class="form-group">
-              <label for="tcs-pan">PAN Number</label>
+              <label for="tcs-pan">PAN Card Number</label>
               <input type="text" id="tcs-pan" name="pan_number" style="text-transform: uppercase;">
             </div>
             <div class="form-group">
-              <label for="tcs-aadhaar">Aadhaar Card No</label>
+              <label for="tcs-aadhaar">Aadhaar Card No (12 Digits)</label>
               <input type="text" id="tcs-aadhaar" name="aadhaar_number">
             </div>
             <div class="form-group">
@@ -232,20 +311,25 @@
 
           <div class="form-grid-3">
             <div class="form-group">
-              <label for="tcs-city">City</label>
+              <label for="tcs-city">Current City</label>
               <input type="text" id="tcs-city" name="residential_city">
             </div>
             <div class="form-group">
-              <label for="tcs-state">State</label>
+              <label for="tcs-state">State / Province</label>
               <input type="text" id="tcs-state" name="state_region">
             </div>
             <div class="form-group">
-              <label for="tcs-pin">Pincode</label>
+              <label for="tcs-pin">PIN Code</label>
               <input type="text" id="tcs-pin" name="pincode">
             </div>
           </div>
 
-          <div class="form-grid-2">
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="tcs-address">Permanent Residential Address</label>
+            <textarea id="tcs-address" name="permanent_address" rows="2"></textarea>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
             <div class="form-group">
               <label for="tcs-password">Set Portal Password</label>
               <input type="password" id="tcs-password" name="portal_password" placeholder="Create account password">
@@ -298,6 +382,10 @@
 
           <div class="form-grid-3" style="margin-top: 16px;">
             <div class="form-group">
+              <label for="tcs-branch">Specialization / Branch</label>
+              <input type="text" id="tcs-branch" name="specialization_branch">
+            </div>
+            <div class="form-group">
               <label for="tcs-prn">PRN / Registration Number</label>
               <input type="text" id="tcs-prn" name="prn_number">
             </div>
@@ -305,9 +393,64 @@
               <label for="tcs-backlogs">Active Backlogs</label>
               <input type="text" id="tcs-backlogs" name="active_backlogs">
             </div>
+          </div>
+        </div>
+
+        <!-- Career & Affirmations Card -->
+        <div class="form-card">
+          <div class="form-card-title">Experience, CTC & Background Affirmations</div>
+
+          <div class="form-grid-3">
             <div class="form-group">
-              <label for="tcs-notice">Notice Period</label>
+              <label for="tcs-comp">Current Company</label>
+              <input type="text" id="tcs-comp" name="current_company">
+            </div>
+            <div class="form-group">
+              <label for="tcs-role">Current Designation</label>
+              <input type="text" id="tcs-role" name="designation">
+            </div>
+            <div class="form-group">
+              <label for="tcs-exp-yrs">Total Experience (Years)</label>
+              <input type="text" id="tcs-exp-yrs" name="total_experience_years">
+            </div>
+          </div>
+
+          <div class="form-grid-3" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="tcs-cur-ctc">Current Annual CTC (in LPA)</label>
+              <input type="text" id="tcs-cur-ctc" name="current_ctc">
+            </div>
+            <div class="form-group">
+              <label for="tcs-exp-ctc">Expected CTC (in LPA)</label>
+              <input type="text" id="tcs-exp-ctc" name="expected_ctc">
+            </div>
+            <div class="form-group">
+              <label for="tcs-notice">Notice Period (Days)</label>
               <input type="text" id="tcs-notice" name="notice_period">
+            </div>
+          </div>
+
+          <div class="form-grid-3" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="tcs-criminal">Any Pending Criminal Cases / Convictions?</label>
+              <select id="tcs-criminal" name="criminal_record">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tcs-passport-hold">Do you hold a valid Indian Passport?</label>
+              <select id="tcs-passport-hold" name="valid_passport">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tcs-shifts">Open to Rotational Shifts / Travel?</label>
+              <select id="tcs-shifts" name="shifts_travel">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
             </div>
           </div>
         </div>
@@ -343,29 +486,34 @@
             <span style="font-size: 11px; color: var(--text-muted);">Greenhouse / Lever Style</span>
           </div>
 
+          <!-- 2-Field Name Layout -->
           <div class="form-grid-2">
             <div class="form-group">
-              <label for="first_name">First Name *</label>
+              <label for="first_name">First Name <span style="color: #f87171;">*</span></label>
               <input type="text" id="first_name" name="first_name">
             </div>
             <div class="form-group">
-              <label for="last_name">Last Name *</label>
+              <label for="last_name">Last Name <span style="color: #f87171;">*</span></label>
               <input type="text" id="last_name" name="last_name">
             </div>
           </div>
 
-          <div class="form-grid-2">
+          <div class="form-grid-3" style="margin-top: 10px;">
             <div class="form-group">
-              <label for="email">Email *</label>
+              <label for="email">Email Address <span style="color: #f87171;">*</span></label>
               <input type="email" id="email" name="email">
             </div>
             <div class="form-group">
-              <label for="phone">Phone *</label>
+              <label for="phone">Mobile Phone <span style="color: #f87171;">*</span></label>
               <input type="tel" id="phone" name="phone">
+            </div>
+            <div class="form-group">
+              <label for="preferred-name">Preferred / Display Name</label>
+              <input type="text" id="preferred-name" name="preferred_name">
             </div>
           </div>
 
-          <div class="form-grid-3">
+          <div class="form-grid-3" style="margin-top: 10px;">
             <div class="form-group">
               <label for="linkedin">LinkedIn Profile URL</label>
               <input type="url" id="linkedin" name="job_application[answers_attributes][0][value]">
@@ -375,19 +523,97 @@
               <input type="url" id="github" name="job_application[answers_attributes][1][value]">
             </div>
             <div class="form-group">
-              <label for="portfolio">Portfolio Website</label>
+              <label for="portfolio">Portfolio Website URL</label>
               <input type="url" id="portfolio" name="job_application[answers_attributes][2][value]">
             </div>
           </div>
 
-          <div class="form-grid-2">
+          <div class="form-grid-3" style="margin-top: 10px;">
             <div class="form-group">
               <label for="current-company">Current Company</label>
               <input type="text" id="current-company" name="company">
             </div>
             <div class="form-group">
-              <label for="expected-ctc">Salary Expectation (Expected CTC)</label>
+              <label for="expected-ctc">Expected Annual CTC (in LPA)</label>
               <input type="text" id="expected-ctc" name="expected_salary">
+            </div>
+            <div class="form-group">
+              <label for="modern-notice">Notice Period</label>
+              <input type="text" id="modern-notice" name="notice_period">
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="work-auth">Are you legally authorized to work in India?</label>
+              <select id="work-auth" name="authorized_to_work">
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="visa-sponsor">Will you now or in the future require visa sponsorship?</label>
+              <select id="visa-sponsor" name="visa_sponsorship">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Self-Reported Technical Skills Experience (Years) -->
+        <div class="form-card">
+          <div class="form-card-title">Self-Reported Technology Experience (Years)</div>
+          <div class="form-grid-4">
+            <div class="form-group">
+              <label for="skill-react">React.js / Frontend</label>
+              <input type="number" id="skill-react" name="years_react" min="0" max="20" placeholder="Years">
+            </div>
+            <div class="form-group">
+              <label for="skill-node">Node.js / Express</label>
+              <input type="number" id="skill-node" name="years_node" min="0" max="20" placeholder="Years">
+            </div>
+            <div class="form-group">
+              <label for="skill-java">Java & DSA</label>
+              <input type="number" id="skill-java" name="years_java" min="0" max="20" placeholder="Years">
+            </div>
+            <div class="form-group">
+              <label for="skill-db">MongoDB / Supabase / SQL</label>
+              <input type="number" id="skill-db" name="years_sql" min="0" max="20" placeholder="Years">
+            </div>
+          </div>
+        </div>
+
+        <!-- Voluntary EEOC Demographics Card -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Voluntary Self-Identification Demographics</span>
+            <span style="font-size: 11px; color: var(--text-muted);">EEOC Standard</span>
+          </div>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="eeoc-gender">Gender Identity</label>
+              <select id="eeoc-gender" name="eeoc_gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Decline">Decline to self-identify</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="eeoc-veteran">Veteran Status</label>
+              <select id="eeoc-veteran" name="eeoc_veteran">
+                <option value="I am not a protected veteran">I am not a protected veteran</option>
+                <option value="I identify as a protected veteran">I identify as a protected veteran</option>
+                <option value="Decline">Decline to self-identify</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="eeoc-disability">Disability / PwD Status</label>
+              <select id="eeoc-disability" name="eeoc_disability">
+                <option value="No, I do not have a disability">No, I do not have a disability</option>
+                <option value="Yes, I have a disability">Yes, I have a disability</option>
+                <option value="Decline">Decline to self-identify</option>
+              </select>
             </div>
           </div>
         </div>
@@ -408,10 +634,112 @@
             <label for="q2">Describe a technical project you built (such as CodeRace or Madina Perfumes) and the key engineering challenges you solved. (AI Question)</label>
             <textarea id="q2" rows="4" placeholder="Click '✨ AI Fill' to answer automatically..."></textarea>
           </div>
+
+          <div class="form-group">
+            <label for="q3">Tell us about a difficult technical obstacle or production bug you encountered and how you diagnosed and fixed it. (AI Question)</label>
+            <textarea id="q3" rows="4" placeholder="Click '✨ AI Fill' to answer automatically..."></textarea>
+          </div>
         </div>
 
         <div class="action-controls">
           <button type="button" class="btn-test btn-test-clear" id="btn-clear-modern">Clear Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ================= 4. LAYOUTS & EDGE CASES SANDBOX ================= -->
+    <div class="tab-content" id="tab-edgecases">
+      <form id="edgecases-form-mock">
+        <!-- Name Layout Tester -->
+        <div class="form-card">
+          <div class="form-card-title">
+            <span>Adaptive Name Resolution Testing (1-Field, 2-Field & 3-Field Layouts)</span>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>Variant A: 3-Field Name</strong> (Should fill: <code>Mohammad Danish</code> | <code>Khan</code> | <code>Naeem Khan</code>)
+            </p>
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="edge-fname">First Name</label>
+                <input type="text" id="edge-fname" name="applicant_fname">
+              </div>
+              <div class="form-group">
+                <label for="edge-mname">Middle Name</label>
+                <input type="text" id="edge-mname" name="applicant_mname">
+              </div>
+              <div class="form-group">
+                <label for="edge-lname">Last Name / Surname</label>
+                <input type="text" id="edge-lname" name="applicant_lname">
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>Variant B: 2-Field Name</strong> (Should fill: <code>Mohammad Danish Khan</code> | <code>Naeem Khan</code>)
+            </p>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label for="edge-fname2">Given Name / First Name</label>
+                <input type="text" id="edge-fname2" name="first_name_2">
+              </div>
+              <div class="form-group">
+                <label for="edge-lname2">Family Name / Last Name</label>
+                <input type="text" id="edge-lname2" name="last_name_2">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px;">
+              <strong>Variant C: 1-Field Full Name</strong> (Should fill: <code>Mohammad Danish Khan Naeem Khan</code>)
+            </p>
+            <div class="form-group">
+              <label for="edge-fullname">Candidate Full Name</label>
+              <input type="text" id="edge-fullname" name="candidate_full_name">
+            </div>
+          </div>
+        </div>
+
+        <!-- Backlog & Boolean Equivalence Stress Tester -->
+        <div class="form-card">
+          <div class="form-card-title">Backlog & Negative Equivalence Stress Testing</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="edge-backlogs-input">Active Backlogs Count (Number)</label>
+              <input type="text" id="edge-backlogs-input" name="active_backlogs_count" placeholder="e.g. 0">
+            </div>
+            <div class="form-group">
+              <label for="edge-backlog-select">Active Standing Arrears (Dropdown)</label>
+              <select id="edge-backlog-select" name="backlogs_dropdown">
+                <option value="">Select option</option>
+                <option value="0">0 (Zero Backlogs)</option>
+                <option value="1">1 Backlog</option>
+                <option value="2+">2+ Backlogs</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTC LPA vs Numeric Digits -->
+        <div class="form-card">
+          <div class="form-card-title">Salary & CTC Currency Format Variations</div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="edge-ctc-lpa">Current CTC in LPA (e.g. 3.5)</label>
+              <input type="text" id="edge-ctc-lpa" name="ctc_lpa" placeholder="e.g. 3.5 LPA">
+            </div>
+            <div class="form-group">
+              <label for="edge-ctc-digits">Expected CTC in INR Digits (e.g. 700000)</label>
+              <input type="text" id="edge-ctc-digits" name="expected_ctc_digits" placeholder="Annual INR in digits">
+            </div>
+          </div>
+        </div>
+
+        <div class="action-controls">
+          <button type="button" class="btn-test btn-test-clear" id="btn-clear-edgecases">Clear Form</button>
         </div>
       </form>
     </div>

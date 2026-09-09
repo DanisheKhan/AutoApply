@@ -31,17 +31,32 @@ const FIELD_PATTERNS = [
   {
     key: "personal.firstName",
     regex: /\b(first[_\s-]?name|fname|given[_\s-]?name|forename|applicant[_\s-]?first[_\s-]?name)\b/i,
-    getValue: (p) => p.personal?.firstName || "Mohammad Danish"
+    getValue: (p, el) => {
+      // Smart detection: if surrounding form/container contains a middle name field, return 3-field first name ("Mohammad Danish")
+      if (el && typeof document !== 'undefined') {
+        const formOrContainer = (typeof el.closest === 'function')
+          ? (el.closest('form') || el.closest('[role="form"]') || el.closest('.form-card') || el.parentElement?.parentElement)
+          : null;
+        if (formOrContainer) {
+          const hasMiddle = formOrContainer.querySelector?.('input[name*="middle" i], input[id*="middle" i], input[placeholder*="middle" i], input[aria-label*="middle" i]') ||
+            Array.from(formOrContainer.querySelectorAll?.('label, div') || []).some(l => /\bmiddle[_\s-]?name\b/i.test(l.textContent || ''));
+          if (hasMiddle) {
+            return p.personal?.firstName3Field || "Mohammad Danish";
+          }
+        }
+      }
+      return p.personal?.firstName2Field || p.personal?.firstName || "Mohammad Danish Khan";
+    }
   },
   {
     key: "personal.middleName",
     regex: /\b(middle[_\s-]?name|mname|second[_\s-]?name)\b/i,
-    getValue: (p) => p.personal?.middleName || "Naeem Khan"
+    getValue: (p) => p.personal?.middleName || "Khan"
   },
   {
     key: "personal.lastName",
     regex: /\b(last[_\s-]?name|lname|surname|family[_\s-]?name|applicant[_\s-]?last[_\s-]?name)\b/i,
-    getValue: (p) => p.personal?.lastName || "Khan"
+    getValue: (p) => p.personal?.lastName || "Naeem Khan"
   },
   {
     key: "personal.email",
@@ -581,6 +596,43 @@ const FIELD_PATTERNS = [
     key: "career.raceEthnicity",
     regex: /\b(race|ethnicity|ethnic[_\s-]?background|hispanic|latino|demographic[_\s-]?race)\b/i,
     getValue: () => "Asian (Indian)"
+  },
+
+  // --- Specific Skill Years Experience ---
+  {
+    key: "skills.react",
+    regex: /\b(years[_\s.-]?of[_\s.-]?react|react([_\s.-]?js)?([_\s.-]*(\/|&)[_\s.-]*)?frontend|years[_\s.-]?react|react([_\s.-]?js)?[_\s.-]?(experience|exp))\b/i,
+    getValue: (p) => String(p.skillYears?.["react"] || p.skillYears?.["react.js"] || 2)
+  },
+  {
+    key: "skills.node",
+    regex: /\b(years[_\s.-]?of[_\s.-]?node|node([_\s.-]?js)?([_\s.-]*(\/|&)[_\s.-]*)?express|years[_\s.-]?node|node([_\s.-]?js)?[_\s.-]?(experience|exp)|years[_\s.-]?express)\b/i,
+    getValue: (p) => String(p.skillYears?.["node.js"] || p.skillYears?.["nodejs"] || p.skillYears?.["express"] || 2)
+  },
+  {
+    key: "skills.java",
+    regex: /\b(years[_\s.-]?of[_\s.-]?java|java([_\s.-]*(&|\/)[_\s.-]*)?dsa|years[_\s.-]?java|java[_\s.-]?(experience|exp))\b/i,
+    getValue: (p) => String(p.skillYears?.["java"] || 3)
+  },
+  {
+    key: "skills.sql_mongodb",
+    regex: /\b(years[_\s.-]?of[_\s.-]?(sql|mongodb|db|database)|(mongo(db)?|supabase|sql)([_\s.-]*(\/|&)[_\s.-]*(supabase|sql|mongo(db)?))+|years[_\s.-]?sql|years[_\s.-]?mongodb|database[_\s.-]?exp)\b/i,
+    getValue: (p) => String(p.skillYears?.["sql"] || p.skillYears?.["mongodb"] || p.skillYears?.["supabase"] || 2)
+  },
+  {
+    key: "skills.javascript_typescript",
+    regex: /\b(years[_\s.-]?of[_\s.-]?(javascript|typescript|js|ts)|(javascript|typescript)[_\s.-]?exp|years[_\s.-]?js|years[_\s.-]?ts)\b/i,
+    getValue: (p) => String(p.skillYears?.["javascript"] || p.skillYears?.["typescript"] || 3)
+  },
+  {
+    key: "skills.python",
+    regex: /\b(years[_\s.-]?of[_\s.-]?python|python[_\s.-]?exp|years[_\s.-]?python)\b/i,
+    getValue: (p) => String(p.skillYears?.["python"] || 1)
+  },
+  {
+    key: "skills.tailwind_css",
+    regex: /\b(years[_\s.-]?of[_\s.-]?(html|css|tailwind)|(html|css|tailwind)[_\s.-]?exp|years[_\s.-]?css|years[_\s.-]?tailwind)\b/i,
+    getValue: (p) => String(p.skillYears?.["tailwind"] || p.skillYears?.["css"] || p.skillYears?.["html"] || 2)
   }
 ];
 

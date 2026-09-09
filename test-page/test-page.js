@@ -52,7 +52,7 @@ function initTestPage() {
   // Handle URL hash navigation (e.g. index.html#tab-enterprise)
   if (window.location.hash) {
     const hash = window.location.hash.replace('#', '');
-    if (['tab-google', 'tab-enterprise', 'tab-modern'].includes(hash)) {
+    if (['tab-google', 'tab-enterprise', 'tab-modern', 'tab-edgecases'].includes(hash)) {
       switchTab(hash);
     }
   }
@@ -181,6 +181,11 @@ function initTestPage() {
   const clearModernBtn = document.getElementById('btn-clear-modern');
   if (clearModernBtn) {
     clearModernBtn.addEventListener('click', () => clearCurrentForm('modern-ats-mock'));
+  }
+
+  const clearEdgecasesBtn = document.getElementById('btn-clear-edgecases');
+  if (clearEdgecasesBtn) {
+    clearEdgecasesBtn.addEventListener('click', () => clearCurrentForm('edgecases-form-mock'));
   }
 
   // 6. Resume file dropzone interactions

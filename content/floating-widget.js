@@ -188,7 +188,19 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
     .aap-toast.thinking { color: #d4d4d8; border-color: rgba(255, 255, 255, 0.25); }
     .aap-toast.success { color: #4ade80; border-color: rgba(74, 222, 128, 0.3); }
     .aap-toast.error { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
-    .aap-collapsed { padding: 6px 12px; }
+    .aap-collapsed {
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .aap-collapsed:hover {
+      border-color: rgba(168, 199, 250, 0.45);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75), 0 0 12px rgba(168, 199, 250, 0.25);
+      transform: scale(1.03);
+    }
+    .aap-collapsed .aap-brand {
+      cursor: pointer;
+    }
     .aap-collapsed .aap-actions,
     .aap-collapsed .aap-platform-badge { display: none; }
   `;
@@ -272,6 +284,7 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
 
   // 1. Draggable Positioning Logic
   let isDragging = false;
+  let hasMoved = false;
   let startX, startY, initialRight, initialBottom;
 
   // Restore saved position
@@ -287,6 +300,7 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
   brand.addEventListener('mousedown', (e) => {
     if (e.target.closest('button')) return;
     isDragging = true;
+    hasMoved = false;
     startX = e.clientX;
     startY = e.clientY;
 
@@ -298,6 +312,10 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
       if (!isDragging) return;
       const deltaX = startX - moveEvent.clientX;
       const deltaY = startY - moveEvent.clientY;
+
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        hasMoved = true;
+      }
 
       let newRight = Math.max(12, Math.min(window.innerWidth - 100, initialRight + deltaX));
       let newBottom = Math.max(12, Math.min(window.innerHeight - 60, initialBottom + deltaY));
@@ -311,14 +329,17 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
 
-      const rect = host.getBoundingClientRect();
-      const pos = {
-        right: window.innerWidth - rect.right,
-        bottom: window.innerHeight - rect.bottom
-      };
-      try {
-        localStorage.setItem('autoapply_widget_pos', JSON.stringify(pos));
-      } catch (e) {}
+      if (hasMoved) {
+        const rect = host.getBoundingClientRect();
+        const pos = {
+          right: window.innerWidth - rect.right,
+          bottom: window.innerHeight - rect.bottom
+        };
+        try {
+          localStorage.setItem('autoapply_widget_pos', JSON.stringify(pos));
+        } catch (e) {}
+        setTimeout(() => { hasMoved = false; }, 80);
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -451,20 +472,47 @@ function mountFloatingWidget(profile, onAutofillClick, onAiFillClick) {
     }
   });
 
-  // 7. Minimize / Expand
+  // 7. Minimize / Expand Logic
   let isCollapsed = false;
-  const toggleCollapse = () => {
-    isCollapsed = !isCollapsed;
+  const toggleCollapse = (forceState) => {
+    if (typeof forceState === 'boolean') {
+      isCollapsed = forceState;
+    } else {
+      isCollapsed = !isCollapsed;
+    }
+
     if (isCollapsed) {
       container.classList.add('aap-collapsed');
+      container.setAttribute('title', 'Click to expand AutoApply HUD');
+      brand.setAttribute('title', 'Click to expand AutoApply HUD');
       toggleBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     } else {
       container.classList.remove('aap-collapsed');
+      container.removeAttribute('title');
+      brand.setAttribute('title', 'Drag to reposition AutoApply HUD');
       toggleBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     }
   };
 
-  toggleBtn.addEventListener('click', toggleCollapse);
+  // Click on the collapsed pill immediately expands it back
+  container.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    if (isCollapsed && !hasMoved) {
+      toggleCollapse(false);
+    }
+  });
+
+  brand.addEventListener('click', (e) => {
+    if (isCollapsed && !hasMoved) {
+      e.stopPropagation();
+      toggleCollapse(false);
+    }
+  });
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCollapse();
+  });
 
   // Hotkey: Alt + Shift + F
   window.addEventListener('keydown', (e) => {

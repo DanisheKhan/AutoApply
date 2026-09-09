@@ -25,9 +25,9 @@ async function runVerification() {
   // 1. Candidate Bio-Data Verification
   console.log("[1] Checking Candidate Master Bio-Data Profile:");
   assert(DEFAULT_PROFILE.personal.fullName.includes("Mohammad Danish Khan"), "Full name verified");
-  assert(DEFAULT_PROFILE.personal.firstName === "Mohammad Danish", "First name verified");
-  assert(DEFAULT_PROFILE.personal.middleName === "Naeem Khan", "Middle name verified");
-  assert(DEFAULT_PROFILE.personal.lastName === "Khan", "Last name verified");
+  assert(DEFAULT_PROFILE.personal.firstName === "Mohammad Danish Khan", "First name verified");
+  assert(DEFAULT_PROFILE.personal.middleName === "Khan", "Middle name verified");
+  assert(DEFAULT_PROFILE.personal.lastName === "Naeem Khan", "Last name verified");
   assert(DEFAULT_PROFILE.personal.gender === "Male", "Gender verified");
   assert(DEFAULT_PROFILE.personal.email === "danishkhan.jsx@gmail.com", "Email verified");
   assert(DEFAULT_PROFILE.personal.phonePlain === "9322990946", "Phone verified (9322990946)");
@@ -134,7 +134,13 @@ async function runVerification() {
     // EEO & Diversity
     { label: "Protected Veteran Status", expectedKey: "career.veteranStatus" },
     { label: "Disability / PwD Status", expectedKey: "career.disabilityStatus" },
-    { label: "Race / Ethnicity", expectedKey: "career.raceEthnicity" }
+    { label: "Race / Ethnicity", expectedKey: "career.raceEthnicity" },
+
+    // Technology Skill Years Experience
+    { label: "REACT.JS / FRONTEND", expectedKey: "skills.react" },
+    { label: "NODE.JS / EXPRESS", expectedKey: "skills.node" },
+    { label: "JAVA & DSA", expectedKey: "skills.java" },
+    { label: "MONGODB / SUPABASE / SQL", expectedKey: "skills.sql_mongodb" }
   ];
 
   testCases.forEach(({ label, expectedKey }) => {
