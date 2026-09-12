@@ -70,7 +70,16 @@ async function runVerification() {
   const testCases = [
     // Personal Identity
     { label: "Full Name *", expectedKey: "personal.fullName" },
+    { label: "COMPLETED NAME *", expectedKey: "personal.fullName" },
+    { label: "COMPLETE NAME", expectedKey: "personal.fullName" },
     { label: "Candidate Name", expectedKey: "personal.fullName" },
+    { label: "Candidate's Name", expectedKey: "personal.fullName" },
+    { label: "Name of Candidate", expectedKey: "personal.fullName" },
+    { label: "Name of the Applicant", expectedKey: "personal.fullName" },
+    { label: "Student Name", expectedKey: "personal.fullName" },
+    { label: "Enter Your Name", expectedKey: "personal.fullName" },
+    { label: "Legal Name", expectedKey: "personal.fullName" },
+    { label: "Name *", expectedKey: "personal.fullName" },
     { label: "First Name", expectedKey: "personal.firstName" },
     { label: "Given Name / Forename", expectedKey: "personal.firstName" },
     { label: "Middle Name", expectedKey: "personal.middleName" },
@@ -284,6 +293,9 @@ async function runVerification() {
   const nameSugg = getFieldSuggestions(null, "Full Name *", DEFAULT_PROFILE);
   assert(nameSugg.primary && nameSugg.primary.value.includes("Mohammad Danish Khan"), `Full Name Suggestion -> "${nameSugg.primary?.value}"`);
   assert(nameSugg.alternatives.length > 0, `Full Name has alternative chips (${nameSugg.alternatives.length})`);
+
+  const completedNameSugg = getFieldSuggestions(null, "COMPLETED NAME *", DEFAULT_PROFILE);
+  assert(completedNameSugg.primary && completedNameSugg.primary.value.includes("Mohammad Danish Khan"), `COMPLETED NAME * Suggestion -> "${completedNameSugg.primary?.value}"`);
 
   const emailSugg = getFieldSuggestions(null, "Email Address *", DEFAULT_PROFILE);
   assert(emailSugg.primary && emailSugg.primary.value === "danishkhan.jsx@gmail.com", `Email Suggestion -> "${emailSugg.primary?.value}"`);

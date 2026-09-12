@@ -8,13 +8,13 @@ const FIELD_PATTERNS = [
   // --- Personal Identity ---
   {
     key: "personal.fullName",
-    regex: /\b(full[_\s-]?name|candidate[_\s-]?name|applicant[_\s-]?name|your[_\s-]?name|complete[_\s-]?name|name[_\s-]?as[_\s-]?per[_\s-]?aadhaar|name[_\s-]?in[_\s-]?full)\b/i,
-    exclude: /first|last|middle|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor/i,
+    regex: /\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)\b/i,
+    exclude: /first|last|middle|given|forename|family|surname|maiden|preferred|nick|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor|project|device|database|table|host|domain|variable|package|branch|course|exam|stream|degree|board|university/i,
     getValue: (p) => p.personal?.fullName || p.personal?.certificateName || "Mohammad Danish Khan"
   },
   {
     key: "personal.certificateName",
-    regex: /\b(certificate[_\s-]?name|name[_\s-]?on[_\s-]?marksheet|name[_\s-]?on[_\s-]?degree|official[_\s-]?name)\b/i,
+    regex: /\b(certificate[_\s-]?name|name[_\s-]?on[_\s-]?marksheet|name[_\s-]?on[_\s-]?degree|official[_\s-]?name|name[_\s-]?as[_\s-]?per[_\s-]?(10th|ssc|hsc|certificate|matriculation))\b/i,
     getValue: (p) => p.personal?.certificateName || p.personal?.fullName || "Mohammad Danish Khan"
   },
   {

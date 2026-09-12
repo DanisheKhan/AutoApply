@@ -320,6 +320,13 @@ function getElementLabel(element) {
       if (el && el.innerText) labels.push(el.innerText.trim());
     }
   }
+  if (element.getAttribute('aria-describedby')) {
+    const ids = element.getAttribute('aria-describedby').split(/\s+/);
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el && el.innerText) labels.push(el.innerText.trim());
+    }
+  }
   if (element.placeholder) labels.push(element.placeholder);
   if (element.name) labels.push(element.name);
   if (element.id) labels.push(element.id);
@@ -334,9 +341,9 @@ function getElementLabel(element) {
   }
 
   // 5. Parent container heading / question block (Google Forms, Greenhouse, Lever, ATS)
-  const container = element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr');
+  const container = element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr, .Qr7Oae, .geS5n, .vQx30e, .c2gGi, .gf-listitem');
   if (container) {
-    const heading = container.querySelector('h1, h2, h3, h4, h5, h6, .label, .title, legend, .dir-ltr, .M7eMe, [role="heading"], td:first-child, th:first-child');
+    const heading = container.querySelector('h1, h2, h3, h4, h5, h6, .label, .title, legend, .dir-ltr, .M7eMe, [role="heading"], .HoPnR, .F9vfv, .HoControl, td:first-child, th:first-child');
     if (heading && heading !== element && heading.innerText) {
       labels.push(heading.innerText.trim());
     }
@@ -1767,7 +1774,7 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   const suggestions = [];
 
   // 1. Personal Identity
-  if (/full[_\s-]?name|candidate[_\s-]?name|^name$|your[_\s-]?name/i.test(lLower) && !/first|last|middle|father|mother|college|company/i.test(lLower)) {
+  if (/\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)/i.test(lLower) && !/first|last|middle|given|forename|family|surname|maiden|father|mother|college|company|school|user|file|project|degree|course|branch|exam|stream|board|university/i.test(lLower)) {
     suggestions.push({ label: "Full Name", value: p.personal?.fullName || "Mohammad Danish Khan Naeem Khan" });
     suggestions.push({ label: "Certificate Name", value: p.personal?.certificateName || "Mohammad Danish Khan" });
     suggestions.push({ label: "Short Name", value: p.personal?.shortName || "Danish Khan" });
