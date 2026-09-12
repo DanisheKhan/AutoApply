@@ -112,6 +112,14 @@
         }
       }
 
+      if (request.action === "TRIGGER_SNIP_FILL") {
+        if (typeof window.activateSnipSelector === 'function') {
+          window.activateSnipSelector(candidateProfile);
+        }
+        sendResponse({ success: true });
+        return false;
+      }
+
       if (request.action === "GET_PAGE_STATUS") {
         const isEnabled = typeof window.isFieldPopupEnabled === 'function'
           ? window.isFieldPopupEnabled()
@@ -126,5 +134,26 @@
       }
     });
   }
+
+  // 5. Global Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    // Alt + Shift + S: Snip & Fill Section
+    if (e.altKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.activateSnipSelector === 'function') {
+        window.activateSnipSelector(candidateProfile);
+      }
+      return;
+    }
+
+    // Alt + Shift + F: 1-Click Autofill Full Page
+    if (e.altKey && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleAutofill();
+      return;
+    }
+  }, true);
 
 })();

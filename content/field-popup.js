@@ -36,6 +36,7 @@
     check: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
     file: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
     dot: `<svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>`,
+    scissors: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>`,
     spinner: `<svg class="aap-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`
   };
 
@@ -748,11 +749,22 @@
     `;
 
     html += `
+      <div class="aap-menu-item aap-menu-action" data-action="snip-fill">
+        <div class="aap-menu-item-left">
+          <span class="aap-icon">${ICONS.scissors}</span>
+          <span class="aap-menu-val">Snip & Fill Area</span>
+        </div>
+        <span class="aap-menu-tag">Alt+Shift+S</span>
+      </div>
+    `;
+
+    html += `
       <div class="aap-menu-item aap-menu-action" data-action="autofill-all">
         <div class="aap-menu-item-left">
           <span class="aap-icon">${ICONS.bolt}</span>
           <span class="aap-menu-val">Autofill Entire Form</span>
         </div>
+        <span class="aap-menu-tag">Alt+Shift+F</span>
       </div>
     `;
 
@@ -779,6 +791,11 @@
           if (typeof autoUploadResume === 'function') {
             autoUploadResume();
             showSuccessFeedback("Attached");
+          }
+        } else if (action === 'snip-fill') {
+          hideMenu();
+          if (typeof window.activateSnipSelector === 'function') {
+            window.activateSnipSelector(activeProfile);
           }
         } else if (action === 'autofill-all') {
           hideMenu();

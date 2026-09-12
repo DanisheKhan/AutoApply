@@ -1882,6 +1882,151 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   };
 }
 
+// 17. Selective Section / Marquee Elements Autofiller
+async function fillSelectedElements(elements, profile, options = { aiAnswers: true }) {
+  if (!elements || !Array.isArray(elements) || elements.length === 0) {
+    return { filledCount: 0, aiCount: 0, selectedCount: 0 };
+  }
+
+  const p = profile && Object.keys(profile).length > 0 ? profile : (typeof window !== 'undefined' ? window.DEFAULT_PROFILE : {});
+  let filledCount = 0;
+  let aiCount = 0;
+  const processedContainers = new Set();
+
+  for (const el of elements) {
+    if (!el || !el.isConnected) continue;
+
+    const tag = el.tagName ? el.tagName.toLowerCase() : '';
+    const type = (el.type || 'text').toLowerCase();
+    const item = el.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem, .form-group, .form-row') || el.parentElement;
+    const labelText = (typeof getElementLabel === 'function') ? getElementLabel(el) : '';
+    const _isOpenEndedFn = (typeof isOpenEndedQuestion === 'function') ? isOpenEndedQuestion : (typeof _heuristics !== 'undefined' ? _heuristics.isOpenEndedQuestion : null);
+    const isOpenEnded = (typeof _isOpenEndedFn === 'function') ? _isOpenEndedFn(labelText) : false;
+
+    // A. Open-ended question AI generation
+    if (options.aiAnswers && (tag === 'textarea' || el.isContentEditable || isOpenEnded)) {
+      try {
+        if (typeof highlightElementThinking === 'function') highlightElementThinking(el);
+        let answer = '';
+        if (typeof sendAiRequest === 'function') {
+          answer = await sendAiRequest(labelText || document.title);
+        } else if (typeof generateAnswerWithGemini === 'function') {
+          answer = await generateAnswerWithGemini({ question: labelText, jobContext: document.title }, p);
+        }
+        if (answer && setNativeValue(el, answer)) {
+          aiCount++;
+          filledCount++;
+          if (item && typeof clearGoogleFormItemError === 'function') clearGoogleFormItemError(item);
+          continue;
+        }
+      } catch (err) {
+        console.warn("[AutoApply Pro] Selected field AI generation error:", err);
+      }
+    }
+
+    // B. Resume / Document input
+    if (type === 'file' || /resume|cv\b/i.test(labelText) || el.classList.contains('gf-hidden-file-input')) {
+      if (typeof autoUploadResume === 'function') {
+        try {
+          const res = await autoUploadResume();
+          if (res && res.uploaded) filledCount++;
+        } catch (e) {}
+      }
+      continue;
+    }
+
+    // C. Heuristic Profile Match
+    let matchedVal = null;
+    if (typeof getFieldSuggestions === 'function') {
+      const suggestions = getFieldSuggestions(el, labelText, p);
+      if (suggestions && suggestions.primary && suggestions.primary.value) {
+        matchedVal = suggestions.primary.value;
+      }
+    }
+
+    if (matchedVal === null && typeof matchValueFromProfile === 'function') {
+      matchedVal = matchValueFromProfile(el, p);
+    }
+
+    if (matchedVal !== null && matchedVal !== undefined) {
+      let isFilled = false;
+
+      // 1. Google Forms or Custom Dropdown Listbox / Native Select
+      if (tag === 'select' || el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox' || el.classList.contains('quantumWizMenuPaperselectEl') || el.classList.contains('gf-custom-select') || el.hasAttribute('aria-haspopup')) {
+        if (typeof fillGoogleFormsDropdown === 'function' && (el.getAttribute('role') === 'listbox' || el.classList.contains('quantumWizMenuPaperselectEl') || el.classList.contains('gf-custom-select') || el.hasAttribute('aria-haspopup'))) {
+          const res = await fillGoogleFormsDropdown(el, matchedVal, labelText);
+          if (res && (res.success || res === true)) isFilled = true;
+        }
+        if (!isFilled && typeof fillCustomComboboxOrSelect === 'function') {
+          if (fillCustomComboboxOrSelect(el, matchedVal)) isFilled = true;
+        }
+        if (!isFilled && tag === 'select') {
+          el.value = matchedVal;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          isFilled = true;
+        }
+      }
+      // 2. Custom ARIA or Native Radio Button
+      else if (type === 'radio' || el.getAttribute('role') === 'radio') {
+        const radioContainer = el.closest('[role="radiogroup"], .gf-radio-group, .form-group, [role="listitem"]') || item || document.body;
+        if (!processedContainers.has(radioContainer)) {
+          processedContainers.add(radioContainer);
+          const valStr = matchedVal.toString().trim().toLowerCase();
+          const allRadios = Array.from(radioContainer.querySelectorAll('[role="radio"], input[type="radio"]'));
+          let targetRadio = allRadios.find(r => {
+            const text = (r.getAttribute('aria-label') || r.innerText || r.textContent || r.value || '').trim().toLowerCase();
+            return text === valStr || text.includes(valStr) || valStr.includes(text);
+          });
+
+          if (!targetRadio && /male/i.test(valStr)) {
+            targetRadio = allRadios.find(r => /\bmale\b|\bman\b/i.test(r.getAttribute('aria-label') || r.innerText || r.textContent || r.value || ''));
+          }
+
+          if (targetRadio) {
+            if (targetRadio.tagName.toLowerCase() === 'input') {
+              targetRadio.checked = true;
+              targetRadio.dispatchEvent(new Event('input', { bubbles: true }));
+              targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+              targetRadio.click();
+              targetRadio.setAttribute('aria-checked', 'true');
+              allRadios.forEach(r => { if (r !== targetRadio) r.setAttribute('aria-checked', 'false'); });
+            }
+            isFilled = true;
+            if (typeof highlightFilledElement === 'function') highlightFilledElement(targetRadio);
+          }
+        }
+      }
+      // 3. Custom ARIA or Native Checkbox
+      else if (type === 'checkbox' || el.getAttribute('role') === 'checkbox') {
+        const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(matchedVal.toString());
+        if (typeof setNativeCheckboxOrRadio === 'function') {
+          if (setNativeCheckboxOrRadio(el, isAffirmative)) isFilled = true;
+        }
+      }
+      // 4. Standard Text / Date / Number / Email / Tel Input
+      else {
+        if (typeof setNativeValue === 'function') {
+          if (setNativeValue(el, matchedVal)) isFilled = true;
+        }
+      }
+
+      if (isFilled) {
+        filledCount++;
+        if (item && typeof clearGoogleFormItemError === 'function') {
+          clearGoogleFormItemError(item);
+        }
+        if (typeof highlightFilledElement === 'function') {
+          highlightFilledElement(el);
+        }
+      }
+    }
+  }
+
+  return { filledCount, aiCount, selectedCount: elements.length };
+}
+
 if (typeof window !== 'undefined') {
   window.runAutoApply = runAutoApply;
   window.detectCurrentPlatform = detectCurrentPlatform;
@@ -1898,6 +2043,7 @@ if (typeof window !== 'undefined') {
   window.clearGoogleFormItemError = clearGoogleFormItemError;
   window.fillGoogleFormsDropdown = fillGoogleFormsDropdown;
   window.getFieldSuggestions = getFieldSuggestions;
+  window.fillSelectedElements = fillSelectedElements;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -1924,6 +2070,7 @@ if (typeof module !== 'undefined' && module.exports) {
     sendAiRequest,
     sendInferFieldAiRequest,
     runAutoApply,
-    getFieldSuggestions
+    getFieldSuggestions,
+    fillSelectedElements
   };
 }

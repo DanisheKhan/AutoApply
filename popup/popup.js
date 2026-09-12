@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const platformEl = document.getElementById('detected-platform');
   const tagEl = document.getElementById('platform-tag');
   const autofillBtn = document.getElementById('btn-autofill');
+  const snipBtn = document.getElementById('btn-snip-fill');
   const aiBtn = document.getElementById('btn-ai-fill');
   const statusMsg = document.getElementById('status-message');
   const optionsBtn = document.getElementById('btn-open-options');
@@ -115,6 +116,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
+
+  // Snip & Fill Click
+  if (snipBtn) {
+    snipBtn.addEventListener('click', () => {
+      chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_SNIP_FILL" }, () => {
+        if (chrome.runtime.lastError) {
+          if (statusMsg) {
+            statusMsg.className = "status-message";
+            statusMsg.textContent = "Please reload the job page once to activate.";
+          }
+        } else {
+          // Close the popup so user can immediately drag to select on the webpage
+          window.close();
+        }
+      });
+    });
+  }
 
   // AI Question Solver Click
   aiBtn.addEventListener('click', () => {
