@@ -730,6 +730,219 @@ const FIELD_PATTERNS = [
 ];
 
 /**
+ * Universal Date Formatter for varied job form date inputs
+ * @param {string} dobStr - "YYYY-MM-DD" e.g. "2005-06-01"
+ * @param {HTMLElement|string} target - element or format string ("YYYY-MM-DD", "DD/MM/YYYY", "MM/DD/YYYY", "DD-MM-YYYY")
+ * @returns {string}
+ */
+function formatCandidateDate(dobStr, target) {
+  if (!dobStr) return '';
+  const parts = dobStr.split('-');
+  if (parts.length !== 3) return dobStr;
+  const [year, month, day] = parts;
+
+  let format = 'YYYY-MM-DD';
+  if (typeof target === 'string') {
+    format = target.toUpperCase();
+  } else if (target && typeof target.getAttribute === 'function') {
+    const ph = (target.getAttribute('placeholder') || '').toUpperCase();
+    const type = (target.getAttribute('type') || '').toLowerCase();
+    if (type === 'date') return `${year}-${month}-${day}`;
+    if (ph.includes('DD/MM/YYYY') || ph.includes('DD-MM-YYYY') || ph.includes('D/M/Y')) {
+      format = ph.includes('-') ? 'DD-MM-YYYY' : 'DD/MM/YYYY';
+    } else if (ph.includes('MM/DD/YYYY') || ph.includes('M/D/Y')) {
+      format = 'MM/DD/YYYY';
+    } else if (ph.includes('YYYY/MM/DD')) {
+      format = 'YYYY/MM/DD';
+    }
+  }
+
+  switch (format) {
+    case 'DD/MM/YYYY': return `${day}/${month}/${year}`;
+    case 'DD-MM-YYYY': return `${day}-${month}-${year}`;
+    case 'MM/DD/YYYY': return `${month}/${day}/${year}`;
+    case 'YYYY/MM/DD': return `${year}/${month}/${day}`;
+    case 'YYYY-MM-DD':
+    default:
+      return `${year}-${month}-${day}`;
+  }
+}
+
+/**
+ * Aadhaar Number Formatter & Slicer
+ * @param {string} aadhaarStr - e.g. "270883622036"
+ * @param {HTMLElement|string} target - element or length ("12", "8", "4", "spaced")
+ * @returns {string}
+ */
+function formatAadhaarNumber(aadhaarStr, target) {
+  if (!aadhaarStr) return '270883622036';
+  const clean = aadhaarStr.replace(/\D/g, '');
+  
+  let mode = '12';
+  if (typeof target === 'string') {
+    mode = target;
+  } else if (target) {
+    const maxLen = target.maxLength || target.getAttribute?.('maxlength');
+    const ph = (target.placeholder || target.getAttribute?.('placeholder') || '').toLowerCase();
+    const label = (target.getAttribute?.('aria-label') || '').toLowerCase();
+    if (maxLen === 4 || maxLen === '4' || /last[_\s-]?4/i.test(ph) || /last[_\s-]?4/i.test(label)) {
+      mode = '4';
+    } else if (maxLen === 8 || maxLen === '8' || /last[_\s-]?8/i.test(ph) || /last[_\s-]?8/i.test(label)) {
+      mode = '8';
+    } else if (maxLen === 14 || maxLen === '14' || /xxxx[_\s-]xxxx[_\s-]xxxx/i.test(ph)) {
+      mode = 'spaced';
+    }
+  }
+
+  if (mode === '4') return clean.slice(-4);
+  if (mode === '8') return clean.slice(-8);
+  if (mode === 'spaced') return clean.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+  return clean;
+}
+
+/**
+ * Job Form Identification & Context Engine
+ * Discovers if the active page or element is an authentic Job Application Form
+ */
+const JobDetector = {
+  KNOWN_PORTALS: [
+    { name: 'Google Forms', test: (url, doc) => (url.hostname && url.hostname.includes('docs.google.com') && url.pathname && url.pathname.includes('/forms/')) || !!doc?.getElementById?.('google-form-mock') },
+    { name: 'LinkedIn Easy Apply', test: (url, doc) => (url.hostname && url.hostname.includes('linkedin.com') && (url.pathname && url.pathname.includes('/jobs/') || !!doc?.querySelector?.('.jobs-easy-apply-modal, [data-test-modal], .jobs-apply-button'))) },
+    { name: 'Greenhouse', test: (url, doc) => (url.hostname && url.hostname.includes('greenhouse.io')) || !!doc?.querySelector?.('#job_application, #application_form, [data-mapped="greenhouse"]') },
+    { name: 'Lever', test: (url, doc) => (url.hostname && url.hostname.includes('lever.co')) || !!doc?.querySelector?.('.application-form, form#apply, [data-mapped="lever"]') },
+    { name: 'Workday', test: (url, doc) => (url.hostname && (url.hostname.includes('myworkdayjobs.com') || url.hostname.includes('workday.com'))) || !!doc?.querySelector?.('[data-automation-id*="form"], [data-automation-id*="application"]') },
+    { name: 'SmartRecruiters', test: (url, doc) => (url.hostname && url.hostname.includes('smartrecruiters.com')) || !!doc?.querySelector?.('[data-automation="application-form"]') },
+    { name: 'Ashby', test: (url, doc) => (url.hostname && url.hostname.includes('ashbyhq.com')) || (url.pathname && url.pathname.includes('/application')) },
+    { name: 'TCS / Infosys Enterprise', test: (url, doc) => (url.hostname && (url.hostname.includes('tcs') || url.hostname.includes('ion') || url.hostname.includes('nextstep') || url.hostname.includes('infosys') || url.hostname.includes('wipro') || url.hostname.includes('capgemini'))) || !!doc?.getElementById?.('enterprise-form-mock') },
+    { name: 'Naukri / Indian Job Board', test: (url, doc) => (url.hostname && (url.hostname.includes('naukri.com') || url.hostname.includes('foundit.in') || url.hostname.includes('hirist.com') || url.hostname.includes('unstop.com') || url.hostname.includes('internshala.com'))) },
+    { name: 'Wellfound / AngelList', test: (url, doc) => url.hostname && (url.hostname.includes('wellfound.com') || url.hostname.includes('angel.co')) },
+    { name: 'Modern Tech ATS', test: (url, doc) => !!doc?.getElementById?.('modern-ats-mock') || !!doc?.getElementById?.('edgecases-form-mock') }
+  ],
+
+  JOB_KEYWORDS: [
+    'resume', 'curriculum vitae', 'cv', 'cover letter', 'current ctc', 'expected ctc',
+    'notice period', 'years of experience', 'highest education', 'degree', 'b.tech',
+    'graduation year', 'college name', 'cgpa', 'work authorization', 'visa sponsorship',
+    'relocation', 'github', 'portfolio', 'pan number', 'aadhaar', 'disability',
+    'veteran', 'applicant', 'candidate', 'apply now', 'job application', 'job opening',
+    'role', 'position', 'experience in years', 'expected salary', 'current salary',
+    'willing to relocate', 'internship', 'full-time', 'fresher', 'pre-placement offer'
+  ],
+
+  NON_JOB_INDICATORS: [
+    'search youtube', 'search google', 'search wikipedia', 'checkout', 'shopping cart',
+    'billing address', 'credit card number', 'sign in to your account', 'post a comment'
+  ],
+
+  analyzePage(doc = (typeof document !== 'undefined' ? document : null), urlObj = (typeof window !== 'undefined' ? window.location : null)) {
+    if (!doc || !urlObj) {
+      return { isJobForm: false, platform: 'Standby', confidence: 0, fieldCount: 0, reason: 'No DOM/URL' };
+    }
+
+    // 1. Check direct portal matches
+    for (const portal of this.KNOWN_PORTALS) {
+      try {
+        if (portal.test(urlObj, doc)) {
+          // Additional Google Forms check: is this a job form or general survey?
+          if (portal.name === 'Google Forms') {
+            const pageText = (doc.body ? (doc.body.innerText || doc.body.textContent || '') : '').slice(0, 10000).toLowerCase();
+            const formItems = doc.querySelectorAll('.Qr7Oae, .geS5n, .vQx30e, .gf-listitem, input, textarea');
+            const hasJobKeywords = this.JOB_KEYWORDS.some(kw => pageText.includes(kw));
+            if (hasJobKeywords || formItems.length >= 3) {
+              return { isJobForm: true, platform: 'Google Forms (Job Application)', confidence: 95, fieldCount: formItems.length, reason: 'Google Forms Job Questionnaire' };
+            }
+            return { isJobForm: true, platform: 'Google Forms', confidence: 80, fieldCount: formItems.length, reason: 'Google Forms Portal' };
+          }
+
+          const fields = (typeof doc.querySelectorAll === 'function') 
+            ? doc.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea, select, [role="listbox"], [role="radio"]') 
+            : [];
+          return { isJobForm: true, platform: portal.name, confidence: 95, fieldCount: fields.length, reason: `Recognized portal: ${portal.name}` };
+        }
+      } catch (e) {}
+    }
+
+    // 2. Scan forms & inputs for Job Form Semantic Heuristic Scoring
+    const forms = (typeof doc.querySelectorAll === 'function') 
+      ? doc.querySelectorAll('form, [role="form"], .application-form, .job-form, .apply-form, #apply, #job-apply, main, article, body') 
+      : [];
+    let bestScore = 0;
+    let matchedKeywords = [];
+    let detectedFields = 0;
+
+    for (const container of forms) {
+      const text = (container.innerText || container.textContent || '').toLowerCase().slice(0, 8000);
+      const inputs = (typeof container.querySelectorAll === 'function') 
+        ? container.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea, select') 
+        : [];
+      
+      let score = 0;
+      let keywords = [];
+
+      for (const kw of this.JOB_KEYWORDS) {
+        if (text.includes(kw)) {
+          score += 15;
+          keywords.push(kw);
+        }
+      }
+
+      // Check input names / labels / placeholders
+      for (const input of inputs) {
+        const inputAttrs = `${input.name || ''} ${input.id || ''} ${input.placeholder || ''} ${input.getAttribute('aria-label') || ''}`.toLowerCase();
+        if (/resume|cv|experience|degree|college|ctc|salary|notice|workauth|portfolio|github|aadhaar|pan/i.test(inputAttrs)) {
+          score += 20;
+        }
+      }
+
+      // Penalize search or checkout forms
+      for (const nonKw of this.NON_JOB_INDICATORS) {
+        if (text.includes(nonKw)) {
+          score -= 15;
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        matchedKeywords = keywords;
+        detectedFields = inputs.length;
+      }
+    }
+
+    const isJobForm = bestScore >= 35 && detectedFields >= 2;
+    const confidence = Math.min(100, Math.max(0, bestScore));
+
+    return {
+      isJobForm,
+      platform: isJobForm ? 'Job Application Form' : 'Non-Job Page',
+      confidence,
+      fieldCount: detectedFields,
+      reason: isJobForm ? `Matched job markers: ${matchedKeywords.slice(0, 4).join(', ')}` : 'Standard web page'
+    };
+  },
+
+  isJobContext(element, doc = (typeof document !== 'undefined' ? document : null)) {
+    if (!doc && typeof document !== 'undefined') doc = document;
+    if (!doc) return true;
+    
+    // Check page-level analysis first
+    const pageAnalysis = this.analyzePage(doc, typeof window !== 'undefined' ? window.location : null);
+    if (pageAnalysis.isJobForm) return true;
+
+    // Check surrounding container if specific element provided
+    if (element && typeof element.closest === 'function') {
+      const container = element.closest('form, [role="form"], .application-form, .job-form, .apply-form, fieldset, .card, div[role="listitem"], .geS5n, .Qr7Oae');
+      if (container) {
+        const text = (container.innerText || container.textContent || '').toLowerCase();
+        const hasJobKw = this.JOB_KEYWORDS.some(kw => text.includes(kw));
+        if (hasJobKw) return true;
+      }
+    }
+
+    return false;
+  }
+};
+
+/**
  * Checks whether an element or label indicates an open-ended essay question suitable for Gemini AI.
  * @param {string} text - The label or question text.
  * @returns {boolean}
@@ -766,12 +979,25 @@ if (typeof window !== 'undefined') {
   window.FIELD_PATTERNS = FIELD_PATTERNS;
   window.isOpenEndedQuestion = isOpenEndedQuestion;
   window.resolveBooleanQuestion = resolveBooleanQuestion;
+  window.JobDetector = JobDetector;
+  window.formatCandidateDate = formatCandidateDate;
+  window.formatAadhaarNumber = formatAadhaarNumber;
 }
 if (typeof self !== 'undefined') {
   self.FIELD_PATTERNS = FIELD_PATTERNS;
   self.isOpenEndedQuestion = isOpenEndedQuestion;
   self.resolveBooleanQuestion = resolveBooleanQuestion;
+  self.JobDetector = JobDetector;
+  self.formatCandidateDate = formatCandidateDate;
+  self.formatAadhaarNumber = formatAadhaarNumber;
 }
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion };
+  module.exports = {
+    FIELD_PATTERNS,
+    isOpenEndedQuestion,
+    resolveBooleanQuestion,
+    JobDetector,
+    formatCandidateDate,
+    formatAadhaarNumber
+  };
 }

@@ -148,8 +148,33 @@ function highlightElementThinking(element) {
 
 // 3. Platform Detection
 function detectCurrentPlatform() {
-  const host = window.location.hostname.toLowerCase();
-  const path = window.location.pathname.toLowerCase();
+  // 1. Inside test harness simulator
+  if (typeof document !== 'undefined') {
+    if (document.getElementById('google-form-mock') && document.getElementById('tab-google')?.classList.contains('active')) {
+      return 'Google Forms';
+    }
+    if (document.getElementById('enterprise-form-mock') && document.getElementById('tab-enterprise')?.classList.contains('active')) {
+      return 'TCS / Infosys Enterprise';
+    }
+    if (document.getElementById('modern-ats-mock') && document.getElementById('tab-modern')?.classList.contains('active')) {
+      return 'Modern Tech ATS';
+    }
+    if (document.getElementById('edgecases-form-mock') && document.getElementById('tab-edgecases')?.classList.contains('active')) {
+      return 'Form Sandbox & Edge Cases';
+    }
+  }
+
+  // 2. Intelligent Job Form Detection via JobDetector
+  const jd = typeof JobDetector !== 'undefined' ? JobDetector : (typeof window !== 'undefined' ? window.JobDetector : null);
+  if (jd && jd.analyzePage && typeof document !== 'undefined') {
+    const analysis = jd.analyzePage(document, typeof window !== 'undefined' ? window.location : null);
+    if (analysis && analysis.platform && analysis.platform !== 'Non-Job Page' && analysis.platform !== 'Standby') {
+      return analysis.platform;
+    }
+  }
+
+  const host = (typeof window !== 'undefined' && window.location ? window.location.hostname : '').toLowerCase();
+  const path = (typeof window !== 'undefined' && window.location ? window.location.pathname : '').toLowerCase();
 
   if (host.includes('docs.google.com') && path.includes('/forms/')) {
     return 'Google Forms';
@@ -157,40 +182,26 @@ function detectCurrentPlatform() {
   if (host.includes('tcs') || host.includes('ion') || host.includes('nextstep') || host.includes('infosys') || host.includes('wipro') || host.includes('capgemini')) {
     return 'TCS / Infosys Enterprise';
   }
-  if (host.includes('linkedin.com') && document.querySelector('.jobs-easy-apply-modal, [data-test-modal]')) {
+  if (host.includes('linkedin.com') && (typeof document !== 'undefined' && document.querySelector('.jobs-easy-apply-modal, [data-test-modal]'))) {
     return 'LinkedIn Easy Apply';
   }
   if (host.includes('naukri.com') || host.includes('foundit.in') || host.includes('hirist.com')) {
     return 'Naukri / Indian Job Board';
   }
-  if (host.includes('boards.greenhouse.io') || document.querySelector('#job_application, #application_form')) {
+  if (host.includes('boards.greenhouse.io') || (typeof document !== 'undefined' && document.querySelector('#job_application, #application_form'))) {
     return 'Greenhouse';
   }
-  if (host.includes('jobs.lever.co') || document.querySelector('.application-form, form#apply')) {
+  if (host.includes('jobs.lever.co') || (typeof document !== 'undefined' && document.querySelector('.application-form, form#apply'))) {
     return 'Lever';
   }
-  if (host.includes('myworkdayjobs.com') || host.includes('workday.com') || document.querySelector('[data-automation-id]')) {
+  if (host.includes('myworkdayjobs.com') || host.includes('workday.com') || (typeof document !== 'undefined' && document.querySelector('[data-automation-id]'))) {
     return 'Workday';
   }
   if (host.includes('ashbyhq.com') || host.includes('smartrecruiters.com') || host.includes('wellfound.com') || host.includes('unstop.com') || host.includes('internshala.com')) {
     return 'Modern Tech ATS';
   }
 
-  // Inside test harness simulator
-  if (document.getElementById('google-form-mock') && document.getElementById('tab-google')?.classList.contains('active')) {
-    return 'Google Forms';
-  }
-  if (document.getElementById('enterprise-form-mock') && document.getElementById('tab-enterprise')?.classList.contains('active')) {
-    return 'TCS / Infosys Enterprise';
-  }
-  if (document.getElementById('modern-ats-mock') && document.getElementById('tab-modern')?.classList.contains('active')) {
-    return 'Modern Tech ATS';
-  }
-  if (document.getElementById('edgecases-form-mock') && document.getElementById('tab-edgecases')?.classList.contains('active')) {
-    return 'Form Sandbox & Edge Cases';
-  }
-
-  return 'Generic Form';
+  return 'Generic Web Page';
 }
 
 // 4. Section & Accordion Auto-Expander (Supports Multi-Step & Collapsible ATS Portals)

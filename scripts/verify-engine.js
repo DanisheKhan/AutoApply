@@ -1,6 +1,6 @@
 // Comprehensive automated verification test suite for AutoApply Pro engine
 const { DEFAULT_PROFILE } = require('../default-profile.js');
-const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion } = require('../content/heuristics.js');
+const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion, JobDetector, formatCandidateDate, formatAadhaarNumber } = require('../content/heuristics.js');
 const { generateInstantFallbackAnswer } = require('../background/gemini-client.js');
 const { RESUME_DATA } = require('../assets/resume-data.js');
 const { getFieldSuggestions } = require('../content/adapters.js');
@@ -305,6 +305,92 @@ async function runVerification() {
   const openEndedSugg = getFieldSuggestions(null, "Why do you want to join our company?", DEFAULT_PROFILE);
   assert(openEndedSugg.isOpenEnded === true, "Open-ended question detected for AI generation");
 
+  // 8. Test Smart Job Form Identification Engine
+  console.log("\n[8] Testing Smart Job Form Identification & Context Engine:");
+  
+  // Mock mock DOM container
+  const createMockDoc = (htmlText = '', isPortal = false) => {
+    const makeElement = (tag = 'div', text = '') => ({
+      tagName: tag,
+      innerText: text || htmlText,
+      textContent: text || htmlText,
+      name: (text || htmlText).includes('resume') ? 'resume' : '',
+      placeholder: (text || htmlText).includes('ctc') ? 'Expected CTC' : '',
+      getAttribute: () => '',
+      querySelectorAll: (sel) => {
+        if (sel.includes('input') || sel.includes('textarea')) {
+          if ((text || htmlText).includes('resume') || (text || htmlText).includes('experience') || (text || htmlText).includes('ctc')) {
+            return [
+              { name: 'resume', type: 'file', placeholder: 'Upload Resume', getAttribute: () => '' },
+              { name: 'expectedCtc', type: 'text', placeholder: 'Expected CTC', getAttribute: () => '' },
+              { name: 'experience', type: 'text', placeholder: 'Experience', getAttribute: () => '' }
+            ];
+          }
+        }
+        return [];
+      }
+    });
+
+    return {
+      body: makeElement('body', htmlText),
+      querySelectorAll: (sel) => {
+        if (isPortal) return [makeElement('input'), makeElement('input'), makeElement('input'), makeElement('input')];
+        if (sel.includes('form') || sel.includes('main') || sel.includes('body')) {
+          return [makeElement('form', htmlText)];
+        }
+        if (sel.includes('input')) {
+          return (htmlText.includes('resume') || htmlText.includes('experience') || htmlText.includes('ctc'))
+            ? [makeElement('input'), makeElement('input'), makeElement('input')]
+            : [];
+        }
+        return [];
+      },
+      querySelector: () => null,
+      getElementById: () => null
+    };
+  };
+
+  // Job portal checks
+  const linkedinCheck = JobDetector.analyzePage(createMockDoc('LinkedIn Easy Apply Form', true), { hostname: 'www.linkedin.com', pathname: '/jobs/view/12345' });
+  assert(linkedinCheck.isJobForm === true && linkedinCheck.platform === 'LinkedIn Easy Apply', "LinkedIn Easy Apply detected as active Job Form");
+
+  const greenhouseCheck = JobDetector.analyzePage(createMockDoc('Greenhouse Application', true), { hostname: 'boards.greenhouse.io', pathname: '/stripe/jobs/123' });
+  assert(greenhouseCheck.isJobForm === true && greenhouseCheck.platform === 'Greenhouse', "Greenhouse portal detected as active Job Form");
+
+  const leverCheck = JobDetector.analyzePage(createMockDoc('Lever Application', true), { hostname: 'jobs.lever.co', pathname: '/openai/abc' });
+  assert(leverCheck.isJobForm === true && leverCheck.platform === 'Lever', "Lever portal detected as active Job Form");
+
+  const workdayCheck = JobDetector.analyzePage(createMockDoc('Workday Application', true), { hostname: 'adobe.myworkdayjobs.com', pathname: '/careers' });
+  assert(workdayCheck.isJobForm === true && workdayCheck.platform === 'Workday', "Workday portal detected as active Job Form");
+
+  const gfJobCheck = JobDetector.analyzePage(createMockDoc('Software Engineer Job Application - Upload your resume, enter CTC, experience in years, and degree.', true), { hostname: 'docs.google.com', pathname: '/forms/d/e/1FAIpQLSc.../viewform' });
+  assert(gfJobCheck.isJobForm === true && gfJobCheck.platform.includes('Google Forms'), "Google Forms Job Application questionnaire identified");
+
+  const customFormCheck = JobDetector.analyzePage(createMockDoc('Company Careers Portal: Please upload your resume, enter your b.tech college name, cgpa, and expected ctc.'), { hostname: 'careers.startup.io', pathname: '/apply' });
+  assert(customFormCheck.isJobForm === true, "Generic domain with career keywords identified as Job Application Form");
+
+  // Negative checks (Non-job pages must be classified as Standby / Non-Job Page)
+  const youtubeCheck = JobDetector.analyzePage(createMockDoc('Search YouTube. Post a comment. Subscribe to channel.'), { hostname: 'www.youtube.com', pathname: '/watch' });
+  assert(youtubeCheck.isJobForm === false && youtubeCheck.platform === 'Non-Job Page', "YouTube video page rejected from Job Form classification");
+
+  const wikipediaCheck = JobDetector.analyzePage(createMockDoc('Wikipedia, the free encyclopedia. Search Wikipedia for articles and references.'), { hostname: 'en.wikipedia.org', pathname: '/wiki/JavaScript' });
+  assert(wikipediaCheck.isJobForm === false && wikipediaCheck.platform === 'Non-Job Page', "Wikipedia search page rejected from Job Form classification");
+
+  const checkoutCheck = JobDetector.analyzePage(createMockDoc('Shopping Cart - Checkout. Enter billing address, credit card number, and cvv.'), { hostname: 'www.amazon.in', pathname: '/checkout' });
+  assert(checkoutCheck.isJobForm === false && checkoutCheck.platform === 'Non-Job Page', "eCommerce checkout page rejected from Job Form classification");
+
+  // 9. Universal Date & Aadhaar Slicing Formatters
+  console.log("\n[9] Testing Universal Date Formatter & Aadhaar Digit Slicer Edge Cases:");
+  assert(formatCandidateDate("2005-06-01", "YYYY-MM-DD") === "2005-06-01", 'Date format YYYY-MM-DD -> "2005-06-01"');
+  assert(formatCandidateDate("2005-06-01", "DD/MM/YYYY") === "01/06/2005", 'Date format DD/MM/YYYY -> "01/06/2005"');
+  assert(formatCandidateDate("2005-06-01", "MM/DD/YYYY") === "06/01/2005", 'Date format MM/DD/YYYY -> "06/01/2005"');
+  assert(formatCandidateDate("2005-06-01", "DD-MM-YYYY") === "01-06-2005", 'Date format DD-MM-YYYY -> "01-06-2005"');
+
+  assert(formatAadhaarNumber("270883622036", "12") === "270883622036", 'Aadhaar 12-digit -> "270883622036"');
+  assert(formatAadhaarNumber("270883622036", "8") === "83622036", 'Aadhaar 8-digit -> "83622036"');
+  assert(formatAadhaarNumber("270883622036", "4") === "2036", 'Aadhaar 4-digit -> "2036"');
+  assert(formatAadhaarNumber("270883622036", "spaced") === "2708 8362 2036", 'Aadhaar spaced format -> "2708 8362 2036"');
+
   console.log("\n==================================================");
   console.log(`Master Verification Results: ${passed} passed, ${failed} failed`);
   console.log("==================================================\n");
@@ -315,3 +401,4 @@ async function runVerification() {
 }
 
 runVerification();
+

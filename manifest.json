@@ -42,7 +42,6 @@
         "content/heuristics.js",
         "content/resume-uploader.js",
         "content/adapters.js",
-        "content/floating-widget.js",
         "content/field-popup.js",
         "content/snip-selector.js",
         "content/content.js"

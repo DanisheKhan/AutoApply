@@ -28,6 +28,7 @@
   let isMenuVisible = false;
   let animFrameId = null;
   let isWidgetEnabled = true;
+  let activationMode = 'smart'; // 'smart' (Job Forms Only) | 'always' | 'disabled'
 
   const ICONS = {
     bolt: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
@@ -39,6 +40,18 @@
     scissors: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>`,
     spinner: `<svg class="aap-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`
   };
+
+  /**
+   * Sets the activation mode: 'smart' | 'always' | 'disabled'
+   */
+  function setActivationMode(mode) {
+    activationMode = mode || 'smart';
+    if (activationMode === 'disabled') {
+      setWidgetEnabled(false);
+    } else {
+      setWidgetEnabled(true);
+    }
+  }
 
   /**
    * Sets whether the floating in-field button is enabled.
@@ -72,8 +85,10 @@
     }
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['floatingWidgetEnabled'], (data) => {
-        if (data && data.floatingWidgetEnabled !== undefined) {
+      chrome.storage.local.get(['floatingWidgetEnabled', 'popupActivationMode'], (data) => {
+        if (data && data.popupActivationMode) {
+          setActivationMode(data.popupActivationMode);
+        } else if (data && data.floatingWidgetEnabled !== undefined) {
           setWidgetEnabled(data.floatingWidgetEnabled !== false);
         }
       });
@@ -455,8 +470,13 @@
     // Listen for storage changes across tabs
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area === 'local' && changes.floatingWidgetEnabled !== undefined) {
-          setWidgetEnabled(changes.floatingWidgetEnabled.newValue !== false);
+        if (area === 'local') {
+          if (changes.popupActivationMode !== undefined) {
+            setActivationMode(changes.popupActivationMode.newValue);
+          }
+          if (changes.floatingWidgetEnabled !== undefined) {
+            setWidgetEnabled(changes.floatingWidgetEnabled.newValue !== false);
+          }
         }
       });
     }
@@ -466,6 +486,8 @@
       chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request && request.action === 'SET_WIDGET_VISIBILITY') {
           setWidgetEnabled(request.enabled);
+        } else if (request && request.action === 'SET_ACTIVATION_MODE') {
+          setActivationMode(request.mode);
         }
       });
     }
@@ -475,7 +497,7 @@
    * Evaluates event target to check if it's an actionable form field.
    */
   function handleTriggerEvent(e) {
-    if (!isWidgetEnabled) return;
+    if (!isWidgetEnabled || activationMode === 'disabled') return;
 
     const target = e.target;
     if (!target) return;
@@ -488,6 +510,19 @@
 
     const field = resolveInteractiveField(target);
     if (!field) return;
+
+    // Smart Job Form Identification Check:
+    // If in 'smart' mode (default), verify that this field is part of a real job form/application
+    if (activationMode === 'smart') {
+      const jd = typeof JobDetector !== 'undefined' ? JobDetector : (typeof window !== 'undefined' ? window.JobDetector : null);
+      if (jd && typeof jd.isJobContext === 'function') {
+        const isJob = jd.isJobContext(field, document);
+        if (!isJob) {
+          // On non-job pages (YouTube search, Wikipedia, shopping cart), stay completely dormant!
+          return;
+        }
+      }
+    }
 
     if (isButtonVisible && currentAnchor === field) return;
 
@@ -1086,6 +1121,8 @@
     window.hideFieldPopup = hideAll;
     window.setFieldPopupEnabled = setWidgetEnabled;
     window.isFieldPopupEnabled = () => isWidgetEnabled;
+    window.setActivationMode = setActivationMode;
+    window.getActivationMode = () => activationMode;
   }
 
   if (typeof document !== 'undefined') {

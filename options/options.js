@@ -111,6 +111,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Activation Mode selector change listener
+  const activationModeSelect = document.getElementById('setting-activation-mode');
+  if (activationModeSelect) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['popupActivationMode'], (data) => {
+        if (data && data.popupActivationMode) {
+          activationModeSelect.value = data.popupActivationMode;
+        }
+      });
+    }
+
+    activationModeSelect.addEventListener('change', async () => {
+      const mode = activationModeSelect.value;
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        await chrome.storage.local.set({ popupActivationMode: mode });
+      }
+      showToast(`✓ In-Field Activation set to: ${activationModeSelect.options[activationModeSelect.selectedIndex].text}`, "success");
+    });
+  }
+
+  // Update Resume PDF Picker & Base64 Converter
+  const replaceResumeBtn = document.getElementById('btn-replace-resume');
+  const resumePicker = document.getElementById('resume-file-picker');
+
+  if (replaceResumeBtn && resumePicker) {
+    replaceResumeBtn.addEventListener('click', () => resumePicker.click());
+    resumePicker.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+          showToast("Please select a valid PDF file.", "error");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const dataUrl = event.target.result;
+            const base64Data = dataUrl.split(',')[1];
+            
+            const resumeObj = {
+              filename: file.name,
+              sizeBytes: file.size,
+              mimeType: 'application/pdf',
+              base64: base64Data,
+              lastModified: Date.now()
+            };
+
+            currentProfile = currentProfile || {};
+            currentProfile.resume = resumeObj;
+
+            // Update UI
+            const nameEl = document.getElementById('resume-display-name');
+            const sizeEl = document.getElementById('resume-display-size');
+            if (nameEl) nameEl.textContent = file.name;
+            if (sizeEl) sizeEl.textContent = `${(file.size / 1024).toFixed(1)} KB • PDF • Ready for Auto-Upload`;
+
+            // Save in chrome.storage.local
+            if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+              await chrome.storage.local.set({
+                customResumeData: resumeObj,
+                candidateProfile: currentProfile
+              });
+            }
+
+            showToast(`✓ Resume updated: ${file.name} (${(file.size / 1024).toFixed(1)} KB)!`, "success");
+          } catch (err) {
+            showToast(`Error processing resume: ${err.message}`, "error");
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
   // Export & Import Profile JSON
   const exportBtn = document.getElementById('btn-export-profile');
   const importBtn = document.getElementById('btn-import-profile');
@@ -139,12 +214,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.onload = async (event) => {
           try {
             const imported = JSON.parse(event.target.result);
+            if (!imported || typeof imported !== 'object' || (!imported.personal && !imported.academics && !imported.career)) {
+              throw new Error("Invalid AutoApply Profile JSON format");
+            }
             currentProfile = imported;
             populateForm(currentProfile);
             await saveProfile();
             showToast(`✓ Imported profile from ${file.name}!`);
           } catch (err) {
-            showToast(`Import error: Invalid JSON file.`, "error");
+            showToast(`Import error: ${err.message || 'Invalid JSON file.'}`, "error");
           }
         };
         reader.readAsText(file);
@@ -160,9 +238,16 @@ async function loadProfile() {
   // 1. Check chrome.storage.local
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     try {
-      const res = await chrome.storage.local.get(['candidateProfile', 'geminiApiKey']);
+      const res = await chrome.storage.local.get(['candidateProfile', 'geminiApiKey', 'customResumeData', 'popupActivationMode']);
       profile = res.candidateProfile;
       storedApiKey = res.geminiApiKey || '';
+      if (res.popupActivationMode) {
+        const actSelect = document.getElementById('setting-activation-mode');
+        if (actSelect) actSelect.value = res.popupActivationMode;
+      }
+      if (res.customResumeData && profile) {
+        profile.resume = res.customResumeData;
+      }
     } catch (e) {
       console.warn("Error reading chrome.storage.local:", e);
     }

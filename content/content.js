@@ -124,11 +124,26 @@
         const isEnabled = typeof window.isFieldPopupEnabled === 'function'
           ? window.isFieldPopupEnabled()
           : true;
+        const currentMode = typeof window.getActivationMode === 'function'
+          ? window.getActivationMode()
+          : 'smart';
+
+        let analysis = { isJobForm: false, platform: detectCurrentPlatform(), confidence: 0, fieldCount: 0 };
+        const jd = typeof JobDetector !== 'undefined' ? JobDetector : (typeof window !== 'undefined' ? window.JobDetector : null);
+        if (jd && typeof jd.analyzePage === 'function') {
+          analysis = jd.analyzePage(document, window.location);
+        }
+
         sendResponse({
-          platform: detectCurrentPlatform(),
+          platform: analysis.platform || detectCurrentPlatform(),
+          isJobForm: Boolean(analysis.isJobForm),
+          confidence: analysis.confidence || 0,
+          fieldCount: analysis.fieldCount || 0,
+          reason: analysis.reason || '',
           url: window.location.href,
           title: document.title,
-          widgetVisible: isEnabled
+          widgetVisible: isEnabled,
+          activationMode: currentMode
         });
         return false;
       }

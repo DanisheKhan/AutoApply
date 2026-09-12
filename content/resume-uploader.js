@@ -26,11 +26,36 @@ function createResumeFileFromBase64() {
 }
 
 async function getResumeFile() {
-  // 1. Try instant Base64 file creation
+  // 1. Check custom uploaded resume in chrome.storage.local / active profile
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    try {
+      const data = await new Promise((resolve) => {
+        chrome.storage.local.get(['customResumeData', 'candidateProfile'], resolve);
+      });
+      const customResume = data?.customResumeData || data?.candidateProfile?.resume;
+      if (customResume && customResume.base64) {
+        const binaryString = atob(customResume.base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: customResume.mimeType || 'application/pdf' });
+        return new File([blob], customResume.filename || 'DanishKhan_Resume.pdf', {
+          type: customResume.mimeType || 'application/pdf',
+          lastModified: Date.now()
+        });
+      }
+    } catch (e) {
+      console.warn('[AutoApply Pro] Error reading custom resume from storage:', e);
+    }
+  }
+
+  // 2. Try instant Base64 file creation from bundled RESUME_DATA
   const file = createResumeFileFromBase64();
   if (file) return file;
 
-  // 2. Fallback: Fetch via Chrome Extension URL
+  // 3. Fallback: Fetch via Chrome Extension URL
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
     try {
       const url = chrome.runtime.getURL('assets/DanishKhan_Resume.pdf');

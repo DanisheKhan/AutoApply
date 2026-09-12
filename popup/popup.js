@@ -84,13 +84,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Ask content script for platform status
   chrome.tabs.sendMessage(tab.id, { action: "GET_PAGE_STATUS" }, (response) => {
     if (chrome.runtime.lastError || !response) {
-      platformEl.textContent = "Ready (Open any job form)";
+      platformEl.textContent = "Ready on Standby";
       tagEl.textContent = "STANDBY";
+      tagEl.className = "badge-tag standby";
+      if (statusMsg) statusMsg.textContent = "Open any job application or press Alt+Shift+F";
       return;
     }
 
-    platformEl.textContent = response.platform || "Standard Form";
-    tagEl.textContent = (response.platform || "GENERIC").toUpperCase();
+    if (response.isJobForm) {
+      platformEl.textContent = response.platform || "Job Application";
+      tagEl.textContent = "JOB FORM";
+      tagEl.className = "badge-tag job-active";
+      if (statusMsg) {
+        statusMsg.className = "status-message success";
+        statusMsg.textContent = response.fieldCount 
+          ? `✓ Detected ${response.fieldCount} fields ready for autofill` 
+          : `✓ Job form detected on this page`;
+      }
+    } else {
+      platformEl.textContent = response.platform || "Standard Web Page";
+      tagEl.textContent = "STANDBY";
+      tagEl.className = "badge-tag standby";
+      if (statusMsg) {
+        statusMsg.className = "status-message";
+        statusMsg.textContent = "Standing by. Autofill activates on job forms or via shortcut.";
+      }
+    }
   });
 
   // Autofill Click
