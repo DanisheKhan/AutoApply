@@ -17,7 +17,6 @@
   let popupShadow = null;
   let btnGroup = null;
   let insertBtn = null;
-  let dotsBtn = null;
   let menuEl = null;
 
   let currentAnchor = null;
@@ -28,6 +27,7 @@
   let isButtonVisible = false;
   let isMenuVisible = false;
   let animFrameId = null;
+  let isWidgetEnabled = true;
 
   const ICONS = {
     bolt: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
@@ -40,6 +40,24 @@
   };
 
   /**
+   * Sets whether the floating in-field button is enabled.
+   * When disabled, immediately hides active buttons and stops tracking.
+   */
+  function setWidgetEnabled(enabled) {
+    isWidgetEnabled = Boolean(enabled);
+    if (!isWidgetEnabled) {
+      hideAll();
+      if (popupHost) {
+        popupHost.style.display = 'none';
+      }
+    } else {
+      if (popupHost) {
+        popupHost.style.display = '';
+      }
+    }
+  }
+
+  /**
    * Initializes the in-field button and menu subsystem.
    * @param {Object} profile - The loaded candidate profile
    */
@@ -50,6 +68,14 @@
       activeProfile = DEFAULT_PROFILE;
     } else if (typeof window !== 'undefined' && window.DEFAULT_PROFILE) {
       activeProfile = window.DEFAULT_PROFILE;
+    }
+
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get(['floatingWidgetEnabled'], (data) => {
+        if (data && data.floatingWidgetEnabled !== undefined) {
+          setWidgetEnabled(data.floatingWidgetEnabled !== false);
+        }
+      });
     }
 
     if (!popupHost) {
@@ -76,17 +102,20 @@
     popupHost.style.margin = '0';
     popupHost.style.zIndex = '2147483647';
     popupHost.style.pointerEvents = 'none';
+    if (!isWidgetEnabled) {
+      popupHost.style.display = 'none';
+    }
     document.documentElement.appendChild(popupHost);
 
     popupShadow = popupHost.attachShadow({ mode: 'closed' });
 
     const style = document.createElement('style');
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@500;600&family=Roboto+Mono:wght@400;500&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
       :host {
         all: initial;
-        font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         z-index: 2147483647;
         position: fixed;
         top: 0;
@@ -99,24 +128,22 @@
         padding: 0;
       }
 
-      /* Split Button Group - Obsidian Dark Minimal */
+      /* Unified Rounded Minimal Pill Button */
       .aap-btn-group {
         position: fixed;
         display: none;
         align-items: center;
         height: 24px;
-        background: rgba(20, 21, 25, 0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 6px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        background: #18181b;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 9999px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         z-index: 2147483647;
         pointer-events: auto !important;
         user-select: none;
         overflow: hidden;
         will-change: transform, left, top;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
         animation: aap-fade-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
@@ -125,125 +152,69 @@
       }
 
       .aap-btn-group:hover {
-        border-color: rgba(255, 255, 255, 0.24);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 10px rgba(255, 255, 255, 0.05);
+        background: #27272a;
+        border-color: rgba(255, 255, 255, 0.28);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
       }
 
-      /* Primary Insert Button */
+      /* Inner Action Button */
       .aap-insert-btn {
         display: inline-flex;
         align-items: center;
         gap: 5px;
         height: 100%;
-        padding: 0 8px 0 9px;
+        padding: 0 10px;
         background: transparent;
-        color: #f1f5f9;
+        color: #f4f4f5;
         border: none;
+        border-radius: 9999px;
         font-family: inherit;
         font-size: 11px;
         font-weight: 500;
-        letter-spacing: 0.15px;
+        letter-spacing: 0.1px;
         cursor: pointer;
         outline: none;
         white-space: nowrap;
-        transition: background 0.12s ease, color 0.12s ease;
+        transition: color 0.12s ease;
       }
 
       .aap-insert-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
         color: #ffffff;
       }
 
       .aap-insert-btn:active {
-        background: rgba(255, 255, 255, 0.14);
+        opacity: 0.85;
       }
 
       .aap-insert-btn .aap-icon {
-        color: #38bdf8;
+        color: #d4d4d8;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
       }
 
-      /* Three Dots Action Button */
-      .aap-dots-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 100%;
-        padding: 0;
-        background: transparent;
-        color: #94a3b8;
-        border: none;
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
-        cursor: pointer;
-        outline: none;
-        transition: background 0.12s ease, color 0.12s ease;
-      }
-
-      .aap-dots-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #ffffff;
-      }
-
-      .aap-dots-btn:active, .aap-dots-btn.active {
-        background: rgba(56, 189, 248, 0.16);
-        color: #38bdf8;
-      }
-
-      /* Success Feedback - Obsidian Emerald */
+      /* Success Feedback - Clean & Minimal without glow */
       .aap-btn-group.success {
-        background: rgba(16, 185, 129, 0.18) !important;
-        border-color: rgba(52, 211, 153, 0.45) !important;
-        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(74, 222, 128, 0.5) !important;
       }
-      .aap-btn-group.success .aap-insert-btn {
-        color: #34d399 !important;
-      }
+      .aap-btn-group.success .aap-insert-btn,
       .aap-btn-group.success .aap-icon {
-        color: #34d399 !important;
-      }
-      .aap-btn-group.success .aap-dots-btn {
-        border-left-color: rgba(52, 211, 153, 0.3) !important;
-        color: #34d399 !important;
-      }
-      .aap-btn-group.success .aap-dots-btn:hover {
-        background: rgba(52, 211, 153, 0.15) !important;
+        color: #4ade80 !important;
       }
 
-      /* Contextual Modes */
-      .aap-btn-group.ai-mode .aap-icon {
-        color: #c084fc;
-      }
-      .aap-btn-group.ai-mode:hover {
-        border-color: rgba(192, 132, 252, 0.4);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 12px rgba(192, 132, 252, 0.2);
-      }
-
-      .aap-btn-group.resume-mode .aap-icon {
-        color: #f87171;
-      }
-      .aap-btn-group.resume-mode:hover {
-        border-color: rgba(248, 113, 113, 0.4);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 12px rgba(248, 113, 113, 0.2);
-      }
-
-      /* Dropdown Menu Overlay - Obsidian Dark Minimal */
+      /* Dropdown Menu Overlay - Minimal Dark */
       .aap-menu {
         position: fixed;
         display: none;
         flex-direction: column;
-        min-width: 215px;
-        max-width: 320px;
-        background: rgba(18, 19, 23, 0.98);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 200px;
+        max-width: 300px;
+        background: #18181b;
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 8px;
-        box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-        padding: 5px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+        padding: 4px;
         z-index: 2147483647;
         pointer-events: auto !important;
         user-select: none;
@@ -259,15 +230,15 @@
         font-size: 9.5px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: #64748b;
-        padding: 6px 9px 3px;
+        letter-spacing: 0.5px;
+        color: #71717a;
+        padding: 5px 8px 3px;
       }
 
       .aap-menu-divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.07);
-        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 3px 0;
       }
 
       .aap-menu-item {
@@ -275,21 +246,21 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
-        padding: 6px 9px;
+        padding: 6px 8px;
         border-radius: 5px;
         font-size: 11.5px;
-        color: #e2e8f0;
+        color: #e4e4e7;
         cursor: pointer;
-        transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
+        transition: background-color 0.1s ease, color 0.1s ease;
       }
 
       .aap-menu-item:hover {
-        background: rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.08);
         color: #ffffff;
       }
 
       .aap-menu-item:active {
-        transform: scale(0.99);
+        background: rgba(255, 255, 255, 0.12);
       }
 
       .aap-menu-item-left {
@@ -299,48 +270,41 @@
         overflow: hidden;
       }
 
+      .aap-menu-item .aap-icon {
+        color: #a1a1aa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
       .aap-menu-val {
         font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: #f1f5f9;
+        color: #f4f4f5;
       }
 
       .aap-menu-tag {
         font-size: 9.5px;
-        font-family: 'Roboto Mono', ui-monospace, monospace;
-        color: #94a3b8;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        color: #a1a1aa;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 1.5px 5px;
+        padding: 1px 5px;
         border-radius: 4px;
         white-space: nowrap;
         flex-shrink: 0;
       }
 
       .aap-menu-action {
-        color: #e2e8f0;
+        color: #e4e4e7;
         font-weight: 500;
       }
 
-      .aap-menu-action.aap-action-ai:hover {
-        background: rgba(192, 132, 252, 0.12);
-        color: #e9d5ff;
-      }
-
-      .aap-menu-action.aap-action-resume:hover {
-        background: rgba(248, 113, 113, 0.12);
-        color: #fecaca;
-      }
-
-      .aap-menu-action.aap-action-autofill:hover {
-        background: rgba(56, 189, 248, 0.12);
-        color: #bae6fd;
-      }
-
       @keyframes aap-fade-in {
-        from { opacity: 0; transform: scale(0.94); }
+        from { opacity: 0; transform: scale(0.96); }
         to { opacity: 1; transform: scale(1); }
       }
 
@@ -355,7 +319,7 @@
 
     popupShadow.appendChild(style);
 
-    // Build Split Button
+    // Build Minimal Rounded Pill Button
     btnGroup = document.createElement('div');
     btnGroup.className = 'aap-btn-group';
 
@@ -364,13 +328,7 @@
     insertBtn.className = 'aap-insert-btn';
     insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
 
-    dotsBtn = document.createElement('button');
-    dotsBtn.type = 'button';
-    dotsBtn.className = 'aap-dots-btn';
-    dotsBtn.innerHTML = ICONS.dots;
-
     btnGroup.appendChild(insertBtn);
-    btnGroup.appendChild(dotsBtn);
     popupShadow.appendChild(btnGroup);
 
     // Build Dropdown Menu
@@ -394,22 +352,26 @@
       e.stopPropagation();
     });
 
+    // Left Click: Execute primary action
     insertBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       handleInsertClick(e);
     });
 
-    dotsBtn.addEventListener('mousedown', (e) => {
+    // Right Click: Toggle Options Menu
+    const handleContextMenu = (e) => {
       e.preventDefault();
       e.stopPropagation();
-    });
+      if (isMenuVisible) {
+        hideMenu();
+      } else {
+        renderAndShowMenu();
+      }
+    };
 
-    dotsBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDotsClick(e);
-    });
+    btnGroup.addEventListener('contextmenu', handleContextMenu);
+    insertBtn.addEventListener('contextmenu', handleContextMenu);
   }
 
   /**
@@ -488,12 +450,32 @@
 
     window.addEventListener('scroll', updatePosition, { passive: true, capture: true });
     window.addEventListener('resize', updatePosition, { passive: true });
+
+    // Listen for storage changes across tabs
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.floatingWidgetEnabled !== undefined) {
+          setWidgetEnabled(changes.floatingWidgetEnabled.newValue !== false);
+        }
+      });
+    }
+
+    // Direct message listener from popup or background
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request && request.action === 'SET_WIDGET_VISIBILITY') {
+          setWidgetEnabled(request.enabled);
+        }
+      });
+    }
   }
 
   /**
    * Evaluates event target to check if it's an actionable form field.
    */
   function handleTriggerEvent(e) {
+    if (!isWidgetEnabled) return;
+
     const target = e.target;
     if (!target) return;
 
@@ -553,7 +535,7 @@
    * Displays the split button anchored cleanly beside/inside the field.
    */
   function showFieldPopupForElement(element) {
-    if (!element) return;
+    if (!isWidgetEnabled || !element) return;
 
     const profile = activeProfile || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE : {}) || {};
     const suggestions = (typeof getFieldSuggestions === 'function')
@@ -571,30 +553,30 @@
     // 1. Open-Ended AI Mode
     if (suggestions.isOpenEnded || isTextarea) {
       currentMode = 'ai';
-      btnGroup.className = 'aap-btn-group visible ai-mode';
+      btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
-      insertBtn.title = `Generate answer with Gemini AI`;
+      insertBtn.title = `Insert AI (Right-click for options)`;
     }
     // 2. Resume Mode
     else if (suggestions.isResume || element.type === 'file') {
       currentMode = 'resume';
-      btnGroup.className = 'aap-btn-group visible resume-mode';
+      btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span><span class="aap-btn-label">Attach Resume</span>`;
-      insertBtn.title = `Attach DanishKhan_Resume.pdf`;
+      insertBtn.title = `Attach Resume (Right-click for options)`;
     }
     // 3. Standard Field Value Insert Mode
     else if (currentTargetValue !== null && currentTargetValue !== undefined && currentTargetValue !== '') {
       currentMode = 'insert';
       btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
-      insertBtn.title = `Insert: ${currentTargetValue}`;
+      insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
     }
     // 4. Default AI / Smart Fill for unclassified fields
     else {
       currentMode = 'ai';
-      btnGroup.className = 'aap-btn-group visible ai-mode';
+      btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
-      insertBtn.title = `Generate answer with Gemini AI`;
+      insertBtn.title = `Insert AI (Right-click for options)`;
     }
 
     // Close any previous menu
@@ -661,7 +643,7 @@
   async function triggerAiGenerationForField(anchor, label) {
     if (!anchor) return;
     insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Drafting...</span>`;
-    btnGroup.className = 'aap-btn-group visible ai-mode';
+    btnGroup.className = 'aap-btn-group visible';
     try {
       let answer = '';
       const promptText = label || document.title || 'Job application response';
@@ -687,22 +669,6 @@
       setTimeout(() => {
         resetButtonToCurrentMode();
       }, 1500);
-    }
-  }
-
-  /**
-   * Three-Dots Button Handler: Toggles the Options Menu
-   */
-  function handleDotsClick(e) {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    if (isMenuVisible) {
-      hideMenu();
-    } else {
-      renderAndShowMenu();
     }
   }
 
@@ -745,12 +711,12 @@
     }
 
     if (allOptions.length > 0) {
-      html += `<div class="aap-menu-header">Candidate Options</div>`;
+      html += `<div class="aap-menu-header">Suggestions</div>`;
       allOptions.forEach((opt) => {
         html += `
           <div class="aap-menu-item" data-action="apply-value" data-val="${escapeHtml(opt.value)}">
             <div class="aap-menu-item-left">
-              <span class="aap-icon" style="color: ${opt.isPrimary ? '#38bdf8' : '#64748b'};">${opt.isPrimary ? ICONS.bolt : ICONS.dot}</span>
+              <span class="aap-icon">${opt.isPrimary ? ICONS.bolt : ICONS.dot}</span>
               <span class="aap-menu-val">${escapeHtml(opt.value)}</span>
             </div>
             <span class="aap-menu-tag">${escapeHtml(opt.label)}</span>
@@ -764,27 +730,27 @@
     html += `<div class="aap-menu-header">Actions</div>`;
 
     html += `
-      <div class="aap-menu-item aap-menu-action aap-action-ai" data-action="ai-generate">
+      <div class="aap-menu-item aap-menu-action" data-action="ai-generate">
         <div class="aap-menu-item-left">
-          <span class="aap-icon" style="color: #c084fc;">${ICONS.sparkle}</span>
+          <span class="aap-icon">${ICONS.sparkle}</span>
           <span class="aap-menu-val">Generate with Gemini AI</span>
         </div>
       </div>
     `;
 
     html += `
-      <div class="aap-menu-item aap-menu-action aap-action-resume" data-action="attach-resume">
+      <div class="aap-menu-item aap-menu-action" data-action="attach-resume">
         <div class="aap-menu-item-left">
-          <span class="aap-icon" style="color: #f87171;">${ICONS.file}</span>
+          <span class="aap-icon">${ICONS.file}</span>
           <span class="aap-menu-val">Attach Resume (PDF)</span>
         </div>
       </div>
     `;
 
     html += `
-      <div class="aap-menu-item aap-menu-action aap-action-autofill" data-action="autofill-all">
+      <div class="aap-menu-item aap-menu-action" data-action="autofill-all">
         <div class="aap-menu-item-left">
-          <span class="aap-icon" style="color: #38bdf8;">${ICONS.bolt}</span>
+          <span class="aap-icon">${ICONS.bolt}</span>
           <span class="aap-menu-val">Autofill Entire Form</span>
         </div>
       </div>
@@ -824,7 +790,6 @@
       });
     });
 
-    dotsBtn.classList.add('active');
     menuEl.classList.add('visible');
     menuEl.style.display = 'flex';
     isMenuVisible = true;
@@ -835,7 +800,6 @@
     if (!menuEl) return;
     menuEl.style.display = 'none';
     menuEl.classList.remove('visible');
-    if (dotsBtn) dotsBtn.classList.remove('active');
     isMenuVisible = false;
   }
 
@@ -908,7 +872,7 @@
         clearGoogleFormItemError(item);
       }
 
-      // Flash green highlight on field
+      // Flash subtle highlight on field
       if (typeof highlightFilledElement === 'function') {
         highlightFilledElement(el);
       }
@@ -923,7 +887,6 @@
 
   /**
    * Displays instant success checkmark on the button, then reverts to active state.
-   * FIX: Never destroys the button or anchor reference so user can still click [ ⋮ ]!
    */
   function showSuccessFeedback(msg = "Inserted") {
     if (successTimer) {
@@ -947,17 +910,17 @@
   function resetButtonToCurrentMode() {
     if (!insertBtn || !btnGroup) return;
     if (currentMode === 'ai') {
-      btnGroup.className = 'aap-btn-group visible ai-mode';
+      btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
-      insertBtn.title = 'Generate answer with Gemini AI';
+      insertBtn.title = 'Insert AI (Right-click for options)';
     } else if (currentMode === 'resume') {
-      btnGroup.className = 'aap-btn-group visible resume-mode';
+      btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span><span class="aap-btn-label">Attach Resume</span>`;
-      insertBtn.title = 'Attach DanishKhan_Resume.pdf';
+      insertBtn.title = 'Attach Resume (Right-click for options)';
     } else {
       btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
-      insertBtn.title = currentTargetValue ? `Insert: ${currentTargetValue}` : 'Insert';
+      insertBtn.title = currentTargetValue ? `Insert: ${currentTargetValue} (Right-click for options)` : 'Insert (Right-click for options)';
     }
   }
 
@@ -1104,6 +1067,8 @@
     window.initFieldPopup = initFieldPopup;
     window.showFieldPopupForElement = showFieldPopupForElement;
     window.hideFieldPopup = hideAll;
+    window.setFieldPopupEnabled = setWidgetEnabled;
+    window.isFieldPopupEnabled = () => isWidgetEnabled;
   }
 
   if (typeof document !== 'undefined') {

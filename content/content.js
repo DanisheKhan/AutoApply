@@ -61,9 +61,15 @@
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === 'local' && changes.floatingWidgetEnabled !== undefined) {
-        const root = document.getElementById('autoapply-pro-root');
-        if (root) {
-          root.style.display = changes.floatingWidgetEnabled.newValue === false ? 'none' : '';
+        const isEnabled = changes.floatingWidgetEnabled.newValue !== false;
+        if (typeof window.setFieldPopupEnabled === 'function') {
+          window.setFieldPopupEnabled(isEnabled);
+        } else if (typeof window.hideFieldPopup === 'function' && !isEnabled) {
+          window.hideFieldPopup();
+        }
+        const fieldRoot = document.getElementById('autoapply-field-popup-root');
+        if (fieldRoot) {
+          fieldRoot.style.display = isEnabled ? '' : 'none';
         }
       }
     });
@@ -73,9 +79,14 @@
   if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === "SET_WIDGET_VISIBILITY") {
-        const root = document.getElementById('autoapply-pro-root');
-        if (root) {
-          root.style.display = request.enabled ? '' : 'none';
+        if (typeof window.setFieldPopupEnabled === 'function') {
+          window.setFieldPopupEnabled(request.enabled);
+        } else if (typeof window.hideFieldPopup === 'function' && !request.enabled) {
+          window.hideFieldPopup();
+        }
+        const fieldRoot = document.getElementById('autoapply-field-popup-root');
+        if (fieldRoot) {
+          fieldRoot.style.display = request.enabled ? '' : 'none';
         }
         sendResponse({ success: true, enabled: request.enabled });
         return false;
@@ -102,12 +113,14 @@
       }
 
       if (request.action === "GET_PAGE_STATUS") {
-        const root = document.getElementById('autoapply-pro-root');
+        const isEnabled = typeof window.isFieldPopupEnabled === 'function'
+          ? window.isFieldPopupEnabled()
+          : true;
         sendResponse({
           platform: detectCurrentPlatform(),
           url: window.location.href,
           title: document.title,
-          widgetVisible: root ? root.style.display !== 'none' : true
+          widgetVisible: isEnabled
         });
         return false;
       }

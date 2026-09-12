@@ -63,24 +63,7 @@ async function autoUploadResume() {
   const dt = new DataTransfer();
   dt.items.add(resumeFile);
 
-  // 1. Check if interactive "Upload from Device", "Upload a Resume", or Google Forms "Add file" button exists
-  const triggerButtons = Array.from(document.querySelectorAll(
-    'button, a, div[role="button"], span[role="button"], .btn, [class*="upload-btn"], [class*="uploadFromDevice"], [class*="upload-option"], .gf-add-file-btn, [aria-label*="Add file" i], [aria-label*="Upload" i]'
-  ));
-  for (const btn of triggerButtons) {
-    const text = (btn.innerText || btn.textContent || btn.getAttribute('aria-label') || '').trim().toLowerCase();
-    if (text === 'add file' || text.includes('add file') || text === 'upload from device' || text === 'upload from computer' || text.includes('upload from device') || text.includes('upload a resume') || text.includes('upload cv')) {
-      try {
-        btn.click();
-        highlightResumeDropzone(btn.closest('div[role="listitem"], .form-group, .gf-listitem, .gf-file-upload-container') || btn);
-      } catch (e) {}
-    }
-  }
-
-  // Allow microtask tick for dynamic DOM attachments if any
-  await new Promise(r => setTimeout(r, 120));
-
-  // 2. Look for all file inputs, including hidden or stylized ones
+  // 1. Look for all file inputs, including hidden or stylized ones (attach directly via DataTransfer)
   const fileInputs = Array.from(document.querySelectorAll('input[type="file"], .gf-hidden-file-input'));
 
   // Filter for resume-specific file inputs (ignore cover letter or profile photos if separate)
@@ -252,16 +235,13 @@ async function autoUploadResume() {
 function highlightResumeDropzone(element) {
   if (!element) return;
   const originalBorder = element.style.borderColor;
-  const originalBoxShadow = element.style.boxShadow;
   const originalTransition = element.style.transition;
 
-  element.style.transition = 'all 0.3s ease';
-  element.style.borderColor = '#a8c7fa';
-  element.style.boxShadow = '0 0 16px rgba(168, 199, 250, 0.4)';
+  element.style.transition = 'border-color 0.3s ease';
+  element.style.borderColor = 'rgba(74, 222, 128, 0.6)';
 
   setTimeout(() => {
     element.style.borderColor = originalBorder;
-    element.style.boxShadow = originalBoxShadow;
     element.style.transition = originalTransition;
   }, 2000);
 }

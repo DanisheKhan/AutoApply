@@ -24,14 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (widgetStatusText) widgetStatusText.textContent = "Active";
       if (widgetPill) {
         widgetPill.classList.remove('inactive');
-        widgetPill.title = "Floating Box: Active (Click to deactivate)";
+        widgetPill.title = "Floating Button: Active (Click to deactivate)";
       }
     } else {
       if (widgetStatusDot) widgetStatusDot.classList.add('inactive');
       if (widgetStatusText) widgetStatusText.textContent = "Inactive";
       if (widgetPill) {
         widgetPill.classList.add('inactive');
-        widgetPill.title = "Floating Box: Inactive (Click to activate)";
+        widgetPill.title = "Floating Button: Inactive (Click to activate)";
       }
     }
   }
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (statusMsg) {
         statusMsg.className = "status-message";
-        statusMsg.textContent = isEnabled ? "Floating box activated on pages." : "Floating box deactivated.";
+        statusMsg.textContent = isEnabled ? "Floating button activated on pages." : "Floating button deactivated.";
       }
     });
   }
