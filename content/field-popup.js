@@ -29,7 +29,7 @@
   let isMenuVisible = false;
   let animFrameId = null;
   let isWidgetEnabled = true;
-  let activationMode = 'smart'; // 'smart' (Job Forms Only) | 'always' | 'disabled'
+  let activationMode = 'always'; // 'smart' (Job Forms Only) | 'always' | 'disabled'
 
   const ICONS = {
     bolt: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
@@ -418,6 +418,7 @@
   function bindGlobalEvents() {
     document.addEventListener('focusin', handleTriggerEvent, true);
     document.addEventListener('click', handleTriggerEvent, true);
+    document.addEventListener('mousedown', handleTriggerEvent, true); // catches masked/wrapped inputs that absorb focus events
 
     // Dismiss ONLY when the user manually types into the field (real keyboard keystroke)
     // Avoid programmatic events dispatched during insertion from triggering dismissal!
@@ -512,19 +513,6 @@
     const field = resolveInteractiveField(target);
     if (!field) return;
 
-    // Smart Job Form Identification Check:
-    // If in 'smart' mode (default), verify that this field is part of a real job form/application
-    if (activationMode === 'smart') {
-      const jd = typeof JobDetector !== 'undefined' ? JobDetector : (typeof window !== 'undefined' ? window.JobDetector : null);
-      if (jd && typeof jd.isJobContext === 'function') {
-        const isJob = jd.isJobContext(field, document);
-        if (!isJob) {
-          // On non-job pages (YouTube search, Wikipedia, shopping cart), stay completely dormant!
-          return;
-        }
-      }
-    }
-
     if (isButtonVisible && currentAnchor === field) return;
 
     showFieldPopupForElement(field);
@@ -564,6 +552,47 @@
       const innerInput = gfItem.querySelector('input.whsOnd, textarea.KHxj8b, textarea.khxj8b, textarea, input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, div[role="listbox"]:not(.OA0dhb), .ry3kXd, .quantumWizMenuPaperselectEl, [aria-haspopup="listbox"], div[role="radio"], div[role="button"][aria-label*="Add file" i]');
       if (innerInput) return innerInput;
     }
+
+    // ── GENERIC FALLBACK (handles icon-wrapped inputs, masked inputs, custom form libraries) ──
+    // Stage 1: Check if the clicked element itself CONTAINS an input (e.g. icon wrapper div)
+    if (typeof target.querySelector === 'function') {
+      const innerInput = target.querySelector(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select'
+      );
+      if (innerInput && !innerInput.disabled && !innerInput.readOnly) return innerInput;
+    }
+
+    // Stage 2: Walk up the DOM tree (up to 6 levels) — handles wrappers like .input-group, .form-control-wrap, icon spans
+    const INPUT_QUERY = 'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select';
+    let el = target.parentElement;
+    for (let depth = 0; depth < 6 && el && el !== document.body; depth++, el = el.parentElement) {
+      // Stop climbing if we hit a big container (table, form, section, article)
+      const elTag = (el.tagName || '').toLowerCase();
+      if (['form', 'table', 'section', 'article', 'main', 'header', 'footer', 'nav'].includes(elTag)) {
+        // Still check one level of this container
+        const sibling = el.querySelector(INPUT_QUERY);
+        if (sibling && !sibling.disabled) return sibling;
+        break;
+      }
+      const sibling = el.querySelector(INPUT_QUERY);
+      if (sibling && !sibling.disabled) return sibling;
+    }
+
+    // Stage 3: If document.activeElement is an input (focused by JS), use that
+    try {
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) {
+        const activeTag = (active.tagName || '').toLowerCase();
+        if (activeTag === 'input') {
+          const activeType = (active.type || 'text').toLowerCase();
+          if (!['submit', 'button', 'reset', 'hidden', 'image'].includes(activeType) && !active.disabled) {
+            return active;
+          }
+        }
+        if (activeTag === 'textarea' || activeTag === 'select') return active;
+        if (active.isContentEditable || active.getAttribute?.('contenteditable') === 'true') return active;
+      }
+    } catch (e) {}
 
     return null;
   }

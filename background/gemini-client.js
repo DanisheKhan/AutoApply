@@ -44,22 +44,46 @@ async function generateAnswerWithGemini({ question, jobContext = "", maxLength }
   }
 
   const customInstructions = profile?.gemini?.customInstructions || "";
-  const lengthConstraint = maxLength ? `Keep response strictly under ${maxLength} characters.` : "Provide a direct, polished, authentic first-person ('I') answer in 2 to 3 impactful sentences.";
 
-  const systemPrompt = `You are an AI career assistant acting directly for candidate Mohammad Danish Khan (B.Tech in Artificial Intelligence, CGPA 7.79, Summer 2026 graduate).
-Candidate Highlights:
-- Stack: React.js, Node.js, Express.js, MongoDB, Next.js, Supabase, PostgreSQL, Tailwind CSS, TypeScript, Java DSA (500+ problems solved).
-- Production Projects: CodeRace (DSA tracker, PostgreSQL/Supabase, leaderboard), Madina Perfumes (live e-commerce, Razorpay HMAC, Shiprocket API dispatch), Meet Bros intern (3 web apps shipped, cut dev time 25%).
-- Rules: ${lengthConstraint} No greetings, bullet points, quotes, or meta-commentary.
-${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
+  // Length constraint: if a char limit exists, enforce it; otherwise demand a COMPLETE detailed answer
+  const lengthConstraint = maxLength
+    ? `Keep response strictly under ${maxLength} characters. Write as many complete sentences as fit.`
+    : "Write a complete, detailed, compelling answer of 3 to 4 full sentences (minimum 80 words). Do NOT stop mid-sentence. The answer must be fully finished.";
 
-  const userPrompt = `Job / Page Context: ${jobContext ? jobContext.slice(0, 300) : "Software Engineering Position"}\nQuestion: "${question}"\nDirect Answer:`;
+  const systemPrompt = `You are an AI career assistant writing job application answers directly for candidate Mohammad Danish Khan.
+
+CANDIDATE PROFILE:
+- Name: Mohammad Danish Khan | B.Tech in Artificial Intelligence, CGPA 7.79, Summer 2026 graduate
+- Tech Stack: React.js, Node.js, Express.js, MongoDB, Next.js, Supabase, PostgreSQL, Tailwind CSS, TypeScript
+- DSA: Java, 500+ problems solved on LeetCode/competitive platforms
+- Production Projects:
+  • CodeRace — multi-user DSA tracking platform with PostgreSQL/Supabase live leaderboards & streak calculations
+  • Madina Perfumes — live e-commerce store with Razorpay HMAC SHA256 webhook verification & Shiprocket API dispatch
+  • Meet Bros — 10-month internship, shipped 3 production web apps, reduced development time by 25%
+  • Muskan Hospital, Vega Star — freelance client projects
+- Experience: 12 months total (10-month Full Stack Intern + freelance)
+- Notice Period: Immediate | Expected CTC: 5 LPA | Location: Bhusawal, Maharashtra | Open to relocate
+
+ANSWER RULES:
+- Write in first person ("I")
+- ${lengthConstraint}
+- Be specific — mention real projects, real numbers, real technologies from the profile above
+- Sound authentic and passionate, not generic
+- No greetings, no "Dear Hiring Manager", no bullet points, no quotes around the answer, no meta-commentary
+- CRITICAL: Write the COMPLETE answer. Never leave it unfinished.
+${customInstructions ? `\nCustom Instructions: ${customInstructions}` : ""}`;
+
+  const userPrompt = `Job / Page Context: ${jobContext ? jobContext.slice(0, 400) : "Software Engineering Position"}
+
+Question: "${question}"
+
+Complete Answer (write the full answer now, do not stop early):`;
 
   const url = `${GEMINI_API_ENDPOINT}/${model}:generateContent?key=${apiKey.trim()}`;
 
-  // 12-second timeout controller so UI never hangs prematurely
+  // 15-second timeout — open-ended questions need more time to generate properly
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(url, {
@@ -74,8 +98,8 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
           }
         ],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 250
+          temperature: 0.55,      // slightly higher for more natural fluent writing
+          maxOutputTokens: 700    // ~500 words — enough for a complete 3-4 sentence answer
         }
       })
     });
@@ -91,6 +115,7 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
 
     const data = await response.json();
     const parts = data?.candidates?.[0]?.content?.parts || [];
+    // Skip thought/reasoning tokens (present in thinking models like gemini-3.7-flash)
     const textPart = parts.find(p => p.text && !p.thought) || parts.find(p => p.text) || parts[parts.length - 1];
     const text = textPart?.text;
 
@@ -102,9 +127,10 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
     console.warn("[AutoApply Pro] Gemini API call skipped/timed out, using instant intelligent answer:", err.message);
   }
 
-  // Graceful ultra-fast fallback on API error/timeout
+  // Graceful fallback on API error/timeout
   return generateInstantFallbackAnswer(question, profile);
 }
+
 
 /**
  * Automatic fallback to gemini-3.7-flash
@@ -117,7 +143,7 @@ async function tryFallbackModel({ question, jobContext, apiKey, systemPrompt, us
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 250 }
+        generationConfig: { temperature: 0.55, maxOutputTokens: 700 }
       })
     });
     if (response.ok) {
