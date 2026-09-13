@@ -15,48 +15,77 @@ if (typeof require !== 'undefined') {
 function setNativeValue(element, value) {
   if (!element || value === undefined || value === null) return false;
 
-  // If contenteditable div
-  if (element.isContentEditable || element.getAttribute('contenteditable') === 'true') {
-    element.focus();
-    element.textContent = value;
-    element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: value }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-    element.dispatchEvent(new Event('blur', { bubbles: true }));
-    highlightFilledElement(element);
+  // 1. If element is a wrapper/container, automatically find the actual interactive input child
+  let target = element;
+  const tag = (element.tagName || '').toLowerCase();
+  if (!['input', 'textarea', 'select'].includes(tag) && !element.isContentEditable && element.getAttribute?.('contenteditable') !== 'true') {
+    const inner = (typeof element.querySelector === 'function')
+      ? element.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), textarea, select, [contenteditable="true"]')
+      : null;
+    if (inner) target = inner;
+  }
+
+  // 2. If contenteditable div
+  if (target.isContentEditable || target.getAttribute?.('contenteditable') === 'true') {
+    try { target.focus(); } catch (e) {}
+    target.textContent = value;
+    target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: value }));
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+    target.dispatchEvent(new Event('blur', { bubbles: true }));
+    highlightFilledElement(target);
     return true;
   }
 
-  const tag = element.tagName.toLowerCase();
-  const prototype = tag === 'input' 
-    ? window.HTMLInputElement.prototype 
-    : tag === 'textarea' 
-      ? window.HTMLTextAreaElement.prototype 
-      : window.HTMLSelectElement.prototype;
+  const targetTag = (target.tagName || '').toLowerCase();
+  const prototype = targetTag === 'input' 
+    ? (typeof window !== 'undefined' ? window.HTMLInputElement.prototype : null) 
+    : targetTag === 'textarea' 
+      ? (typeof window !== 'undefined' ? window.HTMLTextAreaElement.prototype : null) 
+      : targetTag === 'select'
+        ? (typeof window !== 'undefined' ? window.HTMLSelectElement.prototype : null)
+        : null;
 
-  const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+  const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, 'value') : null;
 
-  element.focus();
+  try {
+    target.focus();
+  } catch (e) {}
 
   // Reset React 16+ _valueTracker so React's synthetic event system detects change
-  const tracker = element._valueTracker;
+  const tracker = target._valueTracker;
   if (tracker) {
-    tracker.setValue(element.value === value ? '' : element.value);
+    tracker.setValue(target.value === value ? '' : target.value);
   }
 
   if (descriptor && descriptor.set) {
-    descriptor.set.call(element, value);
+    descriptor.set.call(target, value);
   } else {
-    element.value = value;
+    target.value = value;
   }
 
   // Dispatch full event sequence to satisfy React, Vue, Angular, Svelte, and vanilla listeners
-  element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: String(value) }));
-  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }));
+  target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: String(value) }));
+  target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true }));
+  target.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
 
-  highlightFilledElement(element);
+  // Google Forms Material Textbox styling update
+  if (typeof target.closest === 'function') {
+    const gfInputWrapper = target.closest('.rFrNMe, .Xb9hP, .ndJi5d, .t9kgXb');
+    if (gfInputWrapper) {
+      gfInputWrapper.classList.add('hasValue', 'isFocused');
+      gfInputWrapper.classList.remove('N30obe', 'RHiPp');
+    }
+
+    const gfItem = target.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem');
+    if (gfItem && typeof clearGoogleFormItemError === 'function') {
+      clearGoogleFormItemError(gfItem);
+    }
+  }
+
+  highlightFilledElement(target);
   return true;
 }
 
@@ -352,14 +381,137 @@ function getElementLabel(element) {
   return labels.join(' ').replace(/\s+/g, ' ').trim();
 }
 
-// 7. Match value from profile using Heuristics
-function matchValueFromProfile(element, profile) {
-  const labelText = getElementLabel(element);
-  if (!labelText) return null;
+// 7a. Field Fingerprint Builder — collects every possible DOM signal for a field
+/**
+ * Harvests all available signals from a form field element into one structured fingerprint object.
+ * Used by matchValueFromProfile and sendInferFieldAiRequest to maximise match accuracy.
+ * @param {Element} element - The target form field element
+ * @returns {Object} Fingerprint with label, placeholder, fieldName, fieldId, fieldType, tag,
+ *                   maxLength, ariaLabel, ariaDescribedby, dataAttrs, surroundingText,
+ *                   sectionHeading, options, formTitle
+ */
+function buildFieldFingerprint(element) {
+  if (!element) return {};
+
+  const label = (typeof getElementLabel === 'function') ? getElementLabel(element) : '';
+  const tag = (element.tagName || 'input').toLowerCase();
+  const fieldType = (element.type || 'text').toLowerCase();
+  const placeholder = element.placeholder || '';
+  const fieldName = element.name || '';
+  const fieldId = element.id || '';
+  const maxLength = (element.maxLength && element.maxLength > 0) ? element.maxLength : null;
+  const ariaLabel = element.getAttribute ? (element.getAttribute('aria-label') || '') : '';
+
+  // Collect data-* attributes as flat object
+  const dataAttrs = {};
+  if (element.dataset) {
+    try {
+      for (const key of Object.keys(element.dataset)) {
+        dataAttrs[key] = element.dataset[key];
+      }
+    } catch (e) {}
+  }
+
+  // Resolve aria-describedby text (hints, validation messages, field description)
+  let ariaDescribedby = '';
+  try {
+    const describedById = element.getAttribute ? element.getAttribute('aria-describedby') : null;
+    if (describedById) {
+      describedById.split(/\s+/).forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.innerText) ariaDescribedby += ' ' + el.innerText.trim();
+      });
+    }
+  } catch (e) {}
+
+  // Surrounding text: text content of the nearest containing block, stripped of the field itself
+  let surroundingText = '';
+  try {
+    const container = element.closest
+      ? (element.closest('.form-group, .form-row, fieldset, .field, .application-question, tr, [role="listitem"], .Qr7Oae, .geS5n')
+         || element.parentElement?.parentElement)
+      : null;
+    if (container) {
+      const clone = container.cloneNode(true);
+      clone.querySelectorAll('input, textarea, select, button, script, style, [class*="autoapply"]').forEach(el => el.remove());
+      surroundingText = ((clone.innerText || clone.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 250));
+    }
+  } catch (e) {}
+
+  // Walk up DOM tree to find nearest section heading (h1–h6, legend, fieldset, section title)
+  let sectionHeading = '';
+  try {
+    let el = element.parentElement;
+    for (let i = 0; i < 10 && el; i++, el = el.parentElement) {
+      const heading = el.querySelector
+        ? el.querySelector('legend, h1, h2, h3, h4, h5, h6, .section-title, .form-section-header, .M7eMe, .HoPnR')
+        : null;
+      if (heading && heading !== element && heading.innerText) {
+        sectionHeading = heading.innerText.trim().slice(0, 120);
+        break;
+      }
+    }
+  } catch (e) {}
+
+  // Dropdown options for <select> elements
+  let options = [];
+  if (tag === 'select') {
+    try {
+      options = Array.from(element.options).map(o => o.text.trim()).filter(Boolean);
+    } catch (e) {}
+  }
+
+  return {
+    label,
+    placeholder,
+    fieldName,
+    fieldId,
+    fieldType,
+    tag,
+    maxLength,
+    ariaLabel,
+    ariaDescribedby: ariaDescribedby.trim(),
+    dataAttrs,
+    surroundingText,
+    sectionHeading,
+    options,
+    formTitle: (typeof document !== 'undefined' ? document.title : '') || ''
+  };
+}
+
+// 7b. Match value from profile using Heuristics — now uses full fingerprint signal
+/**
+ * Matches a profile value for the given field using expanded signal matching.
+ * Accepts an optional pre-built fingerprint to avoid rebuilding it (used by Insert button).
+ * @param {Element} element
+ * @param {Object} profile
+ * @param {Object} [fingerprint] - Optional pre-built fingerprint from buildFieldFingerprint()
+ * @returns {string|null}
+ */
+function matchValueFromProfile(element, profile, fingerprint) {
+  // Build or reuse fingerprint
+  const fp = fingerprint && Object.keys(fingerprint).length > 0
+    ? fingerprint
+    : (typeof buildFieldFingerprint === 'function' ? buildFieldFingerprint(element) : {});
+
+  // Build the combined signal string from all available signals
+  const _buildSignal = (typeof buildCombinedSignal === 'function')
+    ? buildCombinedSignal
+    : (typeof window !== 'undefined' && window.buildCombinedSignal)
+      ? window.buildCombinedSignal
+      : null;
+
+  const combinedSignal = _buildSignal ? _buildSignal(fp) : (fp.label || getElementLabel(element) || '').toLowerCase();
+
+  // Need at least some signal to work with
+  if (!combinedSignal) return null;
 
   for (const pattern of FIELD_PATTERNS) {
-    if (pattern.regex.test(labelText)) {
-      if (pattern.exclude && pattern.exclude.test(labelText)) {
+    if (pattern.regex.test(combinedSignal)) {
+      if (pattern.exclude && pattern.exclude.test(combinedSignal)) {
         continue;
       }
       try {
@@ -378,12 +530,11 @@ function matchValueFromProfile(element, profile) {
     return profile.credentials?.defaultPassword || profile.personal?.password || "Danishe@1257";
   }
 
-  // Dynamic skill years experience matcher
+  // Dynamic skill years experience matcher (e.g. "React experience" → years for React)
   if (profile.skillYears && typeof profile.skillYears === 'object') {
-    const lLower = labelText.toLowerCase();
     for (const [skillName, years] of Object.entries(profile.skillYears)) {
       const skillRegex = new RegExp(`\\b${skillName.replace(/[.+]/g, '\\$&')}\\b`, 'i');
-      if (skillRegex.test(lLower)) {
+      if (skillRegex.test(combinedSignal)) {
         return String(years);
       }
     }
@@ -586,17 +737,22 @@ function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
 // Helper: Clear Google Forms validation error states without destructively hiding question containers
 function clearGoogleFormItemError(item) {
   if (!item) return;
-  item.classList.remove('NPEfkd', 'RHiWh', 'hasError', 'is-invalid');
+  item.classList.remove('NPEfkd', 'RHiWh', 'hasError', 'is-invalid', 'N30obe', 'RHiPp', 'kO001e');
   item.querySelectorAll('.geS5n, .Qr7Oae, [role="listitem"]').forEach(el => {
-    el.classList.remove('RHiWh', 'NPEfkd');
+    el.classList.remove('RHiWh', 'NPEfkd', 'N30obe', 'RHiPp', 'kO001e');
   });
   // Restore response wrappers if previously hidden by any script
   item.querySelectorAll('.t9kgXb, .AgroKb, .vQx30e').forEach(el => {
     el.style.display = '';
   });
+  // Set hasValue on input wrappers
+  item.querySelectorAll('.rFrNMe, .Xb9hP, .ndJi5d').forEach(w => {
+    w.classList.add('hasValue');
+    w.classList.remove('N30obe', 'RHiPp', 'kO001e');
+  });
   // Only hide actual role="alert" message bubbles
-  item.querySelectorAll('div[role="alert"], .spb5kn').forEach(alertEl => {
-    if (!alertEl.classList.contains('t9kgXb') && !alertEl.querySelector('input, select, [role="listbox"]')) {
+  item.querySelectorAll('div[role="alert"], .spb5kn, .RHiPp, .kO001e').forEach(alertEl => {
+    if (!alertEl.classList.contains('t9kgXb') && !alertEl.querySelector('input, select, [role="listbox"], textarea')) {
       alertEl.style.display = 'none';
     }
   });
@@ -901,7 +1057,7 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
         } else if (/stipend|program.*structure|gone.*through.*program|clear.*stipend/i.test(questionText)) {
           targetValue = "Yes";
         } else if (/month.*experience|work.*experience|how many months/i.test(questionText)) {
-          targetValue = "10";
+          targetValue = (profile.career?.totalExperienceMonths || "12").toString();
         } else {
           targetValue = resolveBooleanQuestion(questionText);
         }
@@ -1016,7 +1172,7 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
         } else if (/stipend|program.*structure|gone.*through.*program|clear.*stipend/i.test(questionText)) {
           matchedVal = "Yes";
         } else if (/month.*experience|work.*experience|how many months/i.test(questionText)) {
-          matchedVal = "10";
+          matchedVal = (profile.career?.totalExperienceMonths || "12").toString();
         } else if (/course|qualification|degree|highest.*education/i.test(questionText) && !/stipend|structure|ppo|internship/i.test(questionText)) {
           matchedVal = profile.academics?.graduation?.degree || "B.Tech";
         } else if (/year.*graduation|graduation.*year|batch/i.test(questionText)) {
@@ -1126,7 +1282,7 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
         } else if (/stipend|program.*structure|program.*details|gone.*through.*program|clear.*stipend/i.test(questionText)) {
           matchedVal = "Yes";
         } else if (/how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?/i.test(questionText)) {
-          matchedVal = "10";
+          matchedVal = profile.career?.totalExperienceMonths || "12";
         } else if (/relocat|willing.*relocate/i.test(questionText)) {
           matchedVal = "Yes";
         } else if (/notice|availability/i.test(questionText)) {
@@ -1502,7 +1658,23 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
     const labelText = getElementLabel(el);
     const tag = el.tagName.toLowerCase();
 
-    // AI question detection
+    // 1. Prioritize Heuristic Profile Match First
+    const matchedVal = matchValueFromProfile(el, profile);
+    if (matchedVal !== null && matchedVal !== undefined) {
+      if (tag === 'select' || el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox') {
+        if (fillCustomComboboxOrSelect(el, matchedVal)) filledCount++;
+      } else if (el.type === 'radio') {
+        if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
+      } else if (el.type === 'checkbox') {
+        const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(matchedVal.toString());
+        if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
+      } else {
+        if (setNativeValue(el, matchedVal)) filledCount++;
+      }
+      continue;
+    }
+
+    // 2. AI question detection ONLY if matchedVal is null and isOpenEndedQuestion is strictly true
     if (options.aiAnswers && (tag === 'textarea' || el.isContentEditable) && isOpenEndedQuestion(labelText)) {
       try {
         highlightElementThinking(el);
@@ -1518,24 +1690,9 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
       }
     }
 
-    // Heuristic Profile Match
-    const matchedVal = matchValueFromProfile(el, profile);
-    if (matchedVal !== null && matchedVal !== undefined) {
-      if (tag === 'select' || el.getAttribute('role') === 'combobox' || el.getAttribute('role') === 'listbox') {
-        if (fillCustomComboboxOrSelect(el, matchedVal)) filledCount++;
-      } else if (el.type === 'radio') {
-        if (fillNativeRadioGroup(el, matchedVal)) filledCount++;
-      } else if (el.type === 'checkbox') {
-        const isAffirmative = /yes|true|1|agree|citizen|confirm/i.test(matchedVal.toString());
-        if (setNativeCheckboxOrRadio(el, isAffirmative)) filledCount++;
-      } else {
-        if (setNativeValue(el, matchedVal)) filledCount++;
-      }
-    } else {
-      // If we don't have direct heuristic data -> queue for Step 2 (Gemini AI Inference)
-      if (!isElementAlreadyFilled(el) && labelText) {
-        unfilledForAi.push({ el, labelText, tag });
-      }
+    // If we don't have direct heuristic data -> queue for Step 2 (Gemini AI Inference)
+    if (!isElementAlreadyFilled(el) && labelText) {
+      unfilledForAi.push({ el, labelText, tag });
     }
   }
 
@@ -1557,14 +1714,19 @@ async function fillGenericForm(profile, options = { aiAnswers: false }) {
 
     try {
       highlightElementThinking(el);
-      const aiValue = await sendInferFieldAiRequest({
-        label: labelText,
-        tag,
-        type,
-        options: dropdownOptions,
-        sectionContext: section,
-        placeholder
-      });
+      let aiValue = null;
+      if ((tag === 'textarea' || el.isContentEditable) && isOpenEndedQuestion(labelText)) {
+        aiValue = await sendAiRequest(labelText);
+      } else {
+        aiValue = await sendInferFieldAiRequest({
+          label: labelText,
+          tag,
+          type,
+          options: dropdownOptions,
+          sectionContext: section,
+          placeholder
+        });
+      }
 
       if (aiValue && aiValue.trim()) {
         let filled = false;
@@ -1804,11 +1966,6 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "Alternative", value: "No" });
   } else if (/stipend|program[_\s-]?structure|program[_\s-]?details|gone.*through/i.test(lLower)) {
     suggestions.push({ label: "Acknowledge Details", value: "Yes" });
-  } else if (/how many months|months? of (work )?experience|month(s)?.*experience|experience in months/i.test(lLower)) {
-    suggestions.push({ label: "Internship Experience (Months)", value: "10" });
-    suggestions.push({ label: "Experience Range", value: "6-12 months" });
-    suggestions.push({ label: "Total Career Experience", value: "21" });
-    suggestions.push({ label: "Alternative", value: "0-6 months" });
   } else if (/relocat/i.test(lLower)) {
     suggestions.push({ label: "Willing to Relocate", value: "Yes" });
     suggestions.push({ label: "Preferred Location", value: "Pune / Bengaluru / Mumbai" });
@@ -1824,6 +1981,60 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "Count", value: "0" });
   }
 
+  // 3. Career, Experience, Salary & Notice Period
+  else if (/\b(expected.*(salary|ctc|package|compensation|remuneration)|annual.*expected|salary.*expect|desired.*(salary|ctc)|target.*ctc)\b/i.test(lLower)) {
+    const isLpaAsked = lLower.includes('lpa') || lLower.includes('lakh');
+    if (lLower.includes('(inr)') || lLower.includes('inr') || lLower.includes('rs') || (type === 'number' && !isLpaAsked)) {
+      suggestions.push({ label: "Expected Salary (INR)", value: p.career?.expectedCtcInr || "500000" });
+      suggestions.push({ label: "in LPA", value: p.career?.expectedCtcLpa || "5.0" });
+      suggestions.push({ label: "5 LPA Formatted", value: "5 LPA" });
+      suggestions.push({ label: "5,00,000 INR", value: "5,00,000" });
+    } else {
+      suggestions.push({ label: "Expected CTC (LPA)", value: p.career?.expectedCtcLpa || "5.0" });
+      suggestions.push({ label: "in INR", value: p.career?.expectedCtcInr || "500000" });
+      suggestions.push({ label: "5 LPA", value: "5 LPA" });
+    }
+  } else if (/\b(current.*(salary|ctc|package|compensation|remuneration)|annual.*current|present.*(ctc|salary)|fixed.*(ctc|salary)|put 0.*intern)\b/i.test(lLower)) {
+    if (lLower.includes('intern') || lLower.includes('put 0') || lLower.includes('fresher')) {
+      suggestions.push({ label: "Current Salary (Intern: 0)", value: "0" });
+      suggestions.push({ label: "Zero INR", value: "0" });
+      suggestions.push({ label: "Previous CTC", value: "350000" });
+      suggestions.push({ label: "3.5 LPA", value: "3.5 LPA" });
+    } else if (lLower.includes('(inr)') || lLower.includes('inr') || lLower.includes('rs')) {
+      suggestions.push({ label: "Current Salary (INR)", value: p.career?.currentCtcInr || "0" });
+      suggestions.push({ label: "Zero", value: "0" });
+      suggestions.push({ label: "350000 INR", value: "350000" });
+      suggestions.push({ label: "3.5 LPA", value: "3.5 LPA" });
+    } else {
+      suggestions.push({ label: "Current CTC", value: p.career?.currentCtcLpa || "0" });
+      suggestions.push({ label: "Zero", value: "0" });
+      suggestions.push({ label: "3.5 LPA", value: "3.5" });
+    }
+  } else if (/\b(experience[\s_()/-]*in[\s_()/-]*months?|months?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|how many months|relevant.*experience.*month|work.*experience.*month|total.*experience.*month)\b/i.test(lLower)) {
+    suggestions.push({ label: "Relevant Experience (Months)", value: p.career?.totalExperienceMonths || "12" });
+    suggestions.push({ label: "12 Months", value: "12 months" });
+    suggestions.push({ label: "Experience Range", value: "6-12 months" });
+    suggestions.push({ label: "1 Year", value: "12" });
+    suggestions.push({ label: "Intern Experience", value: "10" });
+  } else if (/\b(experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|total.*exp|overall.*experience|relevant.*experience)\b/i.test(lLower) && !/month/i.test(lLower)) {
+    suggestions.push({ label: "Total Experience (Years)", value: p.career?.totalExperienceYears || "1" });
+    suggestions.push({ label: "1 Year", value: "1 Year" });
+    suggestions.push({ label: "1.0", value: "1.0" });
+  } else if (/\b(how soon.*(start|join)|notice.*period|availability.*(start|join|days)|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|earliest.*start)\b/i.test(lLower)) {
+    if (lLower.includes('(days)') || lLower.includes('in days') || lLower.includes('days') || type === 'number') {
+      suggestions.push({ label: "Start Date / Notice (Days)", value: p.career?.noticePeriodDays || "0" });
+      suggestions.push({ label: "0 Days", value: "0" });
+      suggestions.push({ label: "Immediate", value: "Immediate" });
+      suggestions.push({ label: "15 Days", value: "15" });
+      suggestions.push({ label: "30 Days", value: "30" });
+    } else {
+      suggestions.push({ label: "Availability", value: p.career?.noticePeriodString || "Immediate (0 Days)" });
+      suggestions.push({ label: "0 Days", value: "0" });
+      suggestions.push({ label: "Immediate", value: "Immediate" });
+      suggestions.push({ label: "15 Days", value: "15 Days" });
+    }
+  }
+
   // 3. Academics
   else if (/degree|qualification|course/i.test(lLower)) {
     suggestions.push({ label: "Degree", value: p.academics?.graduation?.degree || "B.Tech" });
@@ -1832,13 +2043,12 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "Course Full", value: p.academics?.graduation?.courseName || "B.Tech in Artificial Intelligence" });
   } else if (/cgpa|gpa|marks|grade/i.test(lLower)) {
     suggestions.push({ label: "Graduation CGPA", value: p.academics?.graduation?.cgpa || "7.79" });
-    suggestions.push({ label: "Percentage", value: p.academics?.graduation?.percentage || "77.9%" });
-    suggestions.push({ label: "12th Percentage", value: p.academics?.hsc_12th?.percentage || "76.33%" });
-    suggestions.push({ label: "10th Percentage", value: p.academics?.ssc_10th?.percentage || "83.60%" });
+    suggestions.push({ label: "12th Percentage", value: p.academics?.twelfth?.percentage || "70.50" });
+    suggestions.push({ label: "10th Percentage", value: p.academics?.tenth?.percentage || "89.60" });
   } else if (/year.*grad|grad.*year|passing.*year|batch/i.test(lLower)) {
     suggestions.push({ label: "Graduation Year", value: p.academics?.graduation?.passingYear || "2026" });
   } else if (/college|institute|university/i.test(lLower)) {
-    suggestions.push({ label: "College Name", value: p.academics?.graduation?.college || "G H Raisoni College of Engineering and Management" });
+    suggestions.push({ label: "College Name", value: p.academics?.graduation?.collegeName || "G H Raisoni College of Engineering and Management" });
     suggestions.push({ label: "University", value: p.academics?.graduation?.university || "KBC North Maharashtra University" });
   }
 
@@ -1853,11 +2063,11 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   } else if (/pin|postal|zip/i.test(lLower)) {
     suggestions.push({ label: "Pincode", value: p.address?.pincode || "425201" });
   } else if (/linkedin/i.test(lLower)) {
-    suggestions.push({ label: "LinkedIn URL", value: p.socials?.linkedin || "https://linkedin.com/in/danishkhan-tech" });
+    suggestions.push({ label: "LinkedIn URL", value: p.links?.linkedin || "https://linkedin.com/in/danish-jsx" });
   } else if (/github/i.test(lLower)) {
-    suggestions.push({ label: "GitHub URL", value: p.socials?.github || "https://github.com/DanishKhan0" });
+    suggestions.push({ label: "GitHub URL", value: p.links?.github || "https://github.com/Danishekhan" });
   } else if (/portfolio|website/i.test(lLower)) {
-    suggestions.push({ label: "Portfolio URL", value: p.socials?.portfolio || "https://danishkhan.tech" });
+    suggestions.push({ label: "Portfolio URL", value: p.links?.portfolio || "https://itsdanishkhan.me" });
   }
 
   // Fallback to general heuristics if still empty

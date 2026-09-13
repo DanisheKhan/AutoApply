@@ -285,11 +285,11 @@ async function loadProfile() {
       }
     }
 
-    if (!profile.gemini.model) {
-      profile.gemini.model = (typeof DEFAULT_PROFILE !== 'undefined' && DEFAULT_PROFILE.gemini?.model) 
-        ? DEFAULT_PROFILE.gemini.model 
-        : 'gemini-flash-lite-latest';
+    let modelName = profile.gemini.model || (typeof DEFAULT_PROFILE !== 'undefined' ? DEFAULT_PROFILE.gemini?.model : 'gemini-3.6-flash');
+    if (modelName.includes('lite') || modelName.includes('flash-latest') || modelName === 'gemini-2.0-flash') {
+      modelName = 'gemini-3.6-flash';
     }
+    profile.gemini.model = modelName;
 
     if (!profile.gemini.customInstructions) {
       profile.gemini.customInstructions = (typeof DEFAULT_PROFILE !== 'undefined' && DEFAULT_PROFILE.gemini?.customInstructions) 
@@ -320,8 +320,12 @@ function populateForm(p) {
   if (!p) return;
 
   // Gemini Settings
+  let modelVal = p.gemini?.model || 'gemini-3.6-flash';
+  if (modelVal.includes('lite') || modelVal.includes('flash-latest') || modelVal === 'gemini-2.0-flash') {
+    modelVal = 'gemini-3.6-flash';
+  }
   setVal('gemini-api-key', p.gemini?.apiKey || '');
-  setVal('gemini-model', p.gemini?.model || 'gemini-flash-lite-latest');
+  setVal('gemini-model', modelVal);
   setVal('gemini-custom-instructions', p.gemini?.customInstructions || '');
 
   // Personal Info
@@ -421,7 +425,7 @@ function extractFormData() {
   // Gemini
   p.gemini = p.gemini || {};
   p.gemini.apiKey = getVal('gemini-api-key').trim();
-  p.gemini.model = getVal('gemini-model') || 'gemini-flash-lite-latest';
+  p.gemini.model = getVal('gemini-model') || 'gemini-3.6-flash';
   p.gemini.customInstructions = getVal('gemini-custom-instructions');
 
   // Personal
@@ -491,12 +495,16 @@ function extractFormData() {
 
   // Career
   p.career = p.career || {};
-  p.career.currentCtcLpa = getVal('career-currentCtc');
-  p.career.expectedCtcLpa = getVal('career-expectedCtc');
-  p.career.noticePeriodString = getVal('career-noticePeriod');
-  p.career.totalExperienceYears = getVal('career-totalExp');
-  p.career.currentCompany = getVal('career-currentCompany');
-  p.career.currentRole = getVal('career-currentRole');
+  p.career.currentCtcLpa = getVal('career-currentCtc') || '0';
+  p.career.currentCtcInr = (parseFloat(p.career.currentCtcLpa || '0') * 100000).toString();
+  p.career.expectedCtcLpa = getVal('career-expectedCtc') || '5.0';
+  p.career.expectedCtcInr = (parseFloat(p.career.expectedCtcLpa || '5.0') * 100000).toString();
+  p.career.noticePeriodString = getVal('career-noticePeriod') || 'Immediate (0 Days)';
+  p.career.noticePeriodDays = (p.career.noticePeriodString.match(/\d+/) || ['0'])[0];
+  p.career.totalExperienceYears = getVal('career-totalExp') || '1';
+  p.career.totalExperienceMonths = '12';
+  p.career.currentCompany = getVal('career-currentCompany') || 'Meet Bros';
+  p.career.currentRole = getVal('career-currentRole') || 'Full Stack Developer';
 
   // Skill years
   p.skillYears = p.skillYears || {};
@@ -554,7 +562,7 @@ function resetToDefaults() {
 
 async function testGeminiKey() {
   const key = getVal('gemini-api-key').trim();
-  const model = getVal('gemini-model') || 'gemini-flash-lite-latest';
+  const model = getVal('gemini-model') || 'gemini-3.6-flash';
   const box = document.getElementById('gemini-test-result');
 
   if (!key) {

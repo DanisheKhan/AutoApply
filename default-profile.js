@@ -6,7 +6,7 @@ const DEFAULT_PROFILE = {
   // Gemini AI Configuration
   gemini: {
     apiKey: "",
-    model: "gemini-flash-lite-latest",
+    model: "gemini-3.6-flash",
     tone: "professional_concise",
     customInstructions: "Answer job application screening questions highlighting my full-stack web development skills (React, Node.js, Express, MongoDB, Supabase, Tailwind CSS, REST APIs), real-world freelance & client projects (Madina Perfumes, Muskan Hospital, Vega Star, AURA Restauracja), and strong Java DSA foundation (500+ problems solved). Showcase dual-track experience in rapid client delivery and robust software engineering practices. Keep answers clear, authentic, and high-impact."
   },
@@ -133,13 +133,15 @@ const DEFAULT_PROFILE = {
   // Career & CTC Details
   career: {
     totalExperienceYears: "1",
-    totalExperienceMonths: "9",
+    totalExperienceMonths: "12",
     currentRole: "Full Stack Developer",
     currentCompany: "Meet Bros",
     noticePeriodDays: "0",
     noticePeriodString: "Immediate (0 Days)",
-    currentCtcLpa: "3.5",
-    expectedCtcLpa: "7.0",
+    currentCtcLpa: "0",
+    currentCtcInr: "0",
+    expectedCtcLpa: "5.0",
+    expectedCtcInr: "500000",
     preferredLocations: "Remote, Pune, Bengaluru, Mumbai, Hyderabad",
     workAuthorizationUS: "No",
     requiresSponsorshipUS: "Yes",

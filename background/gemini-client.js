@@ -5,8 +5,18 @@
 
 const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Fast, stable, currently active default model
-const DEFAULT_MODEL = "gemini-flash-lite-latest";
+// Fast, stable, currently active default model in Google Generative Language API
+const DEFAULT_MODEL = "gemini-3.6-flash";
+
+function normalizeModelName(modelName) {
+  if (!modelName) return DEFAULT_MODEL;
+  let clean = modelName.replace(/^models\//, '').trim();
+  // Map legacy / deprecated model aliases to stable defaults while allowing gemini-2.5-flash, gemini-3.6-flash, gemini-3.7-flash
+  if (clean.includes("lite") || clean.includes("flash-latest") || clean === "gemini-2.0-flash") {
+    return DEFAULT_MODEL;
+  }
+  return clean || DEFAULT_MODEL;
+}
 
 /**
  * Generates an answer using Gemini with sub-second latency, or falls back instantly on timeout/missing key.
@@ -18,13 +28,15 @@ const DEFAULT_MODEL = "gemini-flash-lite-latest";
  * @returns {Promise<string>}
  */
 async function generateAnswerWithGemini({ question, jobContext = "", maxLength }, profile) {
-  const apiKey = profile?.gemini?.apiKey;
-  let model = profile?.gemini?.model || DEFAULT_MODEL;
+  const qLower = (question || "").toLowerCase();
 
-  // Normalize legacy/deprecated model names
-  if (model.includes("2.5") || model.includes("1.5") || model.includes("2.0")) {
-    model = DEFAULT_MODEL;
+  // Fast intercept for short numeric/factual questions so LLM never writes an essay for salary/experience/days!
+  if (/\b(salary|ctc|compensation|remuneration|lpa|inr|months?[\s_()/-]*of|experience[\s_()/-]*in[\s_()/-]*months?|how soon.*(start|join)|notice.*period|start.*in days|join.*in days)\b/i.test(qLower)) {
+    return generateInstantFallbackAnswer(question, profile);
   }
+
+  const apiKey = profile?.gemini?.apiKey;
+  let model = normalizeModelName(profile?.gemini?.model || DEFAULT_MODEL);
 
   // If no API key configured, return instant high-impact candidate answer immediately
   if (!apiKey || apiKey.trim() === "") {
@@ -45,9 +57,9 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
 
   const url = `${GEMINI_API_ENDPOINT}/${model}:generateContent?key=${apiKey.trim()}`;
 
-  // 6-second timeout controller so UI never hangs
+  // 12-second timeout controller so UI never hangs prematurely
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   try {
     const response = await fetch(url, {
@@ -71,7 +83,7 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      if (model !== "gemini-3.5-flash-lite") {
+      if (model !== "gemini-3.7-flash") {
         return await tryFallbackModel({ question, jobContext, apiKey, systemPrompt, userPrompt });
       }
       throw new Error(`HTTP ${response.status}`);
@@ -95,11 +107,11 @@ ${customInstructions ? `Custom User Instructions: ${customInstructions}` : ""}`;
 }
 
 /**
- * Automatic fallback to gemini-3.5-flash-lite
+ * Automatic fallback to gemini-3.7-flash
  */
 async function tryFallbackModel({ question, jobContext, apiKey, systemPrompt, userPrompt }) {
   try {
-    const url = `${GEMINI_API_ENDPOINT}/gemini-3.5-flash-lite:generateContent?key=${apiKey.trim()}`;
+    const url = `${GEMINI_API_ENDPOINT}/gemini-3.7-flash:generateContent?key=${apiKey.trim()}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -123,7 +135,35 @@ async function tryFallbackModel({ question, jobContext, apiKey, systemPrompt, us
  * Responds in 0ms with zero latency across 15+ screening question categories.
  */
 function generateInstantFallbackAnswer(question, profile) {
+  const p = profile || (typeof DEFAULT_PROFILE !== 'undefined' ? DEFAULT_PROFILE : {});
   const q = (question || "").toLowerCase();
+
+  // 1. Factual & Numeric Questions (Intercept early to prevent long essay answers!)
+  if (/\b(expected.*(salary|ctc|package|compensation|remuneration)|annual.*expected|salary.*expect|desired.*(salary|ctc)|target.*ctc)\b/i.test(q)) {
+    if (q.includes('inr') || q.includes('annual') || q.includes('rs')) {
+      return p.career?.expectedCtcInr || "500000";
+    }
+    return p.career?.expectedCtcLpa || "5.0";
+  }
+
+  if (/\b(current.*(salary|ctc|package|compensation|remuneration)|annual.*current|present.*(ctc|salary)|fixed.*(ctc|salary)|put 0.*intern)\b/i.test(q)) {
+    return p.career?.currentCtcInr || "0";
+  }
+
+  if (/\b(experience[\s_()/-]*in[\s_()/-]*months?|months?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|how many months|relevant.*experience.*month|work.*experience.*month|total.*experience.*month)\b/i.test(q)) {
+    return p.career?.totalExperienceMonths || "12";
+  }
+
+  if (/\b(experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|total.*exp|overall.*experience|relevant.*experience)\b/i.test(q) && !/month/i.test(q)) {
+    return p.career?.totalExperienceYears || "1";
+  }
+
+  if (/\b(how soon.*(start|join)|notice.*period|availability.*(start|join|days)|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|earliest.*start)\b/i.test(q)) {
+    if (q.includes('day') || q.includes('in days')) {
+      return p.career?.noticePeriodDays || "0";
+    }
+    return p.career?.noticePeriodString || "Immediate (0 Days)";
+  }
 
   // Why join / Motivation
   if (/why.*(join|company|team|role|hire|work with us|interested in)|passion|motivation|reason/i.test(q)) {
@@ -166,109 +206,274 @@ function generateInstantFallbackAnswer(question, profile) {
 
 /**
  * Uses Gemini AI to infer the value or best option for unique/unknown form fields.
+ * Accepts the full field fingerprint for maximum context accuracy.
+ *
+ * @param {Object} params - Full field fingerprint
+ * @param {string} params.label          - Resolved label text
+ * @param {string} [params.tag]          - HTML tag name (input, select, textarea)
+ * @param {string} [params.type]         - Input type (text, number, email, etc.)
+ * @param {string[]} [params.options]    - Dropdown option texts (for select)
+ * @param {string} [params.sectionContext] - Legacy section context string
+ * @param {string} [params.placeholder]  - Placeholder attribute text
+ * @param {string} [params.fieldName]    - HTML name attribute
+ * @param {string} [params.fieldId]      - HTML id attribute
+ * @param {number|null} [params.maxLength] - maxlength attribute value
+ * @param {string} [params.surroundingText] - Visible text surrounding the field
+ * @param {string} [params.sectionHeading]  - Nearest section heading text
+ * @param {string} [params.formTitle]       - Page/form title
+ * @param {string} [params.ariaLabel]       - aria-label attribute
+ * @param {string} [params.ariaDescribedby] - Resolved aria-describedby text
+ * @param {Object} [params.dataAttrs]       - data-* attributes object
+ * @param {Object} profile - The candidate's master profile
+ * @returns {Promise<string>}
  */
-async function inferFieldWithGemini({ label, tag = "input", type = "text", options = [], sectionContext = "", placeholder = "" }, profile) {
-  if (!label || !label.trim()) return null;
+async function inferFieldWithGemini({
+  label,
+  tag = "input",
+  type = "text",
+  options = [],
+  sectionContext = "",
+  placeholder = "",
+  fieldName = "",
+  fieldId = "",
+  maxLength = null,
+  surroundingText = "",
+  sectionHeading = "",
+  formTitle = "",
+  ariaLabel = "",
+  ariaDescribedby = "",
+  dataAttrs = {}
+}, profile) {
+  // Build a combined signal from all available text sources for fast fallback matching
+  const dataStr = Object.values(dataAttrs || {}).filter(Boolean).join(' ');
+  const combinedSignal = [
+    label, placeholder, fieldName, fieldId, ariaLabel,
+    surroundingText, sectionHeading, sectionContext, dataStr
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Require at least some signal to proceed
+  if (!combinedSignal) return null;
 
   const apiKey = profile?.gemini?.apiKey;
-  const model = profile?.gemini?.model || DEFAULT_MODEL;
+  const model = normalizeModelName(profile?.gemini?.model || DEFAULT_MODEL);
 
-  // Bio-Data context snapshot
-  const candidateBio = `Candidate: Mohammad Danish Khan Naeem Khan (Male, Born: 01/06/2005).
-Location: Bhusawal, Dist. Jalgaon, Maharashtra - 425201, India.
-Citizenship: Indian / Citizen. Marital Status: Single / Unmarried. Religion: Islam.
+  // Bio-Data context snapshot (used in both fast fallback and Gemini prompt)
+  const candidateBio = `Candidate: Mohammad Danish Khan (Male, Born: 01/06/2005).
+Location: Bhusawal, Jalgaon, Maharashtra - 425201, India.
+Citizenship: Indian. Marital Status: Single. Religion: Islam.
 Degree: B.Tech in Artificial Intelligence (2022-2026), CGPA 7.79, Zero Backlogs, G H Raisoni College of Engineering, KBC North Maharashtra University.
 Tech Stack: React.js, Node.js, Express.js, MongoDB, Supabase, Next.js, Java DSA (500+ solved).
-Experience: 1 year 9 months total (10-month Full Stack Intern at Meet Bros, Freelance Client Architect for Madina Perfumes, Muskan Hospital, Vega Star).
-Passport: Indian Passport AH927400, Valid till 2035.
-Notice Period: Immediate (0 Days). Work Authorization: Legally authorized in India.
-Current Location: Bhusawal, Maharashtra. Willing to relocate: Yes (Pune, Bengaluru, Mumbai, Hyderabad, Gurgaon, Remote).`;
+Experience: 12 months total (10-month Full Stack Intern at Meet Bros, Freelance: Madina Perfumes, Muskan Hospital, Vega Star).
+Expected CTC: 5.0 LPA (5,00,000 INR). Current CTC: 0 INR (Fresher/Intern).
+Passport: Indian AH927400, Valid till 2035. Notice Period: Immediate (0 Days).
+Current Location: Bhusawal, Maharashtra. Willing to relocate: Yes (Pune, Bengaluru, Mumbai, Hyderabad, Gurgaon, Remote).
+Email: danishkhan.jsx@gmail.com. Phone: 9322990946 (+91 9322990946).
+Headline: Full-Stack Web Developer | React, Node.js, Express, MongoDB, Supabase, Java DSA.
+Designation: Full Stack Developer.`;
 
-  // Instant heuristic fallback for known edge cases
+  /**
+   * Fast zero-API fallback using combined signal across all field signals.
+   * Now matches name="exp_months", id="expected-ctc", surroundingText, aria-label, etc.
+   */
   function getFastFallback() {
-    const lLower = label.toLowerCase();
-    if (/prefix|salutation|title/i.test(lLower) && !/job|position/i.test(lLower)) return "Mr.";
-    if (/gender|sex/i.test(lLower)) return "Male";
-    if (/nationality|citizenship/i.test(lLower)) return "Indian";
-    if (/marital/i.test(lLower)) return "Single";
-    if (/state|province/i.test(lLower)) return "Maharashtra";
-    if (/country/i.test(lLower) && !/code|isd/i.test(lLower)) return "India";
-    if (/city|location/i.test(lLower)) return "Bhusawal";
-    if (/valid.*passport/i.test(lLower)) return "Yes";
-    if (/immigration.*status/i.test(lLower)) return "Citizen";
-    if (/interview.*last|applied.*before/i.test(lLower)) return "No";
-    if (/confirm.*id|read.*understood|agree|declaration/i.test(lLower)) return "Yes";
-    if (/highest.*(education|qualification|degree)/i.test(lLower)) return "B.Tech";
-    if (/visa.*if.*any|other.*visa/i.test(lLower)) return "None";
-    if (/notice|availability/i.test(lLower)) return "Immediate";
-    if (/ppo|pre[_\s-]?placement|post.*internship/i.test(lLower)) {
+    const s = combinedSignal; // already normalized lowercase
+
+    // Expected salary / CTC
+    if (/expected.*(salary|ctc|package|compensation|remuneration)|annual.*expected|salary.*expect|desired.*(salary|ctc)|target.*ctc/i.test(s)) {
       if (options && options.length > 0) {
-        const yesOpt = options.find(o => /^(yes|definitely|interested)\b/i.test(o.trim()));
-        if (yesOpt) return yesOpt;
+        const matchOpt = options.find(o => /5(\\.0)?\\s*lpa|500000|5\\s*lakh|4\\s*-\\s*6/i.test(o.trim()));
+        if (matchOpt) return matchOpt;
       }
-      return "Yes";
+      return (tag === 'input' && (type === 'number' || /inr|annual|rs/i.test(s))) ? "500000" : "5.0";
     }
-    if (/stipend|program[_\s-]?structure|program[_\s-]?details|gone.*through.*program|clear.*stipend/i.test(lLower)) {
+
+    // Current salary / CTC
+    if (/current.*(salary|ctc|package|compensation|remuneration)|annual.*current|put 0.*intern|fixed.*ctc/i.test(s)) {
       if (options && options.length > 0) {
-        const yesOpt = options.find(o => /^(yes|definitely|clear|agree)\b/i.test(o.trim()));
-        if (yesOpt) return yesOpt;
+        const matchOpt = options.find(o => /^0\\b|fresher|0-3|intern/i.test(o.trim()));
+        if (matchOpt) return matchOpt;
       }
-      return "Yes";
+      return "0";
     }
-    if (/how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?/i.test(lLower)) {
+
+    // Experience in months — catches name="exp_months", placeholder="e.g. 12", surrounding text "months of experience"
+    if (/exp.*month|month.*exp|how many months|relevant.*exp.*month|work.*exp.*month|total.*exp.*month/i.test(s)) {
       if (options && options.length > 0) {
         const rangeOpt = options.find(o => {
           const t = o.toLowerCase();
-          return t.includes('6-12') || t.includes('6 to 12') || t.includes('10') || t.includes('1-2') || t.includes('1 year');
+          return t.includes('6-12') || t.includes('6 to 12') || t.includes('12') || t.includes('10') || t.includes('1-2') || t.includes('1 year');
         }) || options.find(o => o.toLowerCase().includes('0-6') || o.toLowerCase().includes('fresher'));
         if (rangeOpt) return rangeOpt;
       }
-      return "10";
+      return "12";
     }
-    if (/relocat|willing.*relocate/i.test(lLower)) {
+
+    // Experience in years — catches name="experience_years", id="total-exp", surrounding "years of experience"
+    if (/exp.*year|year.*exp|total.*exp|overall.*exp|relevant.*exp/i.test(s) && !/month/i.test(s)) {
       if (options && options.length > 0) {
-        const yesOpt = options.find(o => /^(yes|agree|positive)\b/i.test(o.trim()));
+        const rangeOpt = options.find(o => /1\\s*-\\s*2|1\\s*year|^1\\b/i.test(o.trim()));
+        if (rangeOpt) return rangeOpt;
+      }
+      return "1";
+    }
+
+    // Notice period — catches id="notice-days", name="notice_period", type=number near "days"
+    if (/notice|how soon.*(start|join)|availability.*(start|join|days)|when.*can.*(start|join)|(start|join).*in.*days|earliest.*start/i.test(s)) {
+      if (options && options.length > 0) {
+        const immOpt = options.find(o => /immediate|^0\\b|0\\s*days|15\\s*days/i.test(o.trim()));
+        if (immOpt) return immOpt;
+      }
+      return (type === 'number' || /days/i.test(s)) ? "0" : "Immediate";
+    }
+
+    // Prefix / Salutation
+    if (/prefix|salutation|honorific/i.test(s) && !/job|position/i.test(s)) return "Mr.";
+
+    // Gender / Sex
+    if (/\bgender\b|\bsex\b/i.test(s)) return "Male";
+
+    // Nationality / Citizenship
+    if (/nationality|citizenship/i.test(s) && !/code|isd/i.test(s)) return "Indian";
+
+    // Marital status
+    if (/marital/i.test(s)) return "Single";
+
+    // State / Province
+    if (/\bstate\b|\bprovince\b/i.test(s) && !/country|city|district/i.test(s)) return "Maharashtra";
+
+    // Country
+    if (/\bcountry\b/i.test(s) && !/code|isd|dial|county/i.test(s)) return "India";
+
+    // City / Location
+    if (/\bcity\b|\bcurrent.*location\b/i.test(s) && !/state|country/i.test(s)) return "Bhusawal";
+
+    // Designation / Job Title
+    if (/designation|job.*title|role.*title|position.*title/i.test(s) && !/degree|education/i.test(s)) {
+      return profile?.personal?.designation || profile?.career?.currentDesignation || "Full Stack Developer";
+    }
+
+    // Valid passport
+    if (/valid.*passport|passport.*valid|hold.*passport/i.test(s)) return "Yes";
+
+    // Immigration status
+    if (/immigration.*status|work.*auth|authorized.*work/i.test(s)) return "Citizen";
+
+    // Highest qualification / education
+    if (/highest.*(education|qualification|degree)|education.*level/i.test(s)) return "B.Tech";
+
+    // PPO / Pre-placement offer
+    if (/ppo|pre.?placement|post.*internship/i.test(s)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|definitely|interested)\\b/i.test(o.trim()));
         if (yesOpt) return yesOpt;
       }
       return "Yes";
     }
+
+    // Stipend / Program structure acknowledgement
+    if (/stipend|program.*structure|program.*details|gone.*through.*program|clear.*stipend/i.test(s)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|definitely|clear|agree)\\b/i.test(o.trim()));
+        if (yesOpt) return yesOpt;
+      }
+      return "Yes";
+    }
+
+    // Relocation
+    if (/relocat|willing.*relocat/i.test(s)) {
+      if (options && options.length > 0) {
+        const yesOpt = options.find(o => /^(yes|agree|positive)\\b/i.test(o.trim()));
+        if (yesOpt) return yesOpt;
+      }
+      return "Yes";
+    }
+
+    // Agreement / Declaration / Confirmation
+    if (/agree|declaration|confirm.*read|certify|i.*agree|accept.*terms/i.test(s)) return "Yes";
+
+    // Generic select with affirmative first option
     if (tag === 'select' && options.length > 0) {
-      const positive = options.find(o => /^(yes|citizen|indian|male|single|mr|b\.?tech|maharashtra|india)$/i.test(o.trim()));
+      const positive = options.find(o => /^(yes|citizen|indian|male|single|mr|b\\.?tech|maharashtra|india)$/i.test(o.trim()));
       if (positive) return positive;
     }
+
     return "";
   }
 
+  // If no API key, use the enhanced fast fallback immediately
   if (!apiKey || apiKey.trim() === "") {
     return getFastFallback();
   }
 
+  // Build the rich Gemini prompt with ALL available signals
+  const sectionDisplay = sectionHeading || sectionContext || "General";
+  const fieldContextLines = [
+    `Form Title: "${formTitle || document?.title || 'Job Application'}"`,
+    `Section: "${sectionDisplay}"`,
+    `Field Label: "${label || '(none)'}"`,
+    fieldName  ? `HTML name attr: "${fieldName}"` : null,
+    fieldId    ? `HTML id attr: "${fieldId}"` : null,
+    ariaLabel  ? `ARIA Label: "${ariaLabel}"` : null,
+    `Input Type: ${type}`,
+    `HTML Tag: <${tag}>`,
+    maxLength  ? `Max Length: ${maxLength}` : null,
+    placeholder ? `Placeholder: "${placeholder}"` : null,
+    surroundingText ? `Surrounding Text: "${surroundingText.slice(0, 200)}"` : null,
+    ariaDescribedby ? `ARIA Description: "${ariaDescribedby.slice(0, 150)}"` : null,
+  ].filter(Boolean).join('\n');
+
   let prompt;
   if (options && options.length > 0) {
-    prompt = `${candidateBio}
+    prompt = `[CANDIDATE PROFILE]
+${candidateBio}
 
-You are filling a job application form for the candidate.
-Section: ${sectionContext || "General"}
-Field Label: "${label}"
-Field Tag: <${tag}>
-Dropdown Options available: ${JSON.stringify(options.slice(0, 30))}
+[FIELD CONTEXT — ALL SIGNALS]
+${fieldContextLines}
+Dropdown Options: ${JSON.stringify(options.slice(0, 30))}
 
-Instructions:
-Select the exact single option text from the list that best fits candidate Mohammad Danish Khan.
-If it is a Yes/No or boolean question, pick the affirmative or accurate answer for this candidate.
-Respond ONLY with the exact matching option string from the list. Do not include markdown, explanations, or quotes.`;
+[TASK]
+You are auto-filling a job application for this candidate.
+Using ALL context above, select the single best matching option.
+
+RULES:
+- Pick the option that best fits this candidate's profile
+- For Yes/No questions, pick the correct answer for this candidate
+- For experience in months → prefer the option containing 12 or 6-12
+- For experience in years → prefer the option containing 1 or 1-2
+- Respond with ONLY the exact matching option string from the list. No explanation. No quotes.
+
+Answer:`;
   } else {
-    prompt = `${candidateBio}
+    prompt = `[CANDIDATE PROFILE]
+${candidateBio}
 
-You are filling a job application form for the candidate.
-Section: ${sectionContext || "General"}
-Field Label: "${label}"
-Placeholder: "${placeholder}"
-Field Tag: <${tag}>
+[FIELD CONTEXT — ALL SIGNALS]
+${fieldContextLines}
 
-Instructions:
-Provide the concise, single factual value for candidate Mohammad Danish Khan.
-Respond ONLY with the value to enter into the input. No explanation or greetings.`;
+[TASK]
+You are auto-filling a job application for this candidate.
+Using ALL context above, determine the single exact value to type into this field.
+
+RULES:
+- Experience in months → 12
+- Experience in years → 1
+- Expected salary / CTC in INR or annual → 500000
+- Expected CTC in LPA → 5
+- Notice period in days → 0
+- Notice period as text → Immediate
+- Current CTC (fresher/intern) → 0
+- Designation / Job Title → Full Stack Developer
+- Yes/No questions → pick the correct answer for this candidate
+- Respond with ONLY the raw value to type. No explanation. No units. No quotes. No punctuation unless required by the field format.
+
+Answer:`;
   }
 
   const url = `${GEMINI_API_ENDPOINT}/${model}:generateContent?key=${apiKey.trim()}`;
@@ -282,7 +487,7 @@ Respond ONLY with the value to enter into the input. No explanation or greetings
       signal: controller.signal,
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 50 }
+        generationConfig: { temperature: 0.1, maxOutputTokens: 60 }
       })
     });
     clearTimeout(timeoutId);
@@ -302,6 +507,9 @@ Respond ONLY with the value to enter into the input. No explanation or greetings
   return getFastFallback();
 }
 
+
+
+
 /**
  * Tests the Gemini API Key connection with low latency.
  * @param {string} apiKey 
@@ -313,13 +521,10 @@ async function testGeminiApiKey(apiKey, model = DEFAULT_MODEL) {
     return { success: false, message: "API key is empty." };
   }
 
-  let selectedModel = model;
-  if (selectedModel.includes("2.5") || selectedModel.includes("1.5") || selectedModel.includes("2.0")) {
-    selectedModel = DEFAULT_MODEL;
-  }
+  let selectedModel = normalizeModelName(model);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   try {
     const url = `${GEMINI_API_ENDPOINT}/${selectedModel}:generateContent?key=${apiKey.trim()}`;
@@ -336,6 +541,21 @@ async function testGeminiApiKey(apiKey, model = DEFAULT_MODEL) {
     clearTimeout(timeoutId);
 
     if (!res.ok) {
+      if ((res.status === 404 || res.status === 400) && selectedModel !== "gemini-3.7-flash") {
+        const fallbackModel = "gemini-3.7-flash";
+        const fbUrl = `${GEMINI_API_ENDPOINT}/${fallbackModel}:generateContent?key=${apiKey.trim()}`;
+        const fbRes = await fetch(fbUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: "Respond with the single word: OK" }] }],
+            generationConfig: { maxOutputTokens: 10 }
+          })
+        });
+        if (fbRes.ok) {
+          return { success: true, message: `Connected successfully! Active model: ${fallbackModel}` };
+        }
+      }
       const err = await res.json().catch(() => ({}));
       return { success: false, message: err?.error?.message || `HTTP ${res.status}` };
     }
@@ -347,6 +567,9 @@ async function testGeminiApiKey(apiKey, model = DEFAULT_MODEL) {
     return { success: true, message: `Connected successfully! Model: ${selectedModel} (${reply.trim()})` };
   } catch (e) {
     clearTimeout(timeoutId);
+    if (e.name === 'AbortError' || (e.message && e.message.includes('abort'))) {
+      return { success: false, message: "Request timed out after 12s. Please check your internet connection or API key validity." };
+    }
     return { success: false, message: e.message };
   }
 }

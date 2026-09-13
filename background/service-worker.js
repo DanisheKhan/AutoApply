@@ -56,7 +56,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     if (!profile.gemini || !profile.gemini.apiKey || profile.gemini.apiKey.trim() === '') {
       profile.gemini = profile.gemini || {};
       profile.gemini.apiKey = data.geminiApiKey || DEFAULT_PROFILE.gemini?.apiKey || '';
-      profile.gemini.model = profile.gemini.model || DEFAULT_PROFILE.gemini?.model || 'gemini-flash-lite-latest';
+      profile.gemini.model = profile.gemini.model || DEFAULT_PROFILE.gemini?.model || 'gemini-3.6-flash';
     }
     await chrome.storage.local.set({ candidateProfile: profile });
   }

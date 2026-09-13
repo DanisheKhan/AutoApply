@@ -23,6 +23,7 @@
   let currentTargetValue = null;
   let currentLabel = '';
   let currentSuggestions = null;
+  let currentFingerprint = null; // Full DOM fingerprint built by buildFieldFingerprint()
   let currentMode = 'insert'; // 'insert' | 'ai' | 'resume'
   let isButtonVisible = false;
   let isMenuVisible = false;
@@ -558,9 +559,9 @@
     if (radioBtn) return radioBtn;
 
     // Google Forms question container: find inner field
-    const gfItem = target.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem');
+    const gfItem = target.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem, .form-group, .field');
     if (gfItem) {
-      const innerInput = gfItem.querySelector('div[role="listbox"]:not(.OA0dhb), .ry3kXd, .quantumWizMenuPaperselectEl, [aria-haspopup="listbox"], input.whsOnd, textarea.khxj8b, textarea, select, div[role="radio"], div[role="button"][aria-label*="Add file" i], input:not([type="hidden"])');
+      const innerInput = gfItem.querySelector('input.whsOnd, textarea.KHxj8b, textarea.khxj8b, textarea, input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), select, div[role="listbox"]:not(.OA0dhb), .ry3kXd, .quantumWizMenuPaperselectEl, [aria-haspopup="listbox"], div[role="radio"], div[role="button"][aria-label*="Add file" i]');
       if (innerInput) return innerInput;
     }
 
@@ -583,11 +584,16 @@
     currentLabel = suggestions.label || '';
     currentTargetValue = suggestions.primary ? suggestions.primary.value : null;
 
+    // Build and cache the full field fingerprint for use at Insert click time
+    currentFingerprint = (typeof buildFieldFingerprint === 'function')
+      ? buildFieldFingerprint(element)
+      : null;
+
     const tag = element.tagName ? element.tagName.toLowerCase() : '';
     const isTextarea = tag === 'textarea';
 
-    // 1. Open-Ended AI Mode
-    if (suggestions.isOpenEnded || isTextarea) {
+    // 1. Open-Ended AI Mode (ONLY if field is genuinely an open-ended essay question AND has no direct candidate value)
+    if (suggestions.isOpenEnded && (!currentTargetValue || isTextarea)) {
       currentMode = 'ai';
       btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
@@ -607,12 +613,26 @@
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
       insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
     }
-    // 4. Default AI / Smart Fill for unclassified fields
+    // 4. Smart fallback: avoid forcing AI mode unless truly an essay question
     else {
-      currentMode = 'ai';
-      btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
-      insertBtn.title = `Insert AI (Right-click for options)`;
+      const fallbackVal = (typeof matchValueFromProfile === 'function') ? matchValueFromProfile(element, profile) : null;
+      if (fallbackVal !== null && fallbackVal !== undefined && fallbackVal !== '') {
+        currentTargetValue = fallbackVal;
+        currentMode = 'insert';
+        btnGroup.className = 'aap-btn-group visible';
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+        insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
+      } else if (suggestions.isOpenEnded) {
+        currentMode = 'ai';
+        btnGroup.className = 'aap-btn-group visible';
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
+        insertBtn.title = `Insert AI (Right-click for options)`;
+      } else {
+        currentMode = 'insert';
+        btnGroup.className = 'aap-btn-group visible';
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+        insertBtn.title = `Insert (Right-click for options)`;
+      }
     }
 
     // Close any previous menu
@@ -626,7 +646,7 @@
   }
 
   /**
-   * 1-Click Primary Insert Handler
+   * 1-Click Primary Insert Handler (Zero-Failure Execution)
    */
   async function handleInsertClick(e) {
     if (e) {
@@ -635,7 +655,7 @@
     }
     hideMenu();
 
-    if (!currentAnchor) {
+    if (!currentAnchor || !currentAnchor.isConnected) {
       if (document.activeElement && document.activeElement !== document.body) {
         currentAnchor = resolveInteractiveField(document.activeElement);
       }
@@ -666,17 +686,100 @@
       return;
     }
 
-    // C. Standard Insert Mode
-    if (currentTargetValue !== null && currentTargetValue !== undefined) {
-      applyValueToField(currentAnchor, currentTargetValue, currentLabel);
-      showSuccessFeedback("Inserted");
+    // C. Standard Insert Mode: If currentTargetValue is missing, run smart lookup → Gemini
+    let valToApply = currentTargetValue;
+    const profile = activeProfile || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE : {}) || {};
+
+    // Step 1: Try suggestions & profile lookup (0ms, no API)
+    if (!valToApply) {
+      const suggestions = (typeof getFieldSuggestions === 'function')
+        ? getFieldSuggestions(currentAnchor, '', profile)
+        : null;
+      if (suggestions?.primary?.value) {
+        valToApply = suggestions.primary.value;
+      }
     }
-  }
+
+    // Step 2: Try combined-signal profile match with full fingerprint (0ms, no API)
+    if (!valToApply && typeof matchValueFromProfile === 'function') {
+      valToApply = matchValueFromProfile(currentAnchor, profile, currentFingerprint || undefined);
+    }
+
+    if (valToApply) {
+      // Found from profile/heuristics — apply immediately
+      currentTargetValue = valToApply;
+      applyValueToField(currentAnchor, valToApply, currentLabel);
+      showSuccessFeedback('Inserted');
+      return;
+    }
+
+    // Step 3: Nothing found locally → call Gemini with the full fingerprint
+    // Show spinner while Gemini works
+    insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Thinking...</span>`;
+    btnGroup.className = 'aap-btn-group visible';
+
+    try {
+      let geminiVal = '';
+      const fp = currentFingerprint || {};
+
+      if (typeof sendInferFieldAiRequest === 'function') {
+        geminiVal = await sendInferFieldAiRequest({
+          label: fp.label || currentLabel || '',
+          tag: fp.tag || 'input',
+          type: fp.fieldType || 'text',
+          options: fp.options || [],
+          sectionContext: fp.sectionHeading || '',
+          placeholder: fp.placeholder || '',
+          fieldName: fp.fieldName || '',
+          fieldId: fp.fieldId || '',
+          maxLength: fp.maxLength || null,
+          surroundingText: fp.surroundingText || '',
+          sectionHeading: fp.sectionHeading || '',
+          formTitle: fp.formTitle || document.title || '',
+          ariaLabel: fp.ariaLabel || '',
+          ariaDescribedby: fp.ariaDescribedby || '',
+          dataAttrs: fp.dataAttrs || {}
+        });
+      } else if (typeof inferFieldWithGemini === 'function') {
+        // Direct inline call (no background worker path)
+        const p = activeProfile || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE : {}) || {};
+        geminiVal = await inferFieldWithGemini({
+          label: fp.label || currentLabel || '',
+          tag: fp.tag || 'input',
+          type: fp.fieldType || 'text',
+          options: fp.options || [],
+          placeholder: fp.placeholder || '',
+          fieldName: fp.fieldName || '',
+          fieldId: fp.fieldId || '',
+          maxLength: fp.maxLength || null,
+          surroundingText: fp.surroundingText || '',
+          sectionHeading: fp.sectionHeading || '',
+          formTitle: fp.formTitle || document.title || '',
+          ariaLabel: fp.ariaLabel || '',
+          ariaDescribedby: fp.ariaDescribedby || '',
+          dataAttrs: fp.dataAttrs || {}
+        }, p);
+      }
+
+      if (geminiVal && geminiVal.trim()) {
+        currentTargetValue = geminiVal.trim();
+        applyValueToField(currentAnchor, currentTargetValue, currentLabel);
+        showSuccessFeedback('Inserted');
+      } else {
+        // Gemini returned nothing — reset button silently
+        resetButtonToCurrentMode();
+      }
+    } catch (err) {
+      console.warn('[AutoApply Pro] Insert Gemini fallback error:', err);
+      resetButtonToCurrentMode();
+    }
+  } // end handleInsertClick
 
   /**
    * Generates AI answer with Gemini and applies it to the anchor field.
    */
   async function triggerAiGenerationForField(anchor, label) {
+
     if (!anchor) return;
     insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Drafting...</span>`;
     btnGroup.className = 'aap-btn-group visible';
@@ -865,8 +968,14 @@
     isApplyingValue = true;
 
     try {
+      try {
+        el.focus();
+      } catch (e) {}
+
       const tag = el.tagName ? el.tagName.toLowerCase() : '';
-      const item = el.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem') || el.parentElement;
+      const item = (typeof el.closest === 'function') 
+        ? (el.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem, .form-group, .field') || el.parentElement)
+        : el.parentElement;
 
       // 1. Google Forms or Custom Dropdown Listbox
       if (el.getAttribute('role') === 'listbox' || el.classList.contains('quantumWizMenuPaperselectEl') || el.classList.contains('gf-custom-select') || el.hasAttribute('aria-haspopup')) {
@@ -908,7 +1017,7 @@
           allRadios.forEach(r => { if (r !== targetRadio) r.setAttribute('aria-checked', 'false'); });
         }
       }
-      // 4. Standard Input / Textarea
+      // 4. Standard Input / Textarea / Composite Container
       else {
         if (typeof setNativeValue === 'function') {
           setNativeValue(el, value);
@@ -931,7 +1040,7 @@
     } finally {
       setTimeout(() => {
         isApplyingValue = false;
-      }, 50);
+      }, 80);
     }
   }
 

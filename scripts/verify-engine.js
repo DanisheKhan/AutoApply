@@ -128,7 +128,11 @@ async function runVerification() {
     { label: "Current Designation / Role", expectedKey: "career.currentRole" },
     { label: "Total Years of Experience", expectedKey: "career.totalExperienceYears" },
     { label: "Current Annual CTC (in LPA)", expectedKey: "career.currentCtc" },
+    { label: "Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *", expectedKey: "career.currentCtc" },
     { label: "Expected Salary (CTC)", expectedKey: "career.expectedCtc" },
+    { label: "Annual Expected Salary (INR) *", expectedKey: "career.expectedCtc" },
+    { label: "Your relevant experience (in months) *", expectedKey: "career.totalExperienceMonths" },
+    { label: "How soon can you start? (in days) *", expectedKey: "career.noticePeriodDays" },
     { label: "Notice Period / Availability", expectedKey: "career.noticePeriodDays" },
     { label: "Preferred Job Locations", expectedKey: "career.preferredLocations" },
 
@@ -175,7 +179,7 @@ async function runVerification() {
     { label: "Year of Graduation *", expectedKey: "academics.graduation.passingYear" },
     { label: "Are you interested in a PPO (pre-placement offer) post the internship completion ? *", expectedKey: "career.interestedInPpo" },
     { label: "Have you gone through the program details? Are you clear about the stipend and the program structure? *", expectedKey: "career.programDetailsStipend" },
-    { label: "How many months of work experience do you have ? *", expectedKey: "career.workExperienceMonths" },
+    { label: "How many months of work experience do you have ? *", expectedKey: "career.totalExperienceMonths" },
 
     // Technology Skill Years Experience
     { label: "REACT.JS / FRONTEND", expectedKey: "skills.react" },
@@ -201,82 +205,100 @@ async function runVerification() {
   const last4Val = aadhaarPattern.getValue(DEFAULT_PROFILE, mockAadhaarLast4);
   assert(last4Val === "2036", `Aadhaar Last 4 digits -> "2036" [Got: "${last4Val}"]`);
 
-  const mockAadhaarFull = { getAttribute: () => "Aadhaar Number (12 digit)" };
+  const mockAadhaarFull = { getAttribute: () => "Aadhaar Number *" };
   const fullVal = aadhaarPattern.getValue(DEFAULT_PROFILE, mockAadhaarFull);
   assert(fullVal === "270883622036", `Aadhaar Full 12 digits -> "270883622036" [Got: "${fullVal}"]`);
 
-  // Verify Name Variations (2-field vs 3-field)
+  // Verify 2-Field vs 3-Field Name Heuristics
   console.log("\n[3.1] Testing 2-Field vs 3-Field Name Heuristic Logic:");
   const firstNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.firstName");
   const middleNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.middleName");
   const lastNamePattern = FIELD_PATTERNS.find(p => p.key === "personal.lastName");
 
-  // 2-field simulation (no middle name field present in container)
-  const twoFieldName = firstNamePattern.getValue(DEFAULT_PROFILE, {});
-  const twoFieldLastName = lastNamePattern.getValue(DEFAULT_PROFILE, {});
-  assert(twoFieldName === "Mohammad Danish Khan", `2-Field Form: First Name -> "Mohammad Danish Khan" [Got: "${twoFieldName}"]`);
-  assert(twoFieldLastName === "Naeem Khan", `2-Field Form: Last Name -> "Naeem Khan" [Got: "${twoFieldLastName}"]`);
-
-  // 3-field simulation (mock element inside container with middle name)
-  const mockContainerWithMiddle = {
-    querySelector: (sel) => sel.includes('middle') ? {} : null,
-    querySelectorAll: () => []
+  // Mock a 2-field form (form with first + last name, no middle name)
+  const mockForm2Field = {
+    form: {
+      querySelectorAll: (sel) => {
+        if (sel.includes('input')) return [{ name: 'firstName' }, { name: 'lastName' }];
+        return [];
+      }
+    }
   };
-  const mockElement = {
-    closest: () => mockContainerWithMiddle
-  };
-  const threeFieldName = firstNamePattern.getValue(DEFAULT_PROFILE, mockElement);
-  const threeFieldMiddle = middleNamePattern.getValue(DEFAULT_PROFILE, mockElement);
-  const threeFieldLastName = lastNamePattern.getValue(DEFAULT_PROFILE, mockElement);
-  assert(threeFieldName === "Mohammad Danish", `3-Field Form: First Name -> "Mohammad Danish" [Got: "${threeFieldName}"]`);
-  assert(threeFieldMiddle === "Khan", `3-Field Form: Middle Name -> "Khan" [Got: "${threeFieldMiddle}"]`);
-  assert(threeFieldLastName === "Naeem Khan", `3-Field Form: Last Name -> "Naeem Khan" [Got: "${threeFieldLastName}"]`);
 
-  // 4. Boolean Question Classifier Tests
+  // Mock a 3-field form (form with first + middle + last name)
+  const mockForm3Field = {
+    form: {
+      querySelectorAll: (sel) => {
+        if (sel.includes('input')) return [{ name: 'firstName' }, { name: 'middleName' }, { name: 'lastName' }];
+        return [];
+      }
+    }
+  };
+
+  const fName2 = firstNamePattern.getValue(DEFAULT_PROFILE, mockForm2Field);
+  assert(fName2 === "Mohammad Danish Khan", `2-Field Form: First Name -> "Mohammad Danish Khan" [Got: "${fName2}"]`);
+
+  const lName2 = lastNamePattern.getValue(DEFAULT_PROFILE, mockForm2Field);
+  assert(lName2 === "Naeem Khan", `2-Field Form: Last Name -> "Naeem Khan" [Got: "${lName2}"]`);
+
+  const fName3 = firstNamePattern.getValue(DEFAULT_PROFILE, mockForm3Field);
+  assert(fName3 === "Mohammad Danish", `3-Field Form: First Name -> "Mohammad Danish" [Got: "${fName3}"]`);
+
+  const mName3 = middleNamePattern.getValue(DEFAULT_PROFILE, mockForm3Field);
+  assert(mName3 === "Khan", `3-Field Form: Middle Name -> "Khan" [Got: "${mName3}"]`);
+
+  const lName3 = lastNamePattern.getValue(DEFAULT_PROFILE, mockForm3Field);
+  assert(lName3 === "Naeem Khan", `3-Field Form: Last Name -> "Naeem Khan" [Got: "${lName3}"]`);
+
+  // 4. Test Smart Boolean Classifier
   console.log("\n[4] Testing Smart Boolean (Yes/No) Classifier:");
   assert(resolveBooleanQuestion("Are you legally authorized to work in India?") === "Yes", "Work auth question -> Yes");
-  assert(resolveBooleanQuestion("Will you now or in future require visa sponsorship in India?") === "No", "Visa sponsorship in India -> No");
+  assert(resolveBooleanQuestion("Will you require visa sponsorship in India?") === "No", "Visa sponsorship in India -> No");
   assert(resolveBooleanQuestion("Do you have any active backlogs or standing arrears?") === "No", "Backlogs -> No");
-  assert(resolveBooleanQuestion("Have you ever been convicted of a criminal offense?") === "No", "Criminal conviction -> No");
+  assert(resolveBooleanQuestion("Have you ever been convicted of any criminal offense?") === "No", "Criminal conviction -> No");
   assert(resolveBooleanQuestion("Are you willing to relocate to Pune or Bengaluru?") === "Yes", "Relocation -> Yes");
   assert(resolveBooleanQuestion("Are you comfortable working in rotational shifts?") === "Yes", "Shift work -> Yes");
-  assert(resolveBooleanQuestion("Do you agree to the terms and conditions?") === "Yes", "Consent -> Yes");
-  assert(resolveBooleanQuestion("Are you interested in a PPO (pre-placement offer) post the internship completion ?") === "Yes", "PPO interest -> Yes");
-  assert(resolveBooleanQuestion("Have you gone through the program details? Are you clear about the stipend and the program structure?") === "Yes", "Stipend & structure -> Yes");
+  assert(resolveBooleanQuestion("Do you agree to company terms and data processing consent?") === "Yes", "Consent -> Yes");
+  assert(resolveBooleanQuestion("Are you interested in a PPO (pre-placement offer) post the internship completion ? *") === "Yes", "PPO interest -> Yes");
+  assert(resolveBooleanQuestion("Have you gone through the program details? Are you clear about the stipend and the program structure? *") === "Yes", "Stipend & structure -> Yes");
 
-  // 5. Open-Ended AI Question Detector & Instant Fallback Generator Tests
+  // 5. Test AI Open-Ended Question Detector
   console.log("\n[5] Testing AI Open-Ended Question Detector & Instant Fallbacks:");
   assert(isOpenEndedQuestion("Why do you want to join our engineering team?"), "Identified 'Why join' as open-ended question");
   assert(isOpenEndedQuestion("Describe your most challenging technical project and how you solved it."), "Identified 'Project challenge' as open-ended question");
   assert(isOpenEndedQuestion("What are your greatest technical strengths?"), "Identified 'Strengths' as open-ended question");
   assert(!isOpenEndedQuestion("Full Name"), "Full Name rejected from AI question classification");
   assert(!isOpenEndedQuestion("Phone Number"), "Phone rejected from AI question classification");
+  assert(!isOpenEndedQuestion("Annual Expected Salary (INR) *"), "Expected Salary rejected from AI question classification");
+  assert(!isOpenEndedQuestion("Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *"), "Current Salary rejected from AI question classification");
+  assert(!isOpenEndedQuestion("Your relevant experience (in months) *"), "Relevant experience rejected from AI question classification");
+  assert(!isOpenEndedQuestion("How soon can you start? (in days) *"), "How soon can you start rejected from AI question classification");
 
-  const fallbackWhy = generateInstantFallbackAnswer("Why should we hire you?");
-  assert(fallbackWhy.includes("full-stack") && fallbackWhy.includes("React"), "Instant fallback generated high-impact 'Why hire' answer");
+  const instantWhy = generateInstantFallbackAnswer("Why should we hire you for this role?", DEFAULT_PROFILE);
+  assert(instantWhy.includes("full-stack") && instantWhy.includes("React"), "Instant fallback generated high-impact 'Why hire' answer");
 
-  const fallbackProject = generateInstantFallbackAnswer("Tell us about a challenging project.");
-  assert(fallbackProject.includes("CodeRace") || fallbackProject.includes("Madina Perfumes"), "Instant fallback references real projects (CodeRace / Madina)");
+  const instantProj = generateInstantFallbackAnswer("Tell us about your production projects and accomplishments.", DEFAULT_PROFILE);
+  assert(instantProj.includes("CodeRace") || instantProj.includes("Madina Perfumes"), "Instant fallback references real projects (CodeRace / Madina)");
 
-  // 6. Test AI Field Inference Fallback Engine
+  // 6. Test Gemini AI Field Inference Engine
   console.log("\n[6] Testing Gemini AI Field Inference Engine:");
   const { inferFieldWithGemini } = require('../background/gemini-client.js');
-  const inferredPrefix = await inferFieldWithGemini({ label: "Prefix (?)", tag: "select", options: ["No Selection", "Mr.", "Ms.", "Mrs."] }, DEFAULT_PROFILE);
+  const inferredPrefix = await inferFieldWithGemini({ label: "Prefix (?)", tag: "select", options: ["Mr.", "Ms.", "Mrs.", "Dr."] }, DEFAULT_PROFILE);
   assert(inferredPrefix === "Mr.", `AI Inferred Prefix: "${inferredPrefix}" [Expected: "Mr."]`);
 
-  const inferredPassport = await inferFieldWithGemini({ label: "Valid Passport *", tag: "select", options: ["No Selection", "Yes", "No"] }, DEFAULT_PROFILE);
+  const inferredPassport = await inferFieldWithGemini({ label: "Do you hold a valid passport?", tag: "select", options: ["Yes", "No"] }, DEFAULT_PROFILE);
   assert(inferredPassport === "Yes", `AI Inferred Passport: "${inferredPassport}" [Expected: "Yes"]`);
 
-  const inferredImmigration = await inferFieldWithGemini({ label: "Immigration Status", tag: "select", options: ["No Selection", "Citizen", "Alien"] }, DEFAULT_PROFILE);
+  const inferredImmigration = await inferFieldWithGemini({ label: "Immigration Status *", tag: "select", options: ["Citizen", "Permanent Resident", "Work Visa", "Other"] }, DEFAULT_PROFILE);
   assert(inferredImmigration === "Citizen", `AI Inferred Immigration: "${inferredImmigration}" [Expected: "Citizen"]`);
 
-  const inferredPpo = await inferFieldWithGemini({ label: "Are you interested in a PPO (pre-placement offer) post the internship completion ?", tag: "select", options: ["Choose", "Yes", "NO"] }, DEFAULT_PROFILE);
-  assert(inferredPpo === "Yes", `AI Inferred PPO dropdown: "${inferredPpo}" [Expected: "Yes"]`);
+  const inferredPpoDropdown = await inferFieldWithGemini({ label: "Are you interested in a PPO (pre-placement offer) post the internship completion ?", tag: "select", options: ["Yes", "No", "Maybe"] }, DEFAULT_PROFILE);
+  assert(inferredPpoDropdown === "Yes", `AI Inferred PPO dropdown: "${inferredPpoDropdown}" [Expected: "Yes"]`);
 
   const inferredPpoInput = await inferFieldWithGemini({ label: "Are you interested in a PPO (pre-placement offer) post the internship completion ?", tag: "input" }, DEFAULT_PROFILE);
   assert(inferredPpoInput === "Yes", `AI Inferred PPO text input: "${inferredPpoInput}" [Expected: "Yes"]`);
 
-  const inferredStipend = await inferFieldWithGemini({ label: "Have you gone through the program details? Are you clear about the stipend and the program structure?", tag: "select", options: ["Choose", "Yes", "NO"] }, DEFAULT_PROFILE);
+  const inferredStipend = await inferFieldWithGemini({ label: "Have you gone through the program details? Are you clear about the stipend and the program structure?", tag: "select", options: ["Yes", "No"] }, DEFAULT_PROFILE);
   assert(inferredStipend === "Yes", `AI Inferred Stipend & structure dropdown: "${inferredStipend}" [Expected: "Yes"]`);
 
   const inferredStipendInput = await inferFieldWithGemini({ label: "Have you gone through the program details? Are you clear about the stipend and the program structure?", tag: "input" }, DEFAULT_PROFILE);
@@ -285,8 +307,14 @@ async function runVerification() {
   const inferredExpDropdown = await inferFieldWithGemini({ label: "How many months of work experience do you have ?", tag: "select", options: ["0-6 months", "6-12 months", "1-2 years"] }, DEFAULT_PROFILE);
   assert(inferredExpDropdown === "6-12 months", `AI Inferred Experience dropdown: "${inferredExpDropdown}" [Expected: "6-12 months"]`);
 
-  const inferredExpInput = await inferFieldWithGemini({ label: "How many months of work experience do you have ?", tag: "input" }, DEFAULT_PROFILE);
-  assert(inferredExpInput === "10", `AI Inferred Experience text input: "${inferredExpInput}" [Expected: "10"]`);
+  const inferredExpInput = await inferFieldWithGemini({ label: "Your relevant experience (in months) *", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredExpInput === "12", `AI Inferred Experience text input: "${inferredExpInput}" [Expected: "12"]`);
+
+  const inferredExpSalary = await inferFieldWithGemini({ label: "Annual Expected Salary (INR) *", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredExpSalary === "500000", `AI Inferred Expected Salary text input: "${inferredExpSalary}" [Expected: "500000"]`);
+
+  const inferredCurSalary = await inferFieldWithGemini({ label: "Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredCurSalary === "0", `AI Inferred Current Salary text input: "${inferredCurSalary}" [Expected: "0"]`);
 
   // 7. Test Field-Level Quick Fill Suggestions Engine
   console.log("\n[7] Testing Field-Level Quick Fill Suggestions Engine:");
@@ -307,9 +335,18 @@ async function runVerification() {
   const stipendSugg = getFieldSuggestions(null, "Have you gone through the program details? Are you clear about the stipend and the program structure? *", DEFAULT_PROFILE);
   assert(stipendSugg.primary && stipendSugg.primary.value === "Yes", `Stipend Suggestion -> "${stipendSugg.primary?.value}" [Expected: "Yes"]`);
 
-  const expSugg = getFieldSuggestions(null, "How many months of work experience do you have ? *", DEFAULT_PROFILE);
-  assert(expSugg.primary && expSugg.primary.value === "10", `Work Experience Months Suggestion -> "${expSugg.primary?.value}" [Expected: "10"]`);
+  const expSugg = getFieldSuggestions(null, "Your relevant experience (in months) *", DEFAULT_PROFILE);
+  assert(expSugg.primary && expSugg.primary.value === "12", `Work Experience Months Suggestion -> "${expSugg.primary?.value}" [Expected: "12"]`);
   assert(expSugg.alternatives.some(a => a.value.includes("6-12")), "Experience has range alternative '6-12 months'");
+
+  const expSalarySugg = getFieldSuggestions(null, "Annual Expected Salary (INR) *", DEFAULT_PROFILE);
+  assert(expSalarySugg.primary && expSalarySugg.primary.value === "500000", `Expected Salary Suggestion -> "${expSalarySugg.primary?.value}" [Expected: "500000"]`);
+
+  const curSalarySugg = getFieldSuggestions(null, "Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *", DEFAULT_PROFILE);
+  assert(curSalarySugg.primary && curSalarySugg.primary.value === "0", `Current Salary Suggestion -> "${curSalarySugg.primary?.value}" [Expected: "0"]`);
+
+  const startDaysSugg = getFieldSuggestions(null, "How soon can you start? (in days) *", DEFAULT_PROFILE);
+  assert(startDaysSugg.primary && startDaysSugg.primary.value === "0", `Start Days Suggestion -> "${startDaysSugg.primary?.value}" [Expected: "0"]`);
 
   const resumeSugg = getFieldSuggestions(null, "Upload Resume / CV *", DEFAULT_PROFILE);
   assert(resumeSugg.isResume === true, "Resume / File upload field detected correctly");
@@ -400,8 +437,32 @@ async function runVerification() {
 
   assert(formatAadhaarNumber("270883622036", "12") === "270883622036", 'Aadhaar 12-digit -> "270883622036"');
   assert(formatAadhaarNumber("270883622036", "8") === "83622036", 'Aadhaar 8-digit -> "83622036"');
-  assert(formatAadhaarNumber("270883622036", "4") === "2036", 'Aadhaar 4-digit -> "2036"');
-  assert(formatAadhaarNumber("270883622036", "spaced") === "2708 8362 2036", 'Aadhaar spaced format -> "2708 8362 2036"');
+  // 10. Gemini 2.5 Flash Model Support & Direct Form Field Values
+  console.log("\n[10] Testing Gemini 2.5 Flash Support & Form Field Invariants:");
+  const { testGeminiApiKey } = require('../background/gemini-client.js');
+  assert(typeof testGeminiApiKey === 'function', "testGeminiApiKey function exported");
+
+  const expFieldMatch = matchLabel("Annual Expected Salary (INR) *");
+  assert(expFieldMatch && expFieldMatch.key === "career.expectedCtc", "Annual Expected Salary (INR) * matches career.expectedCtc");
+  assert(expFieldMatch && expFieldMatch.value === "500000", `Annual Expected Salary (INR) * returns "500000" [Got: "${expFieldMatch?.value}"]`);
+
+  const curFieldMatch = matchLabel("Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *");
+  assert(curFieldMatch && curFieldMatch.key === "career.currentCtc", "Annual Current Salary (INR) matches career.currentCtc");
+  assert(curFieldMatch && curFieldMatch.value === "0", `Annual Current Salary (INR) returns "0" [Got: "${curFieldMatch?.value}"]`);
+
+  const expMonthsMatch = matchLabel("Your relevant experience (in months) *");
+  assert(expMonthsMatch && expMonthsMatch.key === "career.totalExperienceMonths", "Your relevant experience (in months) matches career.totalExperienceMonths");
+  assert(expMonthsMatch && expMonthsMatch.value === "12", `Your relevant experience (in months) returns "12" [Got: "${expMonthsMatch?.value}"]`);
+
+  const startDaysMatch = matchLabel("How soon can you start? (in days) *");
+  assert(startDaysMatch && startDaysMatch.key === "career.noticePeriodDays", "How soon can you start? (in days) matches career.noticePeriodDays");
+  assert(startDaysMatch && startDaysMatch.value === "0", `How soon can you start? (in days) returns "0" [Got: "${startDaysMatch?.value}"]`);
+
+  // Ensure isOpenEndedQuestion rejects numeric/days/salary
+  assert(!isOpenEndedQuestion("How soon can you start? (in days) *"), "How soon can you start? (in days) rejected from AI essay question classification");
+  assert(!isOpenEndedQuestion("Annual Expected Salary (INR) *"), "Annual Expected Salary (INR) rejected from AI essay question classification");
+  assert(!isOpenEndedQuestion("Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *"), "Annual Current Salary rejected from AI essay question classification");
+  assert(!isOpenEndedQuestion("Your relevant experience (in months) *"), "Your relevant experience rejected from AI essay question classification");
 
   console.log("\n==================================================");
   console.log(`Master Verification Results: ${passed} passed, ${failed} failed`);

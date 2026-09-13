@@ -35,11 +35,12 @@ const FIELD_PATTERNS = [
       // Smart detection: if surrounding form/section/card contains a middle name field, return 3-field first name ("Mohammad Danish")
       if (el) {
         const formOrContainer = (typeof el.closest === 'function')
-          ? (el.closest('form') || el.closest('[role="form"]') || el.closest('.form-card') || el.closest('.tab-content') || el.closest('.accordion-body') || el.closest('.section-content') || el.closest('table') || el.closest('fieldset') || el.parentElement?.parentElement?.parentElement?.parentElement || el)
-          : (typeof document !== 'undefined' ? document.body : null);
+          ? (el.closest('form') || el.closest('[role="form"]') || el.closest('.form-card') || el.closest('.tab-content') || el.closest('.accordion-body') || el.closest('.section-content') || el.closest('table') || el.closest('fieldset') || el.parentElement?.parentElement?.parentElement?.parentElement || el.form || el)
+          : (el.form || (typeof document !== 'undefined' ? document.body : null));
         if (formOrContainer) {
-          const hasMiddleInput = formOrContainer.querySelector?.('input[name*="middle" i], input[id*="middle" i], input[placeholder*="middle" i], input[aria-label*="middle" i], input[data-qa*="middle" i]');
-          const hasMiddleLabel = Array.from(formOrContainer.querySelectorAll?.('label, th, span, div, p') || []).some(l => /\bmiddle[_\s-]?name\b/i.test(l.textContent || ''));
+          const hasMiddleInput = (typeof formOrContainer.querySelector === 'function' && formOrContainer.querySelector('input[name*="middle" i], input[id*="middle" i], input[placeholder*="middle" i], input[aria-label*="middle" i], input[data-qa*="middle" i]')) || 
+            (typeof formOrContainer.querySelectorAll === 'function' && Array.from(formOrContainer.querySelectorAll('input')).some(i => (i.name || '').toLowerCase().includes('middle') || (i.id || '').toLowerCase().includes('middle')));
+          const hasMiddleLabel = typeof formOrContainer.querySelectorAll === 'function' && Array.from(formOrContainer.querySelectorAll('label, th, span, div, p') || []).some(l => /\bmiddle[_\s-]?name\b/i.test(l.textContent || ''));
           if (hasMiddleInput || hasMiddleLabel) {
             return p.personal?.firstName3Field || "Mohammad Danish";
           }
@@ -526,49 +527,55 @@ const FIELD_PATTERNS = [
   },
   {
     key: "career.totalExperienceYears",
-    regex: /\b(total[_\s-]?experience|years[_\s-]?of[_\s-]?experience|experience[_\s-]?in[_\s-]?years|overall[_\s-]?experience|total[_\s-]?exp)\b/i,
-    exclude: /month/i,
+    regex: /\b((your[_\s-]?)?(total|relevant|overall|work)?[_\s-]?experience[\s_()/-]*in[\s_()/-]*years?|years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|experience[_\s-]?in[_\s-]?years|overall[_\s-]?experience|total[_\s-]?exp|relevant[_\s-]?experience\s*\(\s*in\s*years?\s*\))\b/i,
+    exclude: /months?/i,
     getValue: (p) => p.career?.totalExperienceYears || "1"
   },
   {
     key: "career.totalExperienceMonths",
-    regex: /\b(total[_\s-]?experience[_\s-]?months|experience[_\s-]?in[_\s-]?months|months[_\s-]?of[_\s-]?experience)\b/i,
-    getValue: (p) => p.career?.totalExperienceMonths || "9"
+    regex: /\b((your[_\s-]?)?(relevant|total|overall|work)?[_\s-]?experience[\s_()/-]*in[\s_()/-]*months?|months?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|total[_\s-]?experience[_\s-]?months|experience[\s_()/-]*months?|how[_\s-]?many[_\s-]?months([_\s-]?of[_\s-]?experience)?|relevant[_\s-]?experience\s*\(\s*in\s*months?\s*\))\b/i,
+    getValue: (p) => p.career?.totalExperienceMonths || "12"
   },
   {
     key: "career.currentCtc",
-    regex: /\b(current([_\s-]?(annual|fixed))?[_\s-]?(ctc|salary|package)|present[_\s-]?ctc|fixed[_\s-]?ctc)\b/i,
+    regex: /\b(annual[_\s-]?current([_\s-]?(salary|ctc|compensation|package|remuneration|pay))?|current([_\s-]?(annual|fixed|desired))?[_\s-]?(ctc|salary|package|compensation|pay|remuneration)|present[_\s-]?(ctc|salary|package|compensation)|fixed[_\s-]?(ctc|salary|package)|existing[_\s-]?(ctc|salary|package))\b/i,
     getValue: (p, el) => {
       const ph = (el && el.placeholder ? el.placeholder.toLowerCase() : "");
-      if (ph.includes("lakh") || ph.includes("lpa") || ph.includes("inr (lpa)")) {
-        return p.career?.currentCtcLpa || "3.5";
+      const lbl = (typeof getElementLabel === 'function' && el) ? getElementLabel(el).toLowerCase() : (el && (el.getAttribute?.('aria-label') || el.name || el.id || '')).toLowerCase();
+      if (ph.includes("intern") || ph.includes("put 0") || lbl.includes("intern") || lbl.includes("put 0") || ph.includes("fresher") || lbl.includes("fresher")) {
+        return "0";
       }
-      if (ph.includes("per annum") && !ph.includes("lpa")) {
-        return "350000";
+      if ((ph.includes("lpa") || lbl.includes("lpa")) && !lbl.includes("inr") && !ph.includes("inr")) {
+        return p.career?.currentCtcLpa || "0";
       }
-      return p.career?.currentCtcLpa || "3.5";
+      return p.career?.currentCtcInr || "0";
     }
   },
   {
     key: "career.expectedCtc",
-    regex: /\b(expected([_\s-]?(annual|desired))?[_\s-]?(ctc|salary|package)|desired[_\s-]?ctc|salary[_\s-]?expectation|target[_\s-]?ctc)\b/i,
+    regex: /\b(annual[_\s-]?expected([_\s-]?(salary|ctc|compensation|package|remuneration|pay))?|expected([_\s-]?(annual|desired))?[_\s-]?(ctc|salary|package|compensation|pay|remuneration)|desired[_\s-]?(annual[_\s-]?)?(ctc|salary|package|compensation)|salary[_\s-]?expectation|target[_\s-]?(ctc|salary|package))\b/i,
     getValue: (p, el) => {
       const ph = (el && el.placeholder ? el.placeholder.toLowerCase() : "");
-      if (ph.includes("lakh") || ph.includes("lpa") || ph.includes("inr (lpa)")) {
-        return p.career?.expectedCtcLpa || "7.0";
+      const lbl = (typeof getElementLabel === 'function' && el) ? getElementLabel(el).toLowerCase() : (el && (el.getAttribute?.('aria-label') || el.name || el.id || '')).toLowerCase();
+      const isNumberType = el && (el.type === "number" || el.inputMode === "numeric");
+      if ((ph.includes("lpa") || lbl.includes("lpa")) && !lbl.includes("inr") && !ph.includes("inr")) {
+        return p.career?.expectedCtcLpa || "5.0";
       }
-      if (ph.includes("per annum") && !ph.includes("lpa")) {
-        return "700000";
+      if (isNumberType || ph.includes("inr") || lbl.includes("inr") || ph.includes("annual") || lbl.includes("annual") || ph.includes("rupee") || lbl.includes("rupee")) {
+        return p.career?.expectedCtcInr || "500000";
       }
-      return p.career?.expectedCtcLpa || "7.0";
+      return p.career?.expectedCtcInr || "500000";
     }
   },
   {
     key: "career.noticePeriodDays",
-    regex: /\b(notice[_\s-]?period|how[_\s-]?soon[_\s-]?can[_\s-]?you[_\s-]?join|availability|joining[_\s-]?time|notice[_\s-]?period[_\s-]?in[_\s-]?days|serving[_\s-]?notice)\b/i,
+    regex: /\b(notice[_\s-]?period|how[_\s-]?soon[\s\S]*?(join|start)|when[_\s-]?can[_\s-]?you[\s\S]*?(join|start)|availability[\s\S]*?(join|start|days)?|joining[_\s-]?time|notice[_\s-]?period[\s_()/-]*in[\s_()/-]*days|serving[_\s-]?notice|days[\s\S]*?(join|start)|(start|join)[\s_()/-]*in[\s_()/-]*days|earliest[_\s-]?start)\b/i,
     getValue: (p, el) => {
-      if (el && el.type === "number") return "0";
-      return p.career?.noticePeriodString || "Immediate (0 Days)";
+      const ph = (el && el.placeholder ? el.placeholder.toLowerCase() : "");
+      const lbl = (typeof getElementLabel === 'function' && el) ? getElementLabel(el).toLowerCase() : (el && (el.getAttribute?.('aria-label') || el.name || el.id || '')).toLowerCase();
+      if (el && el.type === "number") return p.career?.noticePeriodDays || "0";
+      if (ph.includes("day") || ph.includes("in days") || lbl.includes("day") || lbl.includes("in days")) return p.career?.noticePeriodDays || "0";
+      return p.career?.noticePeriodDays || "0";
     }
   },
   {
@@ -640,8 +647,8 @@ const FIELD_PATTERNS = [
   },
   {
     key: "career.workExperienceMonths",
-    regex: /\b(how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?|total.*months.*exp|experience in months)\b/i,
-    getValue: () => "10"
+    regex: /\b(how many months|months? of (work )?experience|month(s)?.*experience|work experience.*months?|total.*months.*exp|experience.*in.*months|relevant.*experience.*in.*months)\b/i,
+    getValue: (p) => p.career?.totalExperienceMonths || "12"
   },
   {
     key: "career.interviewedBefore",
@@ -933,7 +940,7 @@ const JobDetector = {
       const container = element.closest('form, [role="form"], .application-form, .job-form, .apply-form, fieldset, .card, div[role="listitem"], .geS5n, .Qr7Oae');
       if (container) {
         const text = (container.innerText || container.textContent || '').toLowerCase();
-        const hasJobKw = this.JOB_KEYWORDS.some(kw => text.includes(kw));
+        const hasJobKw = /job|career|apply|application|resume|cv|experience|qualification|ctc|salary/i.test(text);
         if (hasJobKw) return true;
       }
     }
@@ -949,6 +956,13 @@ const JobDetector = {
  */
 function isOpenEndedQuestion(text) {
   if (!text || text.length < 10) return false;
+  // Strictly guard against numeric, salary, experience, notice period, contact, and factual screening fields
+  if (/\b(salary|ctc|package|compensation|remuneration|lpa|inr|rs\b|rupees?|stipend|phone|mobile|pincode|zip|dob|birth|age|cgpa|gpa|percentage|marks|gender|marital|aadhaar|pan\b|passport|passing|batch|backlog|ppo)\b/i.test(text)) {
+    return false;
+  }
+  if (/\b(how many months|months?[\s_()/-]*of[\s_()/-]*experience|experience[\s_()/-]*in[\s_()/-]*months?|experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*experience|how soon.*(start|join)|notice[_\s-]?period|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|availability.*(days)?|relevant.*experience)\b/i.test(text)) {
+    return false;
+  }
   return /\b(why|describe|explain|tell us|what makes|biggest|accomplishment|challenge|project|internship|experience with|motivation|strengths?|weakness(es)?|interests?|cover letter|additional information|briefly describe|summary of experience|about yourself|vision|proudest|share.*details|significant|details on)\b/i.test(text);
 }
 
@@ -975,6 +989,29 @@ function resolveBooleanQuestion(text) {
   return "Yes";
 }
 
+/**
+ * Merges all field fingerprint signals into a single normalized lowercase string.
+ * This allows every existing FIELD_PATTERN regex to match against 7× more DOM signals
+ * (label, placeholder, HTML name, id, aria-label, surrounding text, section heading, data-*)
+ * without changing a single regex.
+ *
+ * @param {Object} fingerprint - The field fingerprint produced by buildFieldFingerprint()
+ * @returns {string} Normalized combined signal string
+ */
+function buildCombinedSignal({ label = '', placeholder = '', fieldName = '', fieldId = '',
+                               ariaLabel = '', surroundingText = '', sectionHeading = '',
+                               dataAttrs = {} } = {}) {
+  const dataStr = Object.values(dataAttrs).filter(Boolean).join(' ');
+  return [label, placeholder, fieldName, fieldId, ariaLabel, surroundingText, sectionHeading, dataStr]
+    .filter(Boolean)
+    .join(' ')
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 if (typeof window !== 'undefined') {
   window.FIELD_PATTERNS = FIELD_PATTERNS;
   window.isOpenEndedQuestion = isOpenEndedQuestion;
@@ -982,6 +1019,7 @@ if (typeof window !== 'undefined') {
   window.JobDetector = JobDetector;
   window.formatCandidateDate = formatCandidateDate;
   window.formatAadhaarNumber = formatAadhaarNumber;
+  window.buildCombinedSignal = buildCombinedSignal;
 }
 if (typeof self !== 'undefined') {
   self.FIELD_PATTERNS = FIELD_PATTERNS;
@@ -990,6 +1028,7 @@ if (typeof self !== 'undefined') {
   self.JobDetector = JobDetector;
   self.formatCandidateDate = formatCandidateDate;
   self.formatAadhaarNumber = formatAadhaarNumber;
+  self.buildCombinedSignal = buildCombinedSignal;
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -998,6 +1037,7 @@ if (typeof module !== 'undefined' && module.exports) {
     resolveBooleanQuestion,
     JobDetector,
     formatCandidateDate,
-    formatAadhaarNumber
+    formatAadhaarNumber,
+    buildCombinedSignal
   };
 }
