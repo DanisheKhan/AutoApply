@@ -29,23 +29,17 @@ function setNativeValue(element, value) {
   if (target.isContentEditable || target.getAttribute?.('contenteditable') === 'true') {
     try { target.focus(); } catch (e) {}
     target.textContent = value;
-    target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: value }));
-    target.dispatchEvent(new Event('change', { bubbles: true }));
-    target.dispatchEvent(new Event('blur', { bubbles: true }));
+    try {
+      target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: String(value) }));
+    } catch (e) {
+      target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    }
+    target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
     highlightFilledElement(target);
     return true;
   }
 
   const targetTag = (target.tagName || '').toLowerCase();
-  const prototype = targetTag === 'input' 
-    ? (typeof window !== 'undefined' ? window.HTMLInputElement.prototype : null) 
-    : targetTag === 'textarea' 
-      ? (typeof window !== 'undefined' ? window.HTMLTextAreaElement.prototype : null) 
-      : targetTag === 'select'
-        ? (typeof window !== 'undefined' ? window.HTMLSelectElement.prototype : null)
-        : null;
-
-  const descriptor = prototype ? Object.getOwnPropertyDescriptor(prototype, 'value') : null;
 
   try {
     target.focus();
@@ -54,22 +48,64 @@ function setNativeValue(element, value) {
   // Reset React 16+ _valueTracker so React's synthetic event system detects change
   const tracker = target._valueTracker;
   if (tracker) {
-    tracker.setValue(target.value === value ? '' : target.value);
+    try {
+      if (typeof tracker.setValue === 'function') {
+        tracker.setValue('');
+      } else {
+        tracker.value = '';
+      }
+    } catch (e) {}
   }
 
-  if (descriptor && descriptor.set) {
-    descriptor.set.call(target, value);
+  let setter = null;
+  try {
+    if (targetTag === 'input' && typeof window !== 'undefined' && window.HTMLInputElement) {
+      setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+    } else if (targetTag === 'textarea' && typeof window !== 'undefined' && window.HTMLTextAreaElement) {
+      setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+    } else if (targetTag === 'select' && typeof window !== 'undefined' && window.HTMLSelectElement) {
+      setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')?.set;
+    }
+  } catch (e) {}
+
+  if (setter) {
+    try {
+      setter.call(target, value);
+    } catch (e) {
+      target.value = value;
+    }
   } else {
     target.value = value;
   }
 
-  // Dispatch full event sequence to satisfy React, Vue, Angular, Svelte, and vanilla listeners
-  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true }));
-  target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: String(value) }));
-  target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-  target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-  target.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true }));
-  target.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
+  // Enforce direct value & attribute assignment as failsafe
+  try {
+    target.value = value;
+    target.setAttribute('value', String(value));
+  } catch (e) {}
+
+  // Dispatch full event sequence to satisfy React, Vue, Angular, Svelte, jQuery, and vanilla listeners
+  try {
+    target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: ' ' }));
+  } catch (e) {}
+
+  try {
+    target.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: String(value) }));
+  } catch (e) {
+    target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  }
+
+  try {
+    target.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+  } catch (e) {}
+
+  try {
+    target.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+  } catch (e) {}
+
+  try {
+    target.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: ' ' }));
+  } catch (e) {}
 
   // Google Forms Material Textbox styling update
   if (typeof target.closest === 'function') {
@@ -152,7 +188,7 @@ function fillNativeRadioGroup(radioInput, targetValue) {
 }
 
 function highlightFilledElement(element) {
-  if (!element) return;
+  if (!element || !element.style) return;
   const originalTransition = element.style.transition;
   const originalOutline = element.style.outline;
   const originalBoxShadow = element.style.boxShadow;
@@ -162,14 +198,16 @@ function highlightFilledElement(element) {
   element.style.boxShadow = '0 0 10px rgba(168, 199, 250, 0.4)';
 
   setTimeout(() => {
-    element.style.outline = originalOutline;
-    element.style.boxShadow = originalBoxShadow;
-    element.style.transition = originalTransition;
+    if (element && element.style) {
+      element.style.outline = originalOutline;
+      element.style.boxShadow = originalBoxShadow;
+      element.style.transition = originalTransition;
+    }
   }, 1200);
 }
 
 function highlightElementThinking(element) {
-  if (!element) return;
+  if (!element || !element.style) return;
   element.style.transition = 'all 0.3s ease';
   element.style.outline = '2px solid #F59E0B';
   element.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.45)';
@@ -327,7 +365,7 @@ function getElementLabel(element) {
   const labels = [];
 
   // 1. Associated <label for="id">
-  if (element.id) {
+  if (element.id && typeof document !== 'undefined' && typeof document.querySelector === 'function') {
     try {
       const label = document.querySelector(`label[for="${CSS.escape(element.id)}"]`);
       if (label && label.innerText) labels.push(label.innerText.trim());
@@ -335,33 +373,35 @@ function getElementLabel(element) {
   }
 
   // 2. Parent <label>
-  const parentLabel = element.closest('label');
+  const parentLabel = typeof element.closest === 'function' ? element.closest('label') : null;
   if (parentLabel && parentLabel.innerText) {
     labels.push(parentLabel.innerText.replace(element.value || '', '').trim());
   }
 
   // 3. ARIA attributes & placeholder
-  if (element.getAttribute('aria-label')) labels.push(element.getAttribute('aria-label'));
-  if (element.getAttribute('aria-labelledby')) {
-    const ids = element.getAttribute('aria-labelledby').split(/\s+/);
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el && el.innerText) labels.push(el.innerText.trim());
+  if (typeof element.getAttribute === 'function') {
+    if (element.getAttribute('aria-label')) labels.push(element.getAttribute('aria-label'));
+    if (element.getAttribute('aria-labelledby') && typeof document !== 'undefined' && typeof document.getElementById === 'function') {
+      const ids = element.getAttribute('aria-labelledby').split(/\s+/);
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.innerText) labels.push(el.innerText.trim());
+      }
     }
-  }
-  if (element.getAttribute('aria-describedby')) {
-    const ids = element.getAttribute('aria-describedby').split(/\s+/);
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (el && el.innerText) labels.push(el.innerText.trim());
+    if (element.getAttribute('aria-describedby') && typeof document !== 'undefined' && typeof document.getElementById === 'function') {
+      const ids = element.getAttribute('aria-describedby').split(/\s+/);
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.innerText) labels.push(el.innerText.trim());
+      }
     }
+    if (element.getAttribute('data-automation-id')) labels.push(element.getAttribute('data-automation-id'));
+    if (element.getAttribute('data-qa')) labels.push(element.getAttribute('data-qa'));
+    if (element.getAttribute('data-testid')) labels.push(element.getAttribute('data-testid'));
   }
   if (element.placeholder) labels.push(element.placeholder);
   if (element.name) labels.push(element.name);
   if (element.id) labels.push(element.id);
-  if (element.getAttribute('data-automation-id')) labels.push(element.getAttribute('data-automation-id'));
-  if (element.getAttribute('data-qa')) labels.push(element.getAttribute('data-qa'));
-  if (element.getAttribute('data-testid')) labels.push(element.getAttribute('data-testid'));
 
   // 4. Preceding sibling label or span
   const prevSibling = element.previousElementSibling;
@@ -370,8 +410,10 @@ function getElementLabel(element) {
   }
 
   // 5. Parent container heading / question block (Google Forms, Greenhouse, Lever, ATS)
-  const container = element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr, .Qr7Oae, .geS5n, .vQx30e, .c2gGi, .gf-listitem');
-  if (container) {
+  const container = typeof element.closest === 'function' 
+    ? element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr, .Qr7Oae, .geS5n, .vQx30e, .c2gGi, .gf-listitem')
+    : null;
+  if (container && typeof container.querySelector === 'function') {
     const heading = container.querySelector('h1, h2, h3, h4, h5, h6, .label, .title, legend, .dir-ltr, .M7eMe, [role="heading"], .HoPnR, .F9vfv, .HoControl, td:first-child, th:first-child');
     if (heading && heading !== element && heading.innerText) {
       labels.push(heading.innerText.trim());

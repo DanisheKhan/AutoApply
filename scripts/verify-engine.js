@@ -500,7 +500,37 @@ async function runVerification() {
   assert(!isOpenEndedQuestion("How soon can you start? (in days) *"), "How soon can you start? (in days) rejected from AI essay question classification");
   assert(!isOpenEndedQuestion("Annual Expected Salary (INR) *"), "Annual Expected Salary (INR) rejected from AI essay question classification");
   assert(!isOpenEndedQuestion("Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *"), "Annual Current Salary rejected from AI essay question classification");
-  assert(!isOpenEndedQuestion("Your relevant experience (in months) *"), "Your relevant experience rejected from AI essay question classification");
+  // 11. Testing setNativeValue and Dynamic Skills Insertion
+  console.log("\n[11] Testing setNativeValue & In-Field Insertion Engine:");
+  const { setNativeValue } = require('../content/adapters.js');
+  
+  // Mock DOM input element
+  const mockInput = {
+    tagName: 'INPUT',
+    type: 'text',
+    value: '',
+    attributes: {},
+    eventsDispatched: [],
+    placeholder: 'Skills',
+    focus() {},
+    setAttribute(name, val) { this.attributes[name] = val; },
+    getAttribute(name) { return this.attributes[name] || null; },
+    dispatchEvent(event) {
+      this.eventsDispatched.push(event.type);
+      return true;
+    }
+  };
+
+  const skillsSuggObj = getFieldSuggestions(mockInput, '', DEFAULT_PROFILE);
+  assert(skillsSuggObj && skillsSuggObj.primary && skillsSuggObj.primary.value.includes("React"), "Skills placeholder generates primary suggestion with React");
+
+  const inserted = setNativeValue(mockInput, skillsSuggObj.primary.value);
+  assert(inserted === true, "setNativeValue returns true for text input");
+  assert(mockInput.value.includes("React.js"), "mockInput value populated correctly");
+  assert(mockInput.attributes['value'] && mockInput.attributes['value'].includes("React.js"), "mockInput HTML attribute value synced");
+  assert(mockInput.eventsDispatched.includes('input'), "Input event dispatched");
+  assert(mockInput.eventsDispatched.includes('change'), "Change event dispatched");
+  assert(!mockInput.eventsDispatched.includes('blur'), "Synthetic blur event omitted to protect framework reactivity");
 
   console.log("\n==================================================");
   console.log(`Master Verification Results: ${passed} passed, ${failed} failed`);

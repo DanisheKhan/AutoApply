@@ -369,11 +369,24 @@
       e.stopPropagation();
     });
 
-    // Left Click: Execute primary action
-    insertBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    // Left Click or Mouse Release: Execute primary action
+    let isExecutingInsert = false;
+    const executeInsertAction = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (isExecutingInsert) return;
+      isExecutingInsert = true;
+      setTimeout(() => { isExecutingInsert = false; }, 350);
       handleInsertClick(e);
+    };
+
+    insertBtn.addEventListener('click', executeInsertAction);
+    insertBtn.addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        executeInsertAction(e);
+      }
     });
 
     // Right Click: Toggle Options Menu
@@ -738,6 +751,20 @@
       valToApply = matchValueFromProfile(currentAnchor, profile, currentFingerprint || undefined);
     }
 
+    // Step 2b: Fallback directly by inspecting anchor placeholder / label text / attributes
+    if (!valToApply && currentAnchor) {
+      const ph = (currentAnchor.placeholder || currentAnchor.getAttribute?.('placeholder') || '').trim();
+      const lbl = (typeof getElementLabel === 'function' ? getElementLabel(currentAnchor) : ph).trim();
+      const combined = `${lbl} ${ph} ${currentAnchor.name || ''} ${currentAnchor.id || ''}`.toLowerCase();
+      if (/skills?|tech.*stack|technolog/i.test(combined) && !/years?|months?|exp/i.test(combined)) {
+        valToApply = profile.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL";
+      } else if (/education|qualif/i.test(combined) && !/10th|12th|school|college|degree/i.test(combined)) {
+        valToApply = profile.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)";
+      } else if (/experience.*year|years.*exp/i.test(combined)) {
+        valToApply = profile.career?.totalExperienceYears || "1";
+      }
+    }
+
     if (valToApply) {
       // Found from profile/heuristics — apply immediately
       currentTargetValue = valToApply;
@@ -1001,36 +1028,46 @@
     isApplyingValue = true;
 
     try {
+      let targetEl = el;
+      const initialTag = (el.tagName || '').toLowerCase();
+      if (!['input', 'textarea', 'select'].includes(initialTag) && !el.isContentEditable && el.getAttribute?.('contenteditable') !== 'true' && el.getAttribute?.('role') !== 'listbox' && el.getAttribute?.('role') !== 'radio') {
+        const inner = (typeof el.querySelector === 'function')
+          ? el.querySelector('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]), textarea, select, div[role="listbox"], div[role="radio"], [contenteditable="true"]')
+          : null;
+        if (inner) targetEl = inner;
+      }
+
       try {
-        el.focus();
+        targetEl.focus();
       } catch (e) {}
 
-      const tag = el.tagName ? el.tagName.toLowerCase() : '';
-      const item = (typeof el.closest === 'function') 
-        ? (el.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem, .form-group, .field') || el.parentElement)
-        : el.parentElement;
+      const tag = (targetEl.tagName || '').toLowerCase();
+      const item = (typeof targetEl.closest === 'function') 
+        ? (targetEl.closest('div[role="listitem"], .Qr7Oae, .geS5n, .gf-listitem, .form-group, .field') || targetEl.parentElement)
+        : targetEl.parentElement;
 
       // 1. Google Forms or Custom Dropdown Listbox
-      if (el.getAttribute('role') === 'listbox' || el.classList.contains('quantumWizMenuPaperselectEl') || el.classList.contains('gf-custom-select') || el.hasAttribute('aria-haspopup')) {
+      if (targetEl.getAttribute?.('role') === 'listbox' || targetEl.classList?.contains('quantumWizMenuPaperselectEl') || targetEl.classList?.contains('gf-custom-select') || targetEl.hasAttribute?.('aria-haspopup')) {
         if (typeof fillGoogleFormsDropdown === 'function') {
-          fillGoogleFormsDropdown(el, value, labelText);
+          fillGoogleFormsDropdown(targetEl, value, labelText);
         } else if (typeof fillCustomComboboxOrSelect === 'function') {
-          fillCustomComboboxOrSelect(el, value);
+          fillCustomComboboxOrSelect(targetEl, value);
         }
       }
       // 2. Native Select
       else if (tag === 'select') {
         if (typeof fillCustomComboboxOrSelect === 'function') {
-          fillCustomComboboxOrSelect(el, value);
+          fillCustomComboboxOrSelect(targetEl, value);
         } else {
-          el.value = value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
+          targetEl.value = value;
+          try { targetEl.setAttribute('value', String(value)); } catch (e) {}
+          targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+          targetEl.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
       // 3. Custom or Native Radio Button
-      else if (el.getAttribute('role') === 'radio' || el.type === 'radio') {
-        const container = el.closest('[role="radiogroup"], .gf-radio-group, .form-group') || item || document.body;
+      else if (targetEl.getAttribute?.('role') === 'radio' || targetEl.type === 'radio') {
+        const container = targetEl.closest?.('[role="radiogroup"], .gf-radio-group, .form-group') || item || document.body;
         const valStr = value.toString().trim().toLowerCase();
         const allRadios = Array.from(container.querySelectorAll('[role="radio"], input[type="radio"]'));
         let targetRadio = allRadios.find(r => {
@@ -1038,7 +1075,7 @@
           return text === valStr || text.includes(valStr) || valStr.includes(text);
         });
 
-        if (!targetRadio) targetRadio = el;
+        if (!targetRadio) targetRadio = targetEl;
 
         if (targetRadio.tagName.toLowerCase() === 'input') {
           targetRadio.checked = true;
@@ -1053,11 +1090,12 @@
       // 4. Standard Input / Textarea / Composite Container
       else {
         if (typeof setNativeValue === 'function') {
-          setNativeValue(el, value);
+          setNativeValue(targetEl, value);
         } else {
-          el.value = value;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
+          targetEl.value = value;
+          try { targetEl.setAttribute('value', String(value)); } catch (e) {}
+          targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+          targetEl.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }
 
@@ -1068,12 +1106,12 @@
 
       // Flash subtle highlight on field
       if (typeof highlightFilledElement === 'function') {
-        highlightFilledElement(el);
+        highlightFilledElement(targetEl);
       }
     } finally {
       setTimeout(() => {
         isApplyingValue = false;
-      }, 80);
+      }, 150);
     }
   }
 
