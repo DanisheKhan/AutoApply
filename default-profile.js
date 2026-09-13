@@ -39,6 +39,10 @@ const DEFAULT_PROFILE = {
     headline: "Full-Stack Web Developer | React, Node.js, MongoDB, Express, Supabase, Next.js, Tailwind CSS | Strong in DSA using Java | Freelancer & Web Architect"
   },
 
+  // High-Level Candidate Summaries (for multi-skill and high-level academic fields)
+  skillsSummary: "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL",
+  educationSummary: "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management, Jalgaon)",
+
   // Contact & Social Links
   links: {
     portfolio: "https://itsdanishkhan.me",

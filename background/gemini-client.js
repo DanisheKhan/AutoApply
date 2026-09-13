@@ -191,6 +191,19 @@ function generateInstantFallbackAnswer(question, profile) {
     return p.career?.noticePeriodString || "Immediate (0 Days)";
   }
 
+  // Factual Skills & Education Intercepts
+  if (/\b(primary[_\s-]?skills?|key[_\s-]?skills?|technical[_\s-]?skills?|core[_\s-]?skills?|skills?|skill[_\s-]?set|tech[_\s-]?stack|technolog(y|ies)|proficienc(y|ies))\b/i.test(q) && !/why|describe|explain|tell|experience with|motivation|strengths?/i.test(q)) {
+    return p.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL";
+  }
+
+  if (/\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education)\b/i.test(q) && !/why|describe|explain|tell|motivation/i.test(q)) {
+    return p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management, Jalgaon)";
+  }
+
+  if (/\b(current[_\s-]?location|present[_\s-]?location|your[_\s-]?location|work[_\s-]?location)\b/i.test(q)) {
+    return p.address?.city || "Bhusawal";
+  }
+
   // Why join / Motivation
   if (/why.*(join|company|team|role|hire|work with us|interested in)|passion|motivation|reason/i.test(q)) {
     return `I am eager to join your engineering team to contribute my full-stack web development skills across React, Node.js, Express, MongoDB, and Supabase. Having built and shipped production platforms like Madina Perfumes and CodeRace alongside solving 500+ Java DSA problems, I thrive on engineering fast, scalable user experiences and solving challenging technical problems.`;
@@ -201,7 +214,7 @@ function generateInstantFallbackAnswer(question, profile) {
     return `In building CodeRace (a multi-user DSA tracking platform), I architected a normalized PostgreSQL/Supabase schema to maintain competitive live leaderboards and streak calculations with low query latency. Additionally, while engineering Madina Perfumes, I implemented secure HMAC SHA256 webhook verification for Razorpay payments and automated dispatch workflows with the Shiprocket API.`;
   }
 
-  // Tech Stack & Skills
+  // Tech Stack & Skills (Open-ended essays)
   if (/stack|technology|tech|match|experience with|skill|tool|framework/i.test(q)) {
     return `My core technical stack centers on React.js, Node.js, Express, MongoDB, Next.js, and Supabase, backed by a strong foundation in Java DSA (500+ problems solved). I focus on modular component architecture, robust RESTful API design, secure JWT authentication, and building clean, high-performance web applications.`;
   }
@@ -344,16 +357,27 @@ Designation: Full Stack Developer.`;
     // Experience in years — catches name="experience_years", id="total-exp", surrounding "years of experience"
     if (/exp.*year|year.*exp|total.*exp|overall.*exp|relevant.*exp/i.test(s) && !/month/i.test(s)) {
       if (options && options.length > 0) {
-        const rangeOpt = options.find(o => /1\\s*-\\s*2|1\\s*year|^1\\b/i.test(o.trim()));
+        const rangeOpt = options.find(o => /^(1(\.0)?|1\s*year|1\s*years|1\s*-\s*2|0\s*-\s*1|fresher|junior)\b/i.test(o.trim()))
+          || options.find(o => /1/i.test(o.trim()));
         if (rangeOpt) return rangeOpt;
       }
       return "1";
     }
 
+    // Technical Skills / Primary Skills / Core Stack
+    if (/\b(primary[_\s-]?skills?|key[_\s-]?skills?|technical[_\s-]?skills?|core[_\s-]?skills?|skills?|skill[_\s-]?set|tech[_\s-]?stack|technolog(y|ies)|proficienc(y|ies))\b/i.test(s) && !/exp|year|month/i.test(s)) {
+      return profile?.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL";
+    }
+
+    // Education Details / Academic Background / Educational Qualification
+    if (/\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education)\b/i.test(s) && !/10th|12th|ssc|hsc|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level/i.test(s)) {
+      return profile?.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management, Jalgaon)";
+    }
+
     // Notice period — catches id="notice-days", name="notice_period", type=number near "days"
     if (/notice|how soon.*(start|join)|availability.*(start|join|days)|when.*can.*(start|join)|(start|join).*in.*days|earliest.*start/i.test(s)) {
       if (options && options.length > 0) {
-        const immOpt = options.find(o => /immediate|^0\\b|0\\s*days|15\\s*days/i.test(o.trim()));
+        const immOpt = options.find(o => /immediate|^0\b|0\s*days|15\s*days/i.test(o.trim()));
         if (immOpt) return immOpt;
       }
       return (type === 'number' || /days/i.test(s)) ? "0" : "Immediate";

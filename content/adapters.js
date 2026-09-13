@@ -630,6 +630,17 @@ function fillCustomComboboxOrSelect(selectOrCombobox, targetValue) {
       });
     }
 
+    // 6b. Experience Years special handling ("1" -> "1", "1 year", "1-2 years", "0-1 years")
+    if (!matchedOpt && (valStr === '1' || valStr === '1 year' || valStr === '1 years' || valStr === '1.0')) {
+      matchedOpt = options.find(o => {
+        if (o.disabled) return false;
+        const oText = (o.text || '').trim().toLowerCase();
+        const oVal = (o.value || '').trim().toLowerCase();
+        if (isPlaceholder(oText, oVal)) return false;
+        return /^(1(\.0)?|1\s*year|1\s*years|1\s*-\s*2|0\s*-\s*1|fresher|junior)\b/i.test(oText) || oVal === '1' || oVal === '1.0';
+      });
+    }
+
     // 7. Exact match by text or value
     if (!matchedOpt) {
       matchedOpt = options.find(o => {
@@ -1936,7 +1947,7 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   const suggestions = [];
 
   // 1. Personal Identity
-  if (/\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)/i.test(lLower) && !/first|last|middle|given|forename|family|surname|maiden|father|mother|college|company|school|user|file|project|degree|course|branch|exam|stream|board|university/i.test(lLower)) {
+  if (/\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)/i.test(lLower) && !/first|last|middle|given|forename|family|surname|maiden|father|mother|college|company|school|user|file|project|degree|course|branch|exam|stream|board|university|skill|skills|primary|technical|technolog|stack|tool|software|framework|language|education|qualification|academic|summary|experience|work|details|history|institution|organization|employer|certif|role|designation|job|proficienc|interest|hobby/i.test(lLower)) {
     suggestions.push({ label: "Full Name", value: p.personal?.fullName || "Mohammad Danish Khan Naeem Khan" });
     suggestions.push({ label: "Certificate Name", value: p.personal?.certificateName || "Mohammad Danish Khan" });
     suggestions.push({ label: "Short Name", value: p.personal?.shortName || "Danish Khan" });
@@ -1958,6 +1969,14 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "DOB (YYYY-MM-DD)", value: p.personal?.dob || "2005-06-01" });
   } else if (/gender|sex/i.test(lLower)) {
     suggestions.push({ label: "Gender", value: p.personal?.gender || "Male" });
+  }
+
+  // 1b. Technical Skills & Core Stack
+  else if (/\b(primary[_\s-]?skills?|key[_\s-]?skills?|technical[_\s-]?skills?|core[_\s-]?skills?|top[_\s-]?skills?|skill[_\s-]?set|skills?|technolog(y|ies)|proficienc(y|ies)|tech[_\s-]?stack|area[_\s-]?of[_\s-]?expertise|tools?[_\s-]?(and|&|\/)?[_\s-]?technologies)\b/i.test(lLower) && !/years?|months?|exp\b|experience\b|rating|level|scale|cert|how[_\s-]?many/i.test(lLower)) {
+    suggestions.push({ label: "Primary Skills", value: p.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL" });
+    suggestions.push({ label: "MERN Stack", value: "React.js, Node.js, Express.js, MongoDB" });
+    suggestions.push({ label: "Full Stack", value: "React, Node.js, Express, MongoDB, Supabase, Java DSA, REST APIs, Tailwind CSS" });
+    suggestions.push({ label: "Java & DSA", value: "Java, Data Structures & Algorithms (500+ problems solved)" });
   }
 
   // 2. Screening & Work Authorization
@@ -2016,9 +2035,10 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "Experience Range", value: "6-12 months" });
     suggestions.push({ label: "1 Year", value: "12" });
     suggestions.push({ label: "Intern Experience", value: "10" });
-  } else if (/\b(experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*(work[_\s-]?)?experience|total.*exp|overall.*experience|relevant.*experience)\b/i.test(lLower) && !/month/i.test(lLower)) {
+  } else if (/\b(total[_\s-]?years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|(your[_\s-]?)?(total|relevant|overall|work)?[_\s-]?experience[\s_()/-]*in[\s_()/-]*years?|experience[_\s-]?in[_\s-]?years|overall[_\s-]?experience|total[_\s-]?exp|relevant[_\s-]?experience\s*\(\s*in\s*years?\s*\))\b/i.test(lLower) && !/month/i.test(lLower)) {
     suggestions.push({ label: "Total Experience (Years)", value: p.career?.totalExperienceYears || "1" });
     suggestions.push({ label: "1 Year", value: "1 Year" });
+    suggestions.push({ label: "1-2 Years", value: "1-2 Years" });
     suggestions.push({ label: "1.0", value: "1.0" });
   } else if (/\b(how soon.*(start|join)|notice.*period|availability.*(start|join|days)|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|earliest.*start)\b/i.test(lLower)) {
     if (lLower.includes('(days)') || lLower.includes('in days') || lLower.includes('days') || type === 'number') {
@@ -2035,8 +2055,13 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     }
   }
 
-  // 3. Academics
-  else if (/degree|qualification|course/i.test(lLower)) {
+  // 4. Academics & Education
+  else if (/\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education[_\s-]?info|education[_\s-]?history|education)\b/i.test(lLower) && !/10th|12th|ssc|hsc|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level/i.test(lLower)) {
+    suggestions.push({ label: "Education Details", value: p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)" });
+    suggestions.push({ label: "Degree & College", value: "B.Tech in AI, G H Raisoni College of Engineering and Management" });
+    suggestions.push({ label: "Highest Degree", value: "Bachelor of Technology (B.Tech)" });
+    suggestions.push({ label: "Branch", value: "Artificial Intelligence" });
+  } else if (/degree|qualification|course/i.test(lLower)) {
     suggestions.push({ label: "Degree", value: p.academics?.graduation?.degree || "B.Tech" });
     suggestions.push({ label: "BE/B.Tech", value: "BE/B.Tech" });
     suggestions.push({ label: "Branch", value: p.academics?.graduation?.branch || "Artificial Intelligence" });
@@ -2052,8 +2077,12 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "University", value: p.academics?.graduation?.university || "KBC North Maharashtra University" });
   }
 
-  // 4. Address & Socials
-  else if (/city/i.test(lLower)) {
+  // 5. Address & Socials
+  else if (/\b(current[_\s-]?location|present[_\s-]?location|work[_\s-]?location|your[_\s-]?location)\b/i.test(lLower)) {
+    suggestions.push({ label: "Current Location", value: p.address?.city || "Bhusawal" });
+    suggestions.push({ label: "City & State", value: "Bhusawal, Maharashtra" });
+    suggestions.push({ label: "Preferred: Pune", value: "Pune" });
+  } else if (/city/i.test(lLower)) {
     suggestions.push({ label: "Current City", value: p.address?.city || "Bhusawal" });
     suggestions.push({ label: "Preferred City", value: "Pune" });
   } else if (/state|province/i.test(lLower)) {

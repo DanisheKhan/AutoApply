@@ -1,6 +1,6 @@
 /**
  * Field Heuristics and Pattern Matchers for AutoApply Pro
- * Maps DOM input attributes (name, id, placeholder, aria-label, label text, surrounding text) to candidate profile values.
+ * Maps DOM input attributes (name, id, placeholder, aria-label, label text) to candidate profile values.
  * Covers 50+ enterprise recruitment categories and subtle edge cases.
  */
 
@@ -9,7 +9,7 @@ const FIELD_PATTERNS = [
   {
     key: "personal.fullName",
     regex: /\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)\b/i,
-    exclude: /first|last|middle|given|forename|family|surname|maiden|preferred|nick|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor|project|device|database|table|host|domain|variable|package|branch|course|exam|stream|degree|board|university/i,
+    exclude: /first|last|middle|given|forename|family|surname|maiden|preferred|nick|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor|project|device|database|table|host|domain|variable|package|branch|course|exam|stream|degree|board|university|skill|skills|primary|technical|technolog|stack|tool|software|framework|language|education|qualification|academic|summary|experience|work|details|history|institution|organization|employer|certif|role|designation|job|proficienc|interest|hobby/i,
     getValue: (p) => p.personal?.fullName || p.personal?.certificateName || "Mohammad Danish Khan"
   },
   {
@@ -31,6 +31,7 @@ const FIELD_PATTERNS = [
   {
     key: "personal.firstName",
     regex: /\b(first[_\s-]?name|fname|given[_\s-]?name|forename|applicant[_\s-]?first[_\s-]?name)\b/i,
+    exclude: /last|middle|family|surname|mother|father|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
     getValue: (p, el) => {
       // Smart detection: if surrounding form/section/card contains a middle name field, return 3-field first name ("Mohammad Danish")
       if (el) {
@@ -57,6 +58,7 @@ const FIELD_PATTERNS = [
   {
     key: "personal.lastName",
     regex: /\b(last[_\s-]?name|lname|surname|family[_\s-]?name|applicant[_\s-]?last[_\s-]?name)\b/i,
+    exclude: /first|given|forename|mother|father|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
     getValue: (p) => {
       if (p.personal?.lastName && p.personal?.lastName !== "Khan") {
         return p.personal.lastName;
@@ -460,6 +462,12 @@ const FIELD_PATTERNS = [
     getValue: (p) => p.academics?.graduation?.university || "Kavayitri Bahinabai Chaudhari North Maharashtra University (KBC NMU), Jalgaon"
   },
   {
+    key: "academics.educationDetails",
+    regex: /\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education[_\s-]?info|education[_\s-]?history)\b/i,
+    exclude: /10th|12th|ssc|hsc|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level|degree/i,
+    getValue: (p) => p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)"
+  },
+  {
     key: "academics.graduation.degree",
     regex: /\b(degree|qualification|graduation[_\s-]?course|highest[_\s-]?qualification|highest[_\s-]?degree|education[_\s-]?level|undergraduate[_\s-]?degree)\b/i,
     exclude: /10th|12th|ssc|hsc|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
@@ -522,12 +530,19 @@ const FIELD_PATTERNS = [
   },
   {
     key: "career.currentRole",
-    regex: /\b(current[_\s-]?title|current[_\s-]?role|job[_\s-]?title|designation|current[_\s-]?position)\b/i,
+    regex: /\b(current[_\s-]?title|current[_\s-]?role|job[_\s-]?title|designation|current[_\s-]?designation|current[_\s-]?position|position[_\s-]?applied|applied[_\s-]?for)\b/i,
+    exclude: /company|experience|salary|ctc|degree|education|stream|branch|level/i,
     getValue: (p) => p.career?.currentRole || "Full Stack Developer"
   },
   {
+    key: "career.experienceSummary",
+    regex: /\b(professional[_\s-]?details|work[_\s-]?experience[_\s-]?details|experience[_\s-]?details|work[_\s-]?history|employment[_\s-]?history|experience[_\s-]?summary)\b/i,
+    exclude: /in[_\s-]?years|in[_\s-]?months|salary|ctc|notice|how[_\s-]?many/i,
+    getValue: () => "12 months total experience — Full Stack Developer Intern at Meet Bros (10 months) and freelance web projects (Madina Perfumes, CodeRace)."
+  },
+  {
     key: "career.totalExperienceYears",
-    regex: /\b((your[_\s-]?)?(total|relevant|overall|work)?[_\s-]?experience[\s_()/-]*in[\s_()/-]*years?|years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|experience[_\s-]?in[_\s-]?years|overall[_\s-]?experience|total[_\s-]?exp|relevant[_\s-]?experience\s*\(\s*in\s*years?\s*\))\b/i,
+    regex: /\b(total[_\s-]?years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|years?[_\s-]?of[_\s-]?(work[_\s-]?)?experience|(your[_\s-]?)?(total|relevant|overall|work)?[_\s-]?experience[\s_()/-]*in[\s_()/-]*years?|experience[_\s-]?in[_\s-]?years|overall[_\s-]?experience|total[_\s-]?exp|relevant[_\s-]?experience\s*\(\s*in\s*years?\s*\))\b/i,
     exclude: /months?/i,
     getValue: (p) => p.career?.totalExperienceYears || "1"
   },
@@ -696,6 +711,14 @@ const FIELD_PATTERNS = [
     key: "career.raceEthnicity",
     regex: /\b(race|ethnicity|ethnic[_\s-]?background|hispanic|latino|demographic[_\s-]?race)\b/i,
     getValue: () => "Asian (Indian)"
+  },
+
+  // --- Technical Skills & Core Stack ---
+  {
+    key: "skills.primary",
+    regex: /\b(primary[_\s-]?skills?|key[_\s-]?skills?|technical[_\s-]?skills?|core[_\s-]?skills?|top[_\s-]?skills?|skill[_\s-]?set|skills?|technolog(y|ies)|proficienc(y|ies)|tech[_\s-]?stack|area[_\s-]?of[_\s-]?expertise|tools?[_\s-]?(and|&|\/)?[_\s-]?technologies)\b/i,
+    exclude: /years?|months?|exp\b|experience\b|rating|level|scale|cert|how[_\s-]?many/i,
+    getValue: (p) => p.skillsSummary || (p.skills ? Object.values(p.skills).flat().filter(s => typeof s === 'string').slice(0, 14).join(', ') : "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java, DSA, REST APIs, Git, SQL")
   },
 
   // --- Specific Skill Years Experience ---
@@ -989,20 +1012,38 @@ function resolveBooleanQuestion(text) {
   return "Yes";
 }
 
+const GENERIC_ATTR_WORDS = /^(name|text|field|input|value|data|info|item|entry|form|box|txt|val|string|content|undefined|null|id|custom|control|element|el)(\d*|_?\d+)$/i;
+const EXACT_GENERIC_ATTR_WORDS = /^(name|text|field|input|value|data|info|item|entry|form|box|txt|val|string|content|undefined|null|id|custom|control|element|el|form-control|input-text|text-input)$/i;
+
+function cleanAttrSignal(val, hasStrongLabel) {
+  if (!val || typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if (hasStrongLabel) {
+    if (EXACT_GENERIC_ATTR_WORDS.test(trimmed) || GENERIC_ATTR_WORDS.test(trimmed)) {
+      return '';
+    }
+  }
+  return trimmed;
+}
+
 /**
- * Merges all field fingerprint signals into a single normalized lowercase string.
- * This allows every existing FIELD_PATTERN regex to match against 7× more DOM signals
- * (label, placeholder, HTML name, id, aria-label, surrounding text, section heading, data-*)
- * without changing a single regex.
+ * Merges STABLE field fingerprint signals into a single normalized lowercase string.
+ * Used for matching against FIELD_PATTERNS — intentionally excludes surroundingText and sectionHeading
+ * because those capture already-filled form values from nearby inputs, causing wrong matches.
+ *
+ * Only uses: label, placeholder, fieldName (HTML name attr), fieldId, ariaLabel, and data-* attrs.
+ * surroundingText and sectionHeading are still collected in the fingerprint and forwarded to Gemini for context.
  *
  * @param {Object} fingerprint - The field fingerprint produced by buildFieldFingerprint()
  * @returns {string} Normalized combined signal string
  */
 function buildCombinedSignal({ label = '', placeholder = '', fieldName = '', fieldId = '',
-                               ariaLabel = '', surroundingText = '', sectionHeading = '',
-                               dataAttrs = {} } = {}) {
-  const dataStr = Object.values(dataAttrs).filter(Boolean).join(' ');
-  return [label, placeholder, fieldName, fieldId, ariaLabel, surroundingText, sectionHeading, dataStr]
+                               ariaLabel = '', dataAttrs = {} } = {}) {
+  const hasStrongLabel = Boolean((label && label.trim().length > 2) || (ariaLabel && ariaLabel.trim().length > 2));
+  const cleanName = cleanAttrSignal(fieldName, hasStrongLabel);
+  const cleanId = cleanAttrSignal(fieldId, hasStrongLabel);
+  const dataStr = Object.values(dataAttrs || {}).filter(Boolean).join(' ');
+  return [label, placeholder, cleanName, cleanId, ariaLabel, dataStr]
     .filter(Boolean)
     .join(' ')
     .replace(/_/g, ' ')

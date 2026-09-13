@@ -562,20 +562,24 @@
       if (innerInput && !innerInput.disabled && !innerInput.readOnly) return innerInput;
     }
 
-    // Stage 2: Walk up the DOM tree (up to 6 levels) — handles wrappers like .input-group, .form-control-wrap, icon spans
+    // Stage 2: Walk up the DOM tree (max 3 levels) looking for an input in DIRECT children only.
+    // Intentionally shallow — avoids picking the wrong input when a big form container is hit.
     const INPUT_QUERY = 'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select';
     let el = target.parentElement;
-    for (let depth = 0; depth < 6 && el && el !== document.body; depth++, el = el.parentElement) {
-      // Stop climbing if we hit a big container (table, form, section, article)
+    for (let depth = 0; depth < 3 && el && el !== document.body; depth++, el = el.parentElement) {
       const elTag = (el.tagName || '').toLowerCase();
-      if (['form', 'table', 'section', 'article', 'main', 'header', 'footer', 'nav'].includes(elTag)) {
-        // Still check one level of this container
-        const sibling = el.querySelector(INPUT_QUERY);
-        if (sibling && !sibling.disabled) return sibling;
-        break;
-      }
-      const sibling = el.querySelector(INPUT_QUERY);
-      if (sibling && !sibling.disabled) return sibling;
+      // Stop at any container that spans multiple fields
+      if (['form', 'table', 'section', 'article', 'main', 'header', 'footer', 'nav', 'ul', 'ol'].includes(elTag)) break;
+      // Only look for inputs that are DIRECT children of el, not deep descendants
+      const directChild = Array.from(el.children || []).find(child => {
+        const ct = (child.tagName || '').toLowerCase();
+        if (ct === 'input') {
+          const ctype = (child.type || 'text').toLowerCase();
+          return !['submit','button','reset','hidden','image'].includes(ctype) && !child.disabled;
+        }
+        return (ct === 'textarea' || ct === 'select') && !child.disabled;
+      });
+      if (directChild) return directChild;
     }
 
     // Stage 3: If document.activeElement is an input (focused by JS), use that

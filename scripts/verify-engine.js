@@ -185,7 +185,16 @@ async function runVerification() {
     { label: "REACT.JS / FRONTEND", expectedKey: "skills.react" },
     { label: "NODE.JS / EXPRESS", expectedKey: "skills.node" },
     { label: "JAVA & DSA", expectedKey: "skills.java" },
-    { label: "MONGODB / SUPABASE / SQL", expectedKey: "skills.sql_mongodb" }
+    { label: "MONGODB / SUPABASE / SQL", expectedKey: "skills.sql_mongodb" },
+
+    // Primary Skills, Education Details & Total Experience (egainz & enterprise forms)
+    { label: "Primary Skills:", expectedKey: "skills.primary" },
+    { label: "Technical Skills", expectedKey: "skills.primary" },
+    { label: "Key Skills", expectedKey: "skills.primary" },
+    { label: "Education Details", expectedKey: "academics.educationDetails" },
+    { label: "Educational Qualification", expectedKey: "academics.educationDetails" },
+    { label: "Education Summary", expectedKey: "academics.educationDetails" },
+    { label: "Total years of Experience:", expectedKey: "career.totalExperienceYears" }
   ];
 
   testCases.forEach(({ label, expectedKey }) => {
@@ -249,6 +258,17 @@ async function runVerification() {
 
   const lName3 = lastNamePattern.getValue(DEFAULT_PROFILE, mockForm3Field);
   assert(lName3 === "Naeem Khan", `3-Field Form: Last Name -> "Naeem Khan" [Got: "${lName3}"]`);
+
+  // Verify HTML Attribute Signal Scrubbing & Robust Matching
+  console.log("\n[3.2] Testing HTML Attribute Signal Scrubbing & Robust Matching:");
+  const { buildCombinedSignal } = require('../content/heuristics.js');
+  const signalSkillsWithName = buildCombinedSignal({ label: "Primary Skills:", fieldName: "name" });
+  const matchSkillsWithName = matchLabel(signalSkillsWithName);
+  assert(matchSkillsWithName && matchSkillsWithName.key === "skills.primary", `Signal "Primary Skills:" with name="name" -> skills.primary [Got: ${matchSkillsWithName?.key || 'NONE'}]`);
+
+  const signalEduWithName = buildCombinedSignal({ label: "Education Details", fieldName: "name" });
+  const matchEduWithName = matchLabel(signalEduWithName);
+  assert(matchEduWithName && matchEduWithName.key === "academics.educationDetails", `Signal "Education Details" with name="name" -> academics.educationDetails [Got: ${matchEduWithName?.key || 'NONE'}]`);
 
   // 4. Test Smart Boolean Classifier
   console.log("\n[4] Testing Smart Boolean (Yes/No) Classifier:");
@@ -316,6 +336,15 @@ async function runVerification() {
   const inferredCurSalary = await inferFieldWithGemini({ label: "Annual Current Salary (INR) ((Put 0 if you're applying for internship role) *", tag: "input" }, DEFAULT_PROFILE);
   assert(inferredCurSalary === "0", `AI Inferred Current Salary text input: "${inferredCurSalary}" [Expected: "0"]`);
 
+  const inferredSkills = await inferFieldWithGemini({ label: "Primary Skills:", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredSkills.includes("React") && inferredSkills.includes("Node"), `AI Inferred Primary Skills: contains React/Node`);
+
+  const inferredEducation = await inferFieldWithGemini({ label: "Education Details", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredEducation.includes("B.Tech") && inferredEducation.includes("Artificial Intelligence"), `AI Inferred Education Details: contains B.Tech AI`);
+
+  const inferredExpYearsDropdown = await inferFieldWithGemini({ label: "Total years of Experience:", tag: "select", options: ["Select...", "0-1 Years", "1-2 Years", "2-3 Years", "3+ Years"] }, DEFAULT_PROFILE);
+  assert(inferredExpYearsDropdown === "1-2 Years" || inferredExpYearsDropdown === "0-1 Years", `AI Inferred Experience dropdown: "${inferredExpYearsDropdown}"`);
+
   // 7. Test Field-Level Quick Fill Suggestions Engine
   console.log("\n[7] Testing Field-Level Quick Fill Suggestions Engine:");
   const nameSugg = getFieldSuggestions(null, "Full Name *", DEFAULT_PROFILE);
@@ -327,6 +356,15 @@ async function runVerification() {
 
   const emailSugg = getFieldSuggestions(null, "Email Address *", DEFAULT_PROFILE);
   assert(emailSugg.primary && emailSugg.primary.value === "danishkhan.jsx@gmail.com", `Email Suggestion -> "${emailSugg.primary?.value}"`);
+
+  const skillsSugg = getFieldSuggestions(null, "Primary Skills:", DEFAULT_PROFILE);
+  assert(skillsSugg.primary && skillsSugg.primary.value.includes("React"), `Primary Skills Suggestion -> "${skillsSugg.primary?.value?.slice(0, 35)}..."`);
+
+  const eduSugg = getFieldSuggestions(null, "Education Details", DEFAULT_PROFILE);
+  assert(eduSugg.primary && eduSugg.primary.value.includes("B.Tech"), `Education Details Suggestion -> "${eduSugg.primary?.value}"`);
+
+  const expYearsSugg = getFieldSuggestions(null, "Total years of Experience:", DEFAULT_PROFILE);
+  assert(expYearsSugg.primary && expYearsSugg.primary.value === "1", `Total Experience Years Suggestion -> "${expYearsSugg.primary?.value}"`);
 
   const ppoSugg = getFieldSuggestions(null, "Are you interested in a PPO (pre-placement offer) post the internship completion ? *", DEFAULT_PROFILE);
   assert(ppoSugg.primary && ppoSugg.primary.value === "Yes", `PPO Suggestion -> "${ppoSugg.primary?.value}" [Expected: "Yes"]`);
