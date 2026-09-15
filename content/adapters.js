@@ -57,6 +57,21 @@ function setNativeValue(element, value) {
     } catch (e) {}
   }
 
+  // Fix for invalid HTML pattern attributes on enterprise portals (e.g. TCS NextStep pattern="^[a-zA-Z.,'& \s-]*$")
+  // which crash modern browser HTMLInputElement.prototype.value.set with SyntaxError: Invalid character class
+  let removedPattern = null;
+  if (target.hasAttribute && target.hasAttribute('pattern')) {
+    const pat = target.getAttribute('pattern');
+    if (pat) {
+      try {
+        new RegExp(pat);
+      } catch (e) {
+        removedPattern = pat;
+        target.removeAttribute('pattern');
+      }
+    }
+  }
+
   let setter = null;
   try {
     if (targetTag === 'input' && typeof window !== 'undefined' && window.HTMLInputElement) {
@@ -68,19 +83,34 @@ function setNativeValue(element, value) {
     }
   } catch (e) {}
 
-  if (setter) {
-    try {
+  const safeApplyValue = () => {
+    if (setter) {
       setter.call(target, value);
-    } catch (e) {
+    } else {
       target.value = value;
     }
-  } else {
-    target.value = value;
+  };
+
+  try {
+    safeApplyValue();
+  } catch (err) {
+    // If setting value threw SyntaxError (e.g. invalid pattern regex attribute), strip pattern and retry
+    if (target.hasAttribute && target.hasAttribute('pattern')) {
+      target.removeAttribute('pattern');
+      try { safeApplyValue(); } catch (e2) {}
+    }
   }
 
   // Enforce direct value & attribute assignment as failsafe
   try {
     target.value = value;
+  } catch (e) {
+    if (target.hasAttribute && target.hasAttribute('pattern')) {
+      target.removeAttribute('pattern');
+      try { target.value = value; } catch (e2) {}
+    }
+  }
+  try {
     target.setAttribute('value', String(value));
   } catch (e) {}
 
@@ -420,6 +450,41 @@ function getElementLabel(element) {
     }
   }
 
+  // 6. Section header / Group heading (e.g. Father's Name*, Mother's Name*, XII Grade, X Grade, Present Address, Permanent Address)
+  try {
+    let parentNode = element.parentElement;
+    for (let i = 0; i < 8 && parentNode && parentNode !== (typeof document !== 'undefined' ? document.body : null); i++, parentNode = parentNode.parentElement) {
+      const secHeader = parentNode.querySelector ? parentNode.querySelector('legend, h1, h2, h3, h4, h5, h6, .section-title, .form-section-header, .card-title, .title, .header, [role="heading"], label:first-child') : null;
+      if (secHeader && secHeader !== element && secHeader.innerText && secHeader.innerText.length < 100) {
+        const isBefore = (typeof secHeader.compareDocumentPosition === 'function')
+          ? (secHeader.compareDocumentPosition(element) & (typeof Node !== 'undefined' ? Node.DOCUMENT_POSITION_FOLLOWING : 4)) !== 0
+          : true;
+        if (isBefore) {
+          const hText = secHeader.innerText.trim();
+          if (!labels.includes(hText)) {
+            labels.unshift(hText);
+          }
+          break;
+        }
+      }
+      // Check preceding siblings
+      let prev = parentNode.previousElementSibling;
+      while (prev) {
+        const prevHead = (prev.matches && prev.matches('h1, h2, h3, h4, h5, h6, legend, .section-title, .form-section-header, .card-title, .title, [role="heading"]'))
+          ? prev
+          : (prev.querySelector ? prev.querySelector('h1, h2, h3, h4, h5, h6, legend, .section-title, .form-section-header, .card-title, .title, [role="heading"]') : null);
+        if (prevHead && prevHead.innerText && prevHead.innerText.length < 100) {
+          const hText = prevHead.innerText.trim();
+          if (!labels.includes(hText)) {
+            labels.unshift(hText);
+          }
+          break;
+        }
+        prev = prev.previousElementSibling;
+      }
+    }
+  } catch (e) {}
+
   return labels.join(' ').replace(/\s+/g, ' ').trim();
 }
 
@@ -483,18 +548,36 @@ function buildFieldFingerprint(element) {
     }
   } catch (e) {}
 
-  // Walk up DOM tree to find nearest section heading (h1–h6, legend, fieldset, section title)
+  // Walk up DOM tree to find nearest preceding section heading (h1–h6, legend, fieldset, section title)
   let sectionHeading = '';
   try {
     let el = element.parentElement;
     for (let i = 0; i < 10 && el; i++, el = el.parentElement) {
       const heading = el.querySelector
-        ? el.querySelector('legend, h1, h2, h3, h4, h5, h6, .section-title, .form-section-header, .M7eMe, .HoPnR')
+        ? el.querySelector('legend, h1, h2, h3, h4, h5, h6, .section-title, .form-section-header, .card-title, .panel-title, .title, .header, .mat-step-header, [role="heading"], .M7eMe, .HoPnR')
         : null;
       if (heading && heading !== element && heading.innerText) {
-        sectionHeading = heading.innerText.trim().slice(0, 120);
-        break;
+        const isBefore = (typeof heading.compareDocumentPosition === 'function')
+          ? (heading.compareDocumentPosition(element) & (typeof Node !== 'undefined' ? Node.DOCUMENT_POSITION_FOLLOWING : 4)) !== 0
+          : true;
+        if (isBefore) {
+          sectionHeading = heading.innerText.trim().slice(0, 120);
+          break;
+        }
       }
+      // Check preceding siblings
+      let prev = el.previousElementSibling;
+      while (prev) {
+        const prevHead = (prev.matches && prev.matches('h1, h2, h3, h4, h5, h6, legend, .section-title, .form-section-header, .card-title, .panel-title, .title, [role="heading"]'))
+          ? prev
+          : (prev.querySelector ? prev.querySelector('h1, h2, h3, h4, h5, h6, legend, .section-title, .form-section-header, .card-title, .panel-title, .title, [role="heading"]') : null);
+        if (prevHead && prevHead.innerText) {
+          sectionHeading = prevHead.innerText.trim().slice(0, 120);
+          break;
+        }
+        prev = prev.previousElementSibling;
+      }
+      if (sectionHeading) break;
     }
   } catch (e) {}
 
@@ -1882,27 +1965,39 @@ function extractCandidateSkills(profile) {
 // 13. Communication with Background Worker for AI Essay Generation
 function sendAiRequest(question) {
   return new Promise((resolve, reject) => {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({
-        action: "GENERATE_AI_ANSWER",
-        payload: { question, jobContext: document.title }
-      }, (res) => {
-        if (chrome.runtime.lastError || !res || !res.success) {
-          if (typeof generateAnswerWithGemini === 'function') {
-            const p = window.DEFAULT_PROFILE || {};
-            generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({
+          action: "GENERATE_AI_ANSWER",
+          payload: { question, jobContext: document.title }
+        }, (res) => {
+          if (chrome.runtime.lastError || !res || !res.success) {
+            if (typeof generateAnswerWithGemini === 'function') {
+              const p = window.DEFAULT_PROFILE || {};
+              generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
+            } else if (typeof generateInstantFallbackAnswer === 'function') {
+              resolve(generateInstantFallbackAnswer(question));
+            } else {
+              reject(new Error(res?.error || chrome.runtime.lastError?.message || "Failed to generate AI response."));
+            }
           } else {
-            reject(new Error(res?.error || chrome.runtime.lastError?.message || "Failed to generate AI response."));
+            resolve(res.answer);
           }
-        } else {
-          resolve(res.answer);
-        }
-      });
-    } else if (typeof generateAnswerWithGemini === 'function') {
-      const p = window.DEFAULT_PROFILE || {};
-      generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
-    } else {
-      reject(new Error("Gemini AI client not available."));
+        });
+      } else if (typeof generateAnswerWithGemini === 'function') {
+        const p = window.DEFAULT_PROFILE || {};
+        generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
+      } else if (typeof generateInstantFallbackAnswer === 'function') {
+        resolve(generateInstantFallbackAnswer(question));
+      } else {
+        reject(new Error("Gemini AI client not available."));
+      }
+    } catch (err) {
+      if (typeof generateInstantFallbackAnswer === 'function') {
+        resolve(generateInstantFallbackAnswer(question));
+      } else {
+        reject(err);
+      }
     }
   });
 }
@@ -1910,26 +2005,30 @@ function sendAiRequest(question) {
 // 14. Communication with Background Worker for AI Field Inference (Unknown/Unique Fields)
 function sendInferFieldAiRequest({ label, tag = "input", type = "text", options = [], sectionContext = "", placeholder = "" }) {
   return new Promise((resolve) => {
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage({
-        action: "INFER_FIELD_AI",
-        payload: { label, tag, type, options, sectionContext, placeholder }
-      }, (res) => {
-        if (chrome.runtime.lastError || !res || !res.success) {
-          if (typeof inferFieldWithGemini === 'function') {
-            const p = window.DEFAULT_PROFILE || {};
-            inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({
+          action: "INFER_FIELD_AI",
+          payload: { label, tag, type, options, sectionContext, placeholder }
+        }, (res) => {
+          if (chrome.runtime.lastError || !res || !res.success) {
+            if (typeof inferFieldWithGemini === 'function') {
+              const p = window.DEFAULT_PROFILE || {};
+              inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
+            } else {
+              resolve("");
+            }
           } else {
-            resolve("");
+            resolve(res.answer || "");
           }
-        } else {
-          resolve(res.answer || "");
-        }
-      });
-    } else if (typeof inferFieldWithGemini === 'function') {
-      const p = window.DEFAULT_PROFILE || {};
-      inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
-    } else {
+        });
+      } else if (typeof inferFieldWithGemini === 'function') {
+        const p = window.DEFAULT_PROFILE || {};
+        inferFieldWithGemini({ label, tag, type, options, sectionContext, placeholder }, p).then(resolve).catch(() => resolve(""));
+      } else {
+        resolve("");
+      }
+    } catch (err) {
       resolve("");
     }
   });
@@ -2097,24 +2196,60 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     }
   }
 
-  // 4. Academics & Education
-  else if (/\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education[_\s-]?info|education[_\s-]?history|education)\b/i.test(lLower) && !/10th|12th|ssc|hsc|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level/i.test(lLower)) {
+  // 4a. 12th Standard / HSC / XII Grade / Diploma
+  else if (/\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|junior[_\s-]?college|diploma)\b/i.test(lLower)) {
+    if (/college|institute|institution|school|university/i.test(lLower)) {
+      suggestions.push({ label: "12th College Name", value: p.academics?.twelfth?.collegeName || "Shri D. L. Hindi Junior College, Bhusawal" });
+      suggestions.push({ label: "Junior College", value: "Shri D. L. Hindi Jr. College" });
+    } else if (/board|council|authority/i.test(lLower)) {
+      suggestions.push({ label: "12th Board", value: p.academics?.twelfth?.board || "Maharashtra State Board (Nashik Divisional Board)" });
+      suggestions.push({ label: "State Board", value: "Maharashtra State Board" });
+    } else if (/stream|branch|discipline|specialization|major|subjects?/i.test(lLower)) {
+      suggestions.push({ label: "12th Specialization", value: p.academics?.twelfth?.specialization || "Computer Science (PCM + CS)" });
+      suggestions.push({ label: "12th Stream", value: p.academics?.twelfth?.stream || "Science (PCM with Computer Science)" });
+      suggestions.push({ label: "PCMCS", value: "PCMCS" });
+      suggestions.push({ label: "12th Subjects", value: p.academics?.twelfth?.subjects || "Physics, Chemistry, Mathematics, Computer Science, English" });
+    } else if (/%|percentage|marks|cgpa|gpa/i.test(lLower)) {
+      suggestions.push({ label: "12th Percentage", value: p.academics?.twelfth?.percentage || "70.50" });
+      suggestions.push({ label: "12th CGPA", value: p.academics?.twelfth?.cgpa || "7.05" });
+    } else if (/year|passing/i.test(lLower)) {
+      suggestions.push({ label: "12th Passing Year", value: p.academics?.twelfth?.passingYear || "2022" });
+    }
+  }
+
+  // 4b. 10th Standard / SSC / X Grade / Matric
+  else if (/\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b/i.test(lLower)) {
+    if (/school|college|institute|institution|university/i.test(lLower)) {
+      suggestions.push({ label: "10th School Name", value: p.academics?.tenth?.schoolName || "B.Z. Urdu High School & Jr. College, Khadka Road, Bhusawal" });
+    } else if (/board|council|authority/i.test(lLower)) {
+      suggestions.push({ label: "10th Board", value: p.academics?.tenth?.board || "Maharashtra State Board (Nashik Divisional Board)" });
+      suggestions.push({ label: "State Board", value: "Maharashtra State Board" });
+    } else if (/%|percentage|marks|cgpa|gpa/i.test(lLower)) {
+      suggestions.push({ label: "10th Percentage", value: p.academics?.tenth?.percentage || "89.60" });
+      suggestions.push({ label: "10th CGPA", value: p.academics?.tenth?.cgpa || "8.96" });
+    } else if (/year|passing/i.test(lLower)) {
+      suggestions.push({ label: "10th Passing Year", value: p.academics?.tenth?.passingYear || "2020" });
+    }
+  }
+
+  // 4c. Academics & Education (General / Graduation)
+  else if (/\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education[_\s-]?info|education[_\s-]?history|education)\b/i.test(lLower) && !/10th|12th|ssc|hsc|\bxii\b|\bx\b|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level/i.test(lLower)) {
     suggestions.push({ label: "Education Details", value: p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)" });
     suggestions.push({ label: "Degree & College", value: "B.Tech in AI, G H Raisoni College of Engineering and Management" });
     suggestions.push({ label: "Highest Degree", value: "Bachelor of Technology (B.Tech)" });
     suggestions.push({ label: "Branch", value: "Artificial Intelligence" });
-  } else if (/degree|qualification|course/i.test(lLower)) {
+  } else if (/degree|qualification|course/i.test(lLower) && !/10th|12th|ssc|hsc|\bxii\b|\bx\b/i.test(lLower)) {
     suggestions.push({ label: "Degree", value: p.academics?.graduation?.degree || "B.Tech" });
     suggestions.push({ label: "BE/B.Tech", value: "BE/B.Tech" });
     suggestions.push({ label: "Branch", value: p.academics?.graduation?.branch || "Artificial Intelligence" });
     suggestions.push({ label: "Course Full", value: p.academics?.graduation?.courseName || "B.Tech in Artificial Intelligence" });
-  } else if (/cgpa|gpa|marks|grade/i.test(lLower)) {
+  } else if (/cgpa|gpa|marks|grade/i.test(lLower) && !/10th|12th|ssc|hsc|\bxii\b|\bx\b/i.test(lLower)) {
     suggestions.push({ label: "Graduation CGPA", value: p.academics?.graduation?.cgpa || "7.79" });
     suggestions.push({ label: "12th Percentage", value: p.academics?.twelfth?.percentage || "70.50" });
     suggestions.push({ label: "10th Percentage", value: p.academics?.tenth?.percentage || "89.60" });
-  } else if (/year.*grad|grad.*year|passing.*year|batch/i.test(lLower)) {
+  } else if (/year.*grad|grad.*year|passing.*year|batch/i.test(lLower) && !/10th|12th|ssc|hsc|\bxii\b|\bx\b/i.test(lLower)) {
     suggestions.push({ label: "Graduation Year", value: p.academics?.graduation?.passingYear || "2026" });
-  } else if (/college|institute|university/i.test(lLower)) {
+  } else if (/college|institute|university/i.test(lLower) && !/10th|12th|ssc|hsc|\bxii\b|\bx\b/i.test(lLower)) {
     suggestions.push({ label: "College Name", value: p.academics?.graduation?.collegeName || "G H Raisoni College of Engineering and Management" });
     suggestions.push({ label: "University", value: p.academics?.graduation?.university || "KBC North Maharashtra University" });
   }

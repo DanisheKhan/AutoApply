@@ -372,14 +372,33 @@ function populateForm(p) {
   // Academics - 12th
   setVal('acad-12-college', p.academics?.twelfth?.collegeName);
   setVal('acad-12-board', p.academics?.twelfth?.board);
+  setVal('acad-12-stream', p.academics?.twelfth?.stream || p.academics?.twelfth?.specialization || 'Science (PCM with Computer Science)');
   setVal('acad-12-percentage', p.academics?.twelfth?.percentage);
   setVal('acad-12-year', p.academics?.twelfth?.passingYear);
+  setVal('acad-12-seat', p.academics?.twelfth?.seatNumber || 'S058734');
+  setVal('acad-12-marks-obtained', p.academics?.twelfth?.marksObtained || '423');
+  setVal('acad-12-total-marks', p.academics?.twelfth?.totalMarks || '600');
+  setVal('acad-12-maths', p.academics?.twelfth?.subjectMarks?.maths?.obtained ? `${p.academics.twelfth.subjectMarks.maths.obtained} / ${p.academics.twelfth.subjectMarks.maths.max || 100}` : '85 / 100');
+  setVal('acad-12-physics', p.academics?.twelfth?.subjectMarks?.physics?.obtained ? `${p.academics.twelfth.subjectMarks.physics.obtained} / ${p.academics.twelfth.subjectMarks.physics.max || 100}` : '70 / 100');
+  setVal('acad-12-chemistry', p.academics?.twelfth?.subjectMarks?.chemistry?.obtained ? `${p.academics.twelfth.subjectMarks.chemistry.obtained} / ${p.academics.twelfth.subjectMarks.chemistry.max || 100}` : '79 / 100');
+  setVal('acad-12-cs', p.academics?.twelfth?.subjectMarks?.computerScience?.obtained ? `${p.academics.twelfth.subjectMarks.computerScience.obtained} / ${p.academics.twelfth.subjectMarks.computerScience.max || 200}` : '138 / 200');
+  setVal('acad-12-english', p.academics?.twelfth?.subjectMarks?.english?.obtained ? `${p.academics.twelfth.subjectMarks.english.obtained} / ${p.academics.twelfth.subjectMarks.english.max || 100}` : '51 / 100');
 
   // Academics - 10th
   setVal('acad-10-school', p.academics?.tenth?.schoolName);
   setVal('acad-10-board', p.academics?.tenth?.board);
+  setVal('acad-10-seat', p.academics?.tenth?.seatNumber || 'D174071');
   setVal('acad-10-percentage', p.academics?.tenth?.percentage);
   setVal('acad-10-year', p.academics?.tenth?.passingYear);
+  setVal('acad-10-marks-obtained', p.academics?.tenth?.marksObtained || '448');
+  setVal('acad-10-total-marks', p.academics?.tenth?.totalMarks || '500');
+  setVal('acad-10-division', p.academics?.tenth?.division || 'Distinction');
+  setVal('acad-10-urdu', p.academics?.tenth?.subjectMarks?.urdu?.obtained ? `${p.academics.tenth.subjectMarks.urdu.obtained} / ${p.academics.tenth.subjectMarks.urdu.max || 100}` : '92 / 100');
+  setVal('acad-10-science', p.academics?.tenth?.subjectMarks?.science?.obtained ? `${p.academics.tenth.subjectMarks.science.obtained} / ${p.academics.tenth.subjectMarks.science.max || 100}` : '94 / 100');
+  setVal('acad-10-english', p.academics?.tenth?.subjectMarks?.english?.obtained ? `${p.academics.tenth.subjectMarks.english.obtained} / ${p.academics.tenth.subjectMarks.english.max || 100}` : '90 / 100');
+  setVal('acad-10-maths', p.academics?.tenth?.subjectMarks?.maths?.obtained ? `${p.academics.tenth.subjectMarks.maths.obtained} / ${p.academics.tenth.subjectMarks.maths.max || 100}` : '87 / 100');
+  setVal('acad-10-social', p.academics?.tenth?.subjectMarks?.socialSciences?.obtained ? `${p.academics.tenth.subjectMarks.socialSciences.obtained} / ${p.academics.tenth.subjectMarks.socialSciences.max || 100}` : '85 / 100');
+  setVal('acad-10-marathi', p.academics?.tenth?.subjectMarks?.marathiHindi?.obtained ? `${p.academics.tenth.subjectMarks.marathiHindi.obtained} / ${p.academics.tenth.subjectMarks.marathiHindi.max || 100}` : '70 / 100');
 
   // Career & CTC
   setVal('career-currentCtc', p.career?.currentCtcLpa);
@@ -483,15 +502,23 @@ function extractFormData() {
   p.academics.twelfth = p.academics.twelfth || {};
   p.academics.twelfth.collegeName = getVal('acad-12-college');
   p.academics.twelfth.board = getVal('acad-12-board');
+  p.academics.twelfth.stream = getVal('acad-12-stream') || 'Science (PCM with Computer Science)';
   p.academics.twelfth.percentage = getVal('acad-12-percentage');
   p.academics.twelfth.passingYear = getVal('acad-12-year');
+  p.academics.twelfth.seatNumber = getVal('acad-12-seat') || 'S058734';
+  p.academics.twelfth.marksObtained = getVal('acad-12-marks-obtained') || '423';
+  p.academics.twelfth.totalMarks = getVal('acad-12-total-marks') || '600';
 
   // Academics - 10th
   p.academics.tenth = p.academics.tenth || {};
   p.academics.tenth.schoolName = getVal('acad-10-school');
   p.academics.tenth.board = getVal('acad-10-board');
+  p.academics.tenth.seatNumber = getVal('acad-10-seat') || 'D174071';
   p.academics.tenth.percentage = getVal('acad-10-percentage');
   p.academics.tenth.passingYear = getVal('acad-10-year');
+  p.academics.tenth.marksObtained = getVal('acad-10-marks-obtained') || '448';
+  p.academics.tenth.totalMarks = getVal('acad-10-total-marks') || '500';
+  p.academics.tenth.division = getVal('acad-10-division') || 'Distinction';
 
   // Career
   p.career = p.career || {};

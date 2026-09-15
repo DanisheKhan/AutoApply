@@ -5,12 +5,51 @@
  */
 
 const FIELD_PATTERNS = [
+  // --- Father & Mother Granular Identity (checked before candidate names so section-scoped subfields match accurately) ---
+  {
+    key: "personal.fatherFirstName",
+    regex: /((\bfather\b.*(first[_\s-]?name|fname|given[_\s-]?name))|((first[_\s-]?name|fname|given[_\s-]?name).*\bfather\b))/i,
+    getValue: (p) => p.personal?.fatherFirstName || "Naeem"
+  },
+  {
+    key: "personal.fatherMiddleName",
+    regex: /((\bfather\b.*(middle[_\s-]?name|mname|second[_\s-]?name))|((middle[_\s-]?name|mname|second[_\s-]?name).*\bfather\b))/i,
+    getValue: (p) => p.personal?.fatherMiddleName || "Khan"
+  },
+  {
+    key: "personal.fatherLastName",
+    regex: /((\bfather\b.*(last[_\s-]?name|lname|surname|family[_\s-]?name))|((last[_\s-]?name|lname|surname|family[_\s-]?name).*\bfather\b))/i,
+    getValue: (p) => p.personal?.fatherLastName || "Ishaque Khan"
+  },
+  {
+    key: "personal.fatherName",
+    regex: /\b(father('?s)?[_\s-]?name|father|guardian[_\s-]?name|parent[_\s-]?name)\b/i,
+    exclude: /mother|first|last|middle|given|surname|forename/i,
+    getValue: (p) => p.personal?.fatherName || p.personal?.fatherFullName || "Naeem Khan Ishaque Khan"
+  },
+  {
+    key: "personal.motherFirstName",
+    regex: /((\bmother\b.*(first[_\s-]?name|fname|given[_\s-]?name))|((first[_\s-]?name|fname|given[_\s-]?name).*\bmother\b))/i,
+    getValue: (p) => p.personal?.motherFirstName || "Yasmeen"
+  },
+  {
+    key: "personal.motherLastName",
+    regex: /((\bmother\b.*(last[_\s-]?name|lname|surname|family[_\s-]?name))|((last[_\s-]?name|lname|surname|family[_\s-]?name).*\bmother\b))/i,
+    getValue: (p) => p.personal?.motherLastName || "Bano"
+  },
+  {
+    key: "personal.motherName",
+    regex: /\b(mother('?s)?[_\s-]?name|mother)\b/i,
+    exclude: /father|tongue|first|last|middle|given|surname|forename/i,
+    getValue: (p) => p.personal?.motherName || "Yasmeen Bano"
+  },
+
   // --- Personal Identity ---
   {
     key: "personal.fullName",
     regex: /\b(full[_\s-]?name|candidate('?s)?[_\s-]?name|applicant('?s)?[_\s-]?name|student('?s)?[_\s-]?name|your[_\s-]?name|complete[d]?[_\s-]?name|name[_\s-]?in[_\s-]?full|name[_\s-]?as[_\s-]?per|name[_\s-]?of[_\s-]?(the[_\s-]?)?(candidate|applicant|student)|legal[_\s-]?name|official[_\s-]?name|print[_\s-]?name|enter[_\s-]?((your|full|complete|completed)[_\s-]?)?name|\bname\b)\b/i,
-    exclude: /first|last|middle|given|forename|family|surname|maiden|preferred|nick|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor|project|device|database|table|host|domain|variable|package|branch|course|exam|stream|degree|board|university|skill|skills|primary|technical|technolog|stack|tool|software|framework|language|education|qualification|academic|summary|experience|work|details|history|institution|organization|employer|certif|role|designation|job|proficienc|interest|hobby/i,
-    getValue: (p) => p.personal?.fullName || p.personal?.certificateName || "Mohammad Danish Khan"
+    exclude: /first|last|middle|given|forename|family|surname|maiden|preferred|nick|user|company|school|college|file|father|mother|guardian|spouse|emergency|reference|referee|manager|vendor|project|device|database|table|host|domain|variable|package|branch|course|exam|stream|degree|board|university|skill|skills|primary|technical|technolog|stack|tool|software|framework|language|education|qualification|academic|summary|experience|work|details|history|institution|organization|employer|certif|role|designation|job|proficienc|interest|hobby|apartment|building|society|house|flat|block|street|road|lane|plot|floor|door|village|city|state|country|location|colony|area|locality|landmark|premise|residence|residential|bank|firm|business|account|product|brand|\bapp\b|repo|repository|service|server/i,
+    getValue: (p) => p.personal?.fullName || p.personal?.certificateName || "Mohammad Danish Khan Naeem Khan"
   },
   {
     key: "personal.certificateName",
@@ -31,7 +70,7 @@ const FIELD_PATTERNS = [
   {
     key: "personal.firstName",
     regex: /\b(first[_\s-]?name|fname|given[_\s-]?name|forename|applicant[_\s-]?first[_\s-]?name)\b/i,
-    exclude: /last|middle|family|surname|mother|father|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
+    exclude: /last|middle|family|surname|mother|father|guardian|spouse|emergency|reference|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
     getValue: (p, el) => {
       // Smart detection: if surrounding form/section/card contains a middle name field, return 3-field first name ("Mohammad Danish")
       if (el) {
@@ -53,12 +92,13 @@ const FIELD_PATTERNS = [
   {
     key: "personal.middleName",
     regex: /\b(middle[_\s-]?name|mname|second[_\s-]?name)\b/i,
+    exclude: /father|mother|guardian|spouse|emergency|reference/i,
     getValue: (p) => p.personal?.middleName || "Khan"
   },
   {
     key: "personal.lastName",
     regex: /\b(last[_\s-]?name|lname|surname|family[_\s-]?name|applicant[_\s-]?last[_\s-]?name)\b/i,
-    exclude: /first|given|forename|mother|father|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
+    exclude: /first|given|forename|mother|father|guardian|spouse|emergency|reference|company|college|school|skill|primary|technical|education|qualification|academic|project|role|designation/i,
     getValue: (p) => {
       if (p.personal?.lastName && p.personal?.lastName !== "Khan") {
         return p.personal.lastName;
@@ -95,18 +135,6 @@ const FIELD_PATTERNS = [
     key: "personal.phoneWithCode",
     regex: /\b(phone[_\s-]?with[_\s-]?country[_\s-]?code|international[_\s-]?format[_\s-]?phone|mobile[_\s-]?\(\+91\))\b/i,
     getValue: (p) => p.personal?.phone || "+919322990946"
-  },
-  {
-    key: "personal.fatherName",
-    regex: /\b(father[_\s-]?name|father|guardian[_\s-]?name|parent[_\s-]?name)\b/i,
-    exclude: /mother/i,
-    getValue: (p) => p.personal?.fatherName || "Naeem Khan"
-  },
-  {
-    key: "personal.motherName",
-    regex: /\b(mother[_\s-]?name|mother)\b/i,
-    exclude: /tongue/i,
-    getValue: (p) => p.personal?.motherName || "Yasmeen Bano"
   },
   {
     key: "personal.dob",
@@ -312,18 +340,18 @@ const FIELD_PATTERNS = [
   },
   {
     key: "address.streetAddress1",
-    regex: /\b(address[_\s-]?\(?line[_\s-]?1\)?|street[_\s-]?address[_\s-]?1|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building[_\s-]?name|plot[_\s-]?no)\b/i,
-    getValue: () => "Near Mujib Members House, Khadka, New Eidgah Colony"
+    regex: /\b(address[_\s-]?\(?line[_\s-]?1\)?|street[_\s-]?address[_\s-]?1|address[_\s-]?1|house[_\s-]?no(\.?|\/|number)?|house[_\s-]?name|apartment([_\s-]?name)?|apt[_\s-]?no|flat[_\s-]?no(\.?|\/|number)?|building([_\s-]?name)?|building[_\s-]?no|block[_\s-]?no(\.?|\/|number)?|plot[_\s-]?no|door[_\s-]?no|room[_\s-]?no|premise[s]?)\b/i,
+    getValue: (p) => p.address?.streetAddress1 || p.address?.line1 || "Near Mujib Members House, Khadka, New Eidgah Colony"
   },
   {
     key: "address.streetAddress2",
-    regex: /\b(address[_\s-]?\(?line[_\s-]?2\)?|street[_\s-]?address[_\s-]?2|address[_\s-]?2|colony|landmark|locality|area|street)\b/i,
-    getValue: () => "Bhusawal (Rural), Dist. Jalgaon"
+    regex: /\b(address[_\s-]?\(?line[_\s-]?2\)?|street[_\s-]?address[_\s-]?2|address[_\s-]?2|colony|landmark|locality|area|street|sector|road|lane)\b/i,
+    getValue: (p) => p.address?.streetAddress2 || p.address?.line2 || "Bhusawal (Rural), Dist. Jalgaon"
   },
   {
     key: "address.fullAddress",
-    regex: /\b(address|street[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address)\b/i,
-    exclude: /email|mac|ip|state|city|pin|zip|line[_\s-]?1|line[_\s-]?2/i,
+    regex: /\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i,
+    exclude: /email|mac|ip|state|city|pin|zip|line[_\s-]?1|line[_\s-]?2|street[_\s-]?1|street[_\s-]?2|house|apartment|building|flat|block|plot|door/i,
     getValue: (p) => p.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India"
   },
 
@@ -350,133 +378,227 @@ const FIELD_PATTERNS = [
     getValue: (p) => p.links?.leetcode || "https://leetcode.com/u/Danishekhan/"
   },
 
-  // --- 10th Standard / Secondary School (SSC) ---
+  // --- 10th Standard / Secondary School (SSC / X Grade) ---
   {
     key: "academics.tenth.percentage",
-    regex: /\b(10th[_\s-]?%|10th[_\s-]?percentage|ssc[_\s-]?%|ssc[_\s-]?percentage|secondary[_\s-]?percentage|10th[_\s-]?marks[_\s-]?%|tenth[_\s-]?percentage)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(%|percentage|marks[_\s-]?%|aggregate))|((%|percentage|marks[_\s-]?%|aggregate).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.tenth?.percentage || "89.60"
   },
   {
     key: "academics.tenth.cgpa",
-    regex: /\b(10th[_\s-]?cgpa|ssc[_\s-]?cgpa|secondary[_\s-]?cgpa|10th[_\s-]?gpa)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(cgpa|gpa|grade[_\s-]?point))|((cgpa|gpa|grade[_\s-]?point).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech|marks|obtained|secured|scored|maximum|max[_\s-]?marks|total[_\s-]?marks/i,
     getValue: (p) => p.academics?.tenth?.cgpa || "8.96"
   },
   {
     key: "academics.tenth.schoolName",
-    regex: /\b(10th[_\s-]?school|ssc[_\s-]?school|secondary[_\s-]?school|10th[_\s-]?institution|10th[_\s-]?board[_\s-]?school)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(school|institution|institute|college|university))|((school|institution|institute|college|university).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b)|\b(10th[_\s-]?school|ssc[_\s-]?school|tenth[_\s-]?school|matric[_\s-]?school|matriculation[_\s-]?school)\b)/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.tenth?.schoolName || "B.Z. Urdu High School & Jr. College, Khadka Road, Bhusawal"
   },
   {
     key: "academics.tenth.board",
-    regex: /\b(10th[_\s-]?board|ssc[_\s-]?board|secondary[_\s-]?board|10th[_\s-]?education[_\s-]?board)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(board|education[_\s-]?board|council|authority))|((board|education[_\s-]?board|council|authority).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.tenth?.board || "Maharashtra State Board (Nashik Divisional Board)"
   },
   {
     key: "academics.tenth.passingYear",
-    regex: /\b(10th[_\s-]?passing[_\s-]?year|10th[_\s-]?year|ssc[_\s-]?year|10th[_\s-]?completion[_\s-]?year)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(passing[_\s-]?year|year|completion[_\s-]?year|passout[_\s-]?year|duration[_\s-]?to|year[_\s-]?to))|((passing[_\s-]?year|year|completion[_\s-]?year|passout[_\s-]?year|duration[_\s-]?to|year[_\s-]?to).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.tenth?.passingYear || "2020"
   },
   {
     key: "academics.tenth.seatNumber",
-    regex: /\b(10th[_\s-]?seat|ssc[_\s-]?seat|10th[_\s-]?roll|ssc[_\s-]?roll)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(seat|roll|hall[_\s-]?ticket))|((seat|roll|hall[_\s-]?ticket).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.tenth?.seatNumber || "D174071"
   },
   {
     key: "academics.tenth.marksObtained",
-    regex: /\b(10th[_\s-]?marks[_\s-]?obtained|ssc[_\s-]?marks[_\s-]?obtained|10th[_\s-]?secured)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(marks[_\s-]?(obtained|secured|scored)|secured[_\s-]?marks|obtained[_\s-]?marks|total[_\s-]?marks[_\s-]?obtained))|((marks[_\s-]?(obtained|secured|scored)|secured[_\s-]?marks|obtained[_\s-]?marks|total[_\s-]?marks[_\s-]?obtained).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech|max|maximum|total[_\s-]?maximum/i,
     getValue: (p) => p.academics?.tenth?.marksObtained || "448"
   },
   {
     key: "academics.tenth.totalMarks",
-    regex: /\b(10th[_\s-]?total[_\s-]?marks|ssc[_\s-]?total[_\s-]?marks|10th[_\s-]?max[_\s-]?marks)\b/i,
+    regex: /((\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b.*(total[_\s-]?(maximum|max)?[_\s-]?marks|maximum[_\s-]?marks|max[_\s-]?marks|out[_\s-]?of([_\s-]?marks)?))|((total[_\s-]?(maximum|max)?[_\s-]?marks|maximum[_\s-]?marks|max[_\s-]?marks|out[_\s-]?of([_\s-]?marks)?).*\b(10th|ssc|\bx\b|tenth|secondary|matric|matriculation)\b))/i,
+    exclude: /12th|hsc|\bxii\b|twelfth|graduation|b\.?tech|obtained|secured|scored/i,
     getValue: (p) => p.academics?.tenth?.totalMarks || "500"
   },
 
-  // --- 12th Standard / HSC / Diploma ---
+  // --- 12th Standard / HSC / XII Grade / Diploma ---
   {
     key: "academics.twelfth.percentage",
-    regex: /\b(12th[_\s-]?%|12th[_\s-]?percentage|hsc[_\s-]?%|hsc[_\s-]?percentage|higher[_\s-]?secondary[_\s-]?percentage|diploma[_\s-]?%|twelfth[_\s-]?percentage)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(%|percentage|marks[_\s-]?%|aggregate))|((%|percentage|marks[_\s-]?%|aggregate).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.twelfth?.percentage || "70.50"
   },
   {
     key: "academics.twelfth.cgpa",
-    regex: /\b(12th[_\s-]?cgpa|hsc[_\s-]?cgpa|higher[_\s-]?secondary[_\s-]?cgpa)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(cgpa|gpa|grade[_\s-]?point))|((cgpa|gpa|grade[_\s-]?point).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech|marks|obtained|secured|scored|maximum|max[_\s-]?marks|total[_\s-]?marks/i,
     getValue: (p) => p.academics?.twelfth?.cgpa || "7.05"
   },
   {
     key: "academics.twelfth.collegeName",
-    regex: /\b(12th[_\s-]?college|hsc[_\s-]?college|junior[_\s-]?college|12th[_\s-]?institution|12th[_\s-]?school)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(college|institution|institute|school|university))|((college|institution|institute|school|university).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b)|\b(junior[_\s-]?college|hsc[_\s-]?college|12th[_\s-]?college|twelfth[_\s-]?college|intermediate[_\s-]?college)\b)/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.twelfth?.collegeName || "Shri D. L. Hindi Junior College, Bhusawal"
   },
   {
     key: "academics.twelfth.board",
-    regex: /\b(12th[_\s-]?board|hsc[_\s-]?board|higher[_\s-]?secondary[_\s-]?board)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(board|education[_\s-]?board|council|authority))|((board|education[_\s-]?board|council|authority).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.twelfth?.board || "Maharashtra State Board (Nashik Divisional Board)"
   },
   {
     key: "academics.twelfth.passingYear",
-    regex: /\b(12th[_\s-]?passing[_\s-]?year|12th[_\s-]?year|hsc[_\s-]?year|12th[_\s-]?completion[_\s-]?year)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(passing[_\s-]?year|year|completion[_\s-]?year|passout[_\s-]?year|duration[_\s-]?to|year[_\s-]?to))|((passing[_\s-]?year|year|completion[_\s-]?year|passout[_\s-]?year|duration[_\s-]?to|year[_\s-]?to).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.twelfth?.passingYear || "2022"
   },
   {
     key: "academics.twelfth.stream",
-    regex: /\b(12th[_\s-]?stream|hsc[_\s-]?stream|12th[_\s-]?branch|12th[_\s-]?discipline)\b/i,
-    getValue: (p) => p.academics?.twelfth?.stream || "Science"
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(stream|branch|discipline|group))|((stream|branch|discipline|group).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
+    getValue: (p) => p.academics?.twelfth?.stream || "Science (PCM with Computer Science)"
+  },
+  {
+    key: "academics.twelfth.subjects",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(subjects?|major[_\s-]?subjects?|course[_\s-]?subjects?))|((subjects?|major[_\s-]?subjects?|course[_\s-]?subjects?).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
+    getValue: (p) => p.academics?.twelfth?.subjects || "Physics, Chemistry, Mathematics, Computer Science, English"
+  },
+  {
+    key: "academics.twelfth.specialization",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(specialization|major[_\s-]?field|focus|major))\b|((specialization|major[_\s-]?field|focus).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /subjects?|marks|percentage|board|school|college|10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
+    getValue: (p) => p.academics?.twelfth?.specialization || "Computer Science (PCM + CS)"
+  },
+  {
+    key: "academics.twelfth.pcmcs",
+    regex: /\b(pcmcs|pcm[_\s-]?\+?[_\s-]?cs|pcm[_\s-]?cs|pcm|pcb|pcbe|pcme)\b/i,
+    getValue: () => "PCMCS"
   },
   {
     key: "academics.twelfth.seatNumber",
-    regex: /\b(12th[_\s-]?seat|hsc[_\s-]?seat|12th[_\s-]?roll|hsc[_\s-]?roll)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(seat|roll|hall[_\s-]?ticket))|((seat|roll|hall[_\s-]?ticket).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech/i,
     getValue: (p) => p.academics?.twelfth?.seatNumber || "S058734"
   },
   {
     key: "academics.twelfth.marksObtained",
-    regex: /\b(12th[_\s-]?marks[_\s-]?obtained|hsc[_\s-]?marks[_\s-]?obtained|12th[_\s-]?secured)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(marks[_\s-]?(obtained|secured|scored)|secured[_\s-]?marks|obtained[_\s-]?marks|total[_\s-]?marks[_\s-]?obtained))|((marks[_\s-]?(obtained|secured|scored)|secured[_\s-]?marks|obtained[_\s-]?marks|total[_\s-]?marks[_\s-]?obtained).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech|max|maximum|total[_\s-]?maximum/i,
     getValue: (p) => p.academics?.twelfth?.marksObtained || "423"
   },
   {
     key: "academics.twelfth.totalMarks",
-    regex: /\b(12th[_\s-]?total[_\s-]?marks|hsc[_\s-]?total[_\s-]?marks|12th[_\s-]?max[_\s-]?marks)\b/i,
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b.*(total[_\s-]?(maximum|max)?[_\s-]?marks|maximum[_\s-]?marks|max[_\s-]?marks|out[_\s-]?of([_\s-]?marks)?))|((total[_\s-]?(maximum|max)?[_\s-]?marks|maximum[_\s-]?marks|max[_\s-]?marks|out[_\s-]?of([_\s-]?marks)?).*\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|diploma)\b))/i,
+    exclude: /10th|ssc|\bx\b|tenth|secondary|matric|graduation|b\.?tech|obtained|secured|scored/i,
     getValue: (p) => p.academics?.twelfth?.totalMarks || "600"
+  },
+
+  // --- 12th Subject-Wise Individual Marks ---
+  {
+    key: "academics.twelfth.mathsMarks",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate)\b.*(math|mathematics|maths).*marks)|((math|mathematics|maths).*marks.*\b(12th|hsc|\bxii\b|twelfth)\b)|\b(12th[_\s-]?(math|maths|mathematics)[_\s-]?marks?)\b)/i,
+    getValue: (p) => p.academics?.twelfth?.subjectMarks?.maths?.obtained || "85"
+  },
+  {
+    key: "academics.twelfth.physicsMarks",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate)\b.*physics.*marks)|(physics.*marks.*\b(12th|hsc|\bxii\b|twelfth)\b)|\b(12th[_\s-]?physics[_\s-]?marks?)\b)/i,
+    getValue: (p) => p.academics?.twelfth?.subjectMarks?.physics?.obtained || "70"
+  },
+  {
+    key: "academics.twelfth.chemistryMarks",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate)\b.*chemistry.*marks)|(chemistry.*marks.*\b(12th|hsc|\bxii\b|twelfth)\b)|\b(12th[_\s-]?chemistry[_\s-]?marks?)\b)/i,
+    getValue: (p) => p.academics?.twelfth?.subjectMarks?.chemistry?.obtained || "79"
+  },
+  {
+    key: "academics.twelfth.csMarks",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate)\b.*(computer[_\s-]?science|cs).*marks)|((computer[_\s-]?science|cs).*marks.*\b(12th|hsc|\bxii\b|twelfth)\b)|\b(12th[_\s-]?(cs|computer[_\s-]?science)[_\s-]?marks?)\b)/i,
+    getValue: (p) => p.academics?.twelfth?.subjectMarks?.computerScience?.obtained || "138"
+  },
+  {
+    key: "academics.twelfth.englishMarks",
+    regex: /((\b(12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate)\b.*english.*marks)|(english.*marks.*\b(12th|hsc|\bxii\b|twelfth)\b)|\b(12th[_\s-]?english[_\s-]?marks?)\b)/i,
+    getValue: (p) => p.academics?.twelfth?.subjectMarks?.english?.obtained || "51"
   },
 
   // --- Graduation / Undergrad (B.Tech) ---
   {
     key: "academics.graduation.cgpa",
     regex: /\b(cgpa|gpa|grade[_\s-]?point|cumulative[_\s-]?gpa|b\.?tech[_\s-]?cgpa|degree[_\s-]?cgpa|overall[_\s-]?cgpa|current[_\s-]?cgpa)\b/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric|marks|obtained|secured|scored|maximum|max[_\s-]?marks|total[_\s-]?marks/i,
     getValue: (p) => p.academics?.graduation?.cgpa || "7.79"
   },
   {
     key: "academics.graduation.percentageEquivalent",
     regex: /\b(degree[_\s-]?%|graduation[_\s-]?percentage|b\.?tech[_\s-]?%|b\.?tech[_\s-]?percentage|percentage[_\s-]?in[_\s-]?graduation)\b/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric/i,
     getValue: (p) => p.academics?.graduation?.percentageEquivalent || "70.40"
   },
   {
     key: "academics.graduation.collegeName",
     regex: /\b(college|university|institution|institute|graduating[_\s-]?college|b\.?tech[_\s-]?college)\b/i,
-    exclude: /10th|12th|high[_\s-]?school|junior|ssc|hsc/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric|high[_\s-]?school|junior|diploma|school/i,
     getValue: (p) => p.academics?.graduation?.collegeName || "G H Raisoni College of Engineering and Management, Jalgaon"
   },
   {
     key: "academics.graduation.university",
     regex: /\b(university|affiliat(ed|ing)[_\s-]?university|degree[_\s-]?university)\b/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric|high[_\s-]?school|junior|diploma|school/i,
     getValue: (p) => p.academics?.graduation?.university || "Kavayitri Bahinabai Chaudhari North Maharashtra University (KBC NMU), Jalgaon"
   },
   {
     key: "academics.educationDetails",
     regex: /\b(education[_\s-]?details|educational[_\s-]?qualifications?|education[_\s-]?summary|academic[_\s-]?details|qualification[_\s-]?details|education[_\s-]?background|education[_\s-]?info|education[_\s-]?history)\b/i,
-    exclude: /10th|12th|ssc|hsc|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level|degree/i,
+    exclude: /10th|12th|ssc|hsc|\bxii\b|\bx\b|gap|cgpa|gpa|percentage|marks|passing|board|school|college|university|fee|stipend|ppo|structure|level|degree/i,
     getValue: (p) => p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)"
   },
   {
     key: "academics.graduation.degree",
     regex: /\b(degree|qualification|graduation[_\s-]?course|highest[_\s-]?qualification|highest[_\s-]?degree|education[_\s-]?level|undergraduate[_\s-]?degree)\b/i,
-    exclude: /10th|12th|ssc|hsc|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
+    exclude: /10th|12th|ssc|hsc|\bxii\b|\bx\b|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
     getValue: (p) => p.academics?.graduation?.degree || "Bachelor of Technology (B.Tech)"
+  },
+  {
+    key: "academics.graduation.startDate",
+    regex: /\b(course.*start([_\s-]?date)?|graduation.*start([_\s-]?date)?|degree.*start([_\s-]?date)?|commencement[_\s-]?date|start[_\s-]?date|from[_\s-]?date|from[_\s-]?year|joining[_\s-]?date|joining[_\s-]?year|duration[_\s-]?from|date[_\s-]?from|year[_\s-]?from)\b/i,
+    exclude: /experience|company|job|employment|work|internship|project|end|to\b|passing|completion|notice|how[_\s-]?soon|start[_\s-]?in[_\s-]?days/i,
+    getValue: (p, el) => {
+      const startVal = p.academics?.graduation?.startDate || "2022-08-01";
+      if (typeof formatCandidateDate === 'function') {
+        return formatCandidateDate(startVal, el);
+      }
+      return startVal;
+    }
+  },
+  {
+    key: "academics.graduation.endDate",
+    regex: /\b(course.*end([_\s-]?date)?|graduation.*end([_\s-]?date)?|degree.*end([_\s-]?date)?|completion[_\s-]?date|end[_\s-]?date|to[_\s-]?date|to[_\s-]?year|passing[_\s-]?date|expected[_\s-]?end[_\s-]?date|expected[_\s-]?graduation([_\s-]?date)?|duration[_\s-]?to|date[_\s-]?to|year[_\s-]?to)\b/i,
+    exclude: /experience|company|job|employment|work|internship|project|start|from|joining|notice|how[_\s-]?soon/i,
+    getValue: (p, el) => {
+      const endVal = p.academics?.graduation?.endDate || "2026-06-30";
+      if (typeof formatCandidateDate === 'function') {
+        return formatCandidateDate(endVal, el);
+      }
+      return endVal;
+    }
+  },
+  {
+    key: "academics.graduation.courseDuration",
+    regex: /\b(course[_\s-]?duration|duration[_\s-]?of[_\s-]?(course|degree|graduation)|degree[_\s-]?duration)\b/i,
+    exclude: /start|end|from|to|experience|company|job/i,
+    getValue: (p) => p.academics?.graduation?.duration || "2022 - 2026 (4 Years)"
   },
   {
     key: "academics.graduation.courseName",
     regex: /\b(course[_\s-]?name|degree[_\s-]?name|program[_\s-]?name|graduation[_\s-]?course|course)\b/i,
-    exclude: /10th|12th|ssc|hsc|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend/i,
+    exclude: /10th|12th|ssc|hsc|\bxii\b|\bx\b|school|stipend|structure|ppo|internship|gone[_\s-]?through|clear.*stipend|start|end|duration|date|from|to|year|commence|completion/i,
     getValue: (p) => p.academics?.graduation?.degree || "Bachelor of Technology (B.Tech)"
   },
   {
@@ -488,12 +610,13 @@ const FIELD_PATTERNS = [
   {
     key: "academics.graduation.branch",
     regex: /\b(branch|major|field[_\s-]?of[_\s-]?study|specialization|discipline|degree[_\s-]?stream|engineering[_\s-]?branch)\b/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric|junior|diploma/i,
     getValue: (p) => p.academics?.graduation?.branch || "Artificial Intelligence"
   },
   {
     key: "academics.graduation.passingYear",
     regex: /\b(graduation[_\s-]?year|year[_\s-]?of[_\s-]?graduation|passing[_\s-]?year|batch|grad[_\s-]?year|year[_\s-]?of[_\s-]?passing|expected[_\s-]?graduation)\b/i,
-    exclude: /10th|12th|ssc|hsc/i,
+    exclude: /10th|12th|tenth|twelfth|ssc|hsc|\bxii\b|\bx\b|secondary|matric/i,
     getValue: (p) => p.academics?.graduation?.passingYear || "2026"
   },
   {
@@ -777,7 +900,10 @@ function formatCandidateDate(dobStr, target) {
   } else if (target && typeof target.getAttribute === 'function') {
     const ph = (target.getAttribute('placeholder') || '').toUpperCase();
     const type = (target.getAttribute('type') || '').toLowerCase();
+    const maxLen = target.maxLength || target.getAttribute('maxlength');
     if (type === 'date') return `${year}-${month}-${day}`;
+    if (maxLen === 4 || maxLen === '4' || ph === 'YYYY' || ph === 'YEAR') return year;
+    if (ph.includes('MM/YYYY') || ph.includes('M/YYYY')) return `${month}/${year}`;
     if (ph.includes('DD/MM/YYYY') || ph.includes('DD-MM-YYYY') || ph.includes('D/M/Y')) {
       format = ph.includes('-') ? 'DD-MM-YYYY' : 'DD/MM/YYYY';
     } else if (ph.includes('MM/DD/YYYY') || ph.includes('M/D/Y')) {
@@ -788,6 +914,8 @@ function formatCandidateDate(dobStr, target) {
   }
 
   switch (format) {
+    case 'YYYY': return year;
+    case 'MM/YYYY': return `${month}/${year}`;
     case 'DD/MM/YYYY': return `${day}/${month}/${year}`;
     case 'DD-MM-YYYY': return `${day}-${month}-${year}`;
     case 'MM/DD/YYYY': return `${month}/${day}/${year}`;
@@ -1038,12 +1166,18 @@ function cleanAttrSignal(val, hasStrongLabel) {
  * @returns {string} Normalized combined signal string
  */
 function buildCombinedSignal({ label = '', placeholder = '', fieldName = '', fieldId = '',
-                               ariaLabel = '', dataAttrs = {} } = {}) {
+                               ariaLabel = '', sectionHeading = '', dataAttrs = {} } = {}) {
   const hasStrongLabel = Boolean((label && label.trim().length > 2) || (ariaLabel && ariaLabel.trim().length > 2));
   const cleanName = cleanAttrSignal(fieldName, hasStrongLabel);
   const cleanId = cleanAttrSignal(fieldId, hasStrongLabel);
   const dataStr = Object.values(dataAttrs || {}).filter(Boolean).join(' ');
-  return [label, placeholder, cleanName, cleanId, ariaLabel, dataStr]
+
+  // Include section heading when it contains vital scoping context (father, mother, guardian, spouse, emergency, address, 10th/12th/BTech, etc.)
+  const cleanSection = (sectionHeading && /\b(father|mother|guardian|spouse|emergency|reference|referee|permanent|present|correspondence|residential|current|10th|ssc|\bx\b|tenth|secondary|matric|matriculation|12th|hsc|\bxii\b|twelfth|higher[_\s-]?secondary|intermediate|junior[_\s-]?college|diploma|graduation|b\.?tech|undergraduat\w*|postgraduat\w*|master|bachelor|\bug\b|\bpg\b|degree|college|school|university|institute|institution|academics?|education|qualification|employer|experience|career|employment|salary|ctc)\b/i.test(sectionHeading))
+    ? sectionHeading.trim()
+    : '';
+
+  return [cleanSection, label, placeholder, cleanName, cleanId, ariaLabel, dataStr]
     .filter(Boolean)
     .join(' ')
     .replace(/_/g, ' ')

@@ -21,8 +21,14 @@ const DEFAULT_PROFILE = {
     firstName3Field: "Mohammad Danish",
     middleName: "Khan",
     lastName: "Naeem Khan",
-    fatherName: "Naeem Khan",
+    fatherName: "Naeem Khan Ishaque Khan",
+    fatherFullName: "Naeem Khan Ishaque Khan",
+    fatherFirstName: "Naeem",
+    fatherMiddleName: "Khan",
+    fatherLastName: "Ishaque Khan",
     motherName: "Yasmeen Bano",
+    motherFirstName: "Yasmeen",
+    motherLastName: "Bano",
     dob: "2005-06-01",
     dobFormatted: "01/06/2005",
     gender: "Male",
@@ -59,6 +65,8 @@ const DEFAULT_PROFILE = {
     state: "Maharashtra",
     country: "India",
     pincode: "425201",
+    streetAddress1: "Near Mujib Members House, Khadka, New Eidgah Colony",
+    streetAddress2: "Bhusawal (Rural), Dist. Jalgaon",
     fullAddress: "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India",
     correspondenceAddress: "Maulana Azad Nagar, Near Raza Tower Beside Noori Ki, Azad Nagar, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India",
     domicilePlace: "Bhusawal, Maharashtra"
@@ -95,11 +103,23 @@ const DEFAULT_PROFILE = {
       percentage: "89.60",
       cgpa: "8.96",
       division: "First Class with Distinction",
-      mediumOfInstruction: "Urdu / English"
+      mediumOfInstruction: "Urdu / English",
+      subjectMarks: {
+        urdu: { obtained: "92", max: "100" },
+        marathiHindi: { obtained: "70", max: "100" },
+        english: { obtained: "90", max: "100" },
+        maths: { obtained: "87", max: "100" },
+        science: { obtained: "94", max: "100" },
+        socialSciences: { obtained: "85", max: "100" }
+      }
     },
     twelfth: {
       standard: "12th / HSC",
-      stream: "Science",
+      stream: "Science (PCM with Computer Science)",
+      streamShort: "PCMCS",
+      specialization: "Computer Science (PCM + CS)",
+      subjects: "Physics, Chemistry, Mathematics, Computer Science, English",
+      group: "PCMCS",
       collegeName: "Shri D. L. Hindi Junior College, Bhusawal",
       board: "Maharashtra State Board (Nashik Divisional Board)",
       passingYear: "2022",
@@ -110,7 +130,14 @@ const DEFAULT_PROFILE = {
       percentage: "70.50",
       cgpa: "7.05",
       division: "First Class",
-      mediumOfInstruction: "English"
+      mediumOfInstruction: "English",
+      subjectMarks: {
+        english: { obtained: "51", max: "100" },
+        maths: { obtained: "85", max: "100" },
+        physics: { obtained: "70", max: "100" },
+        chemistry: { obtained: "79", max: "100" },
+        computerScience: { obtained: "138", max: "200" }
+      }
     },
     graduation: {
       degree: "Bachelor of Technology (B.Tech)",
@@ -120,7 +147,13 @@ const DEFAULT_PROFILE = {
       university: "Kavayitri Bahinabai Chaudhari North Maharashtra University (KBC NMU), Jalgaon",
       status: "Completed / Graduated",
       startYear: "2022",
+      startDate: "2022-08-01",
+      startDateFormatted: "01/08/2022",
       passingYear: "2026",
+      endDate: "2026-06-30",
+      endDateFormatted: "30/06/2026",
+      duration: "2022 - 2026 (4 Years)",
+      durationYears: "4",
       passingMonth: "Summer 2026",
       prnNumber: "2022100101010928",
       collegeRollNumber: "22111032",

@@ -830,7 +830,11 @@
         resetButtonToCurrentMode();
       }
     } catch (err) {
-      console.warn('[AutoApply Pro] Insert Gemini fallback error:', err);
+      if (err?.message?.includes('Extension context invalidated')) {
+        showSuccessFeedback('Please refresh tab');
+      } else {
+        console.warn('[AutoApply Pro] Insert Gemini fallback error:', err);
+      }
       resetButtonToCurrentMode();
     }
   } // end handleInsertClick
@@ -858,16 +862,17 @@
 
       if (answer) {
         applyValueToField(anchor, answer, label);
-        showSuccessFeedback("Inserted");
+        showSuccessFeedback('Inserted');
       } else {
-        throw new Error("No answer generated");
+        resetButtonToCurrentMode();
       }
     } catch (err) {
-      console.warn("[AutoApply Pro] Field AI generation failed:", err);
-      insertBtn.innerHTML = `<span class="aap-btn-label">Retry</span>`;
-      setTimeout(() => {
-        resetButtonToCurrentMode();
-      }, 1500);
+      if (err?.message?.includes('Extension context invalidated')) {
+        showSuccessFeedback('Please refresh tab');
+      } else {
+        console.warn('[AutoApply Pro] AI generation error:', err);
+      }
+      resetButtonToCurrentMode();
     }
   }
 

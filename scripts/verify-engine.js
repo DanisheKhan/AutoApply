@@ -29,6 +29,12 @@ async function runVerification() {
   assert(DEFAULT_PROFILE.personal.firstName === "Mohammad Danish Khan", "First name verified");
   assert(DEFAULT_PROFILE.personal.middleName === "Khan", "Middle name verified");
   assert(DEFAULT_PROFILE.personal.lastName === "Naeem Khan", "Last name verified");
+  assert(DEFAULT_PROFILE.personal.fatherName === "Naeem Khan Ishaque Khan", "Father's Full Name verified (Naeem Khan Ishaque Khan)");
+  assert(DEFAULT_PROFILE.personal.fatherFirstName === "Naeem", "Father's First Name verified (Naeem)");
+  assert(DEFAULT_PROFILE.personal.fatherMiddleName === "Khan", "Father's Middle Name verified (Khan)");
+  assert(DEFAULT_PROFILE.personal.fatherLastName === "Ishaque Khan", "Father's Last Name verified (Ishaque Khan)");
+  assert(DEFAULT_PROFILE.personal.motherName === "Yasmeen Bano", "Mother's Name verified (Yasmeen Bano)");
+  assert(DEFAULT_PROFILE.personal.motherFirstName === "Yasmeen", "Mother's First Name verified (Yasmeen)");
   assert(DEFAULT_PROFILE.personal.gender === "Male", "Gender verified");
   assert(DEFAULT_PROFILE.personal.email === "danishkhan.jsx@gmail.com", "Email verified");
   assert(DEFAULT_PROFILE.personal.phonePlain === "9322990946", "Phone verified (9322990946)");
@@ -90,7 +96,15 @@ async function runVerification() {
     { label: "Date of Birth (DD/MM/YYYY)", expectedKey: "personal.dob" },
     { label: "Gender / Sex", expectedKey: "personal.gender" },
     { label: "Father's Name", expectedKey: "personal.fatherName" },
+    { label: "Father's Name First Name", expectedKey: "personal.fatherFirstName" },
+    { label: "Father's Name Middle Name", expectedKey: "personal.fatherMiddleName" },
+    { label: "Father's Name Last Name", expectedKey: "personal.fatherLastName" },
+    { label: "Father First Name", expectedKey: "personal.fatherFirstName" },
+    { label: "Father Middle Name", expectedKey: "personal.fatherMiddleName" },
+    { label: "Father Last Name", expectedKey: "personal.fatherLastName" },
     { label: "Mother's Name", expectedKey: "personal.motherName" },
+    { label: "Mother's Name First Name", expectedKey: "personal.motherFirstName" },
+    { label: "Mother's Name Last Name", expectedKey: "personal.motherLastName" },
     { label: "Nationality / Citizenship", expectedKey: "personal.nationality" },
     { label: "Caste / Category", expectedKey: "personal.casteCategory" },
 
@@ -102,6 +116,9 @@ async function runVerification() {
     { label: "Confirm Password", expectedKey: "credentials.confirmPassword" },
 
     // Address & Location
+    { label: "House No./Apartment Name/Block No.*", expectedKey: "address.streetAddress1" },
+    { label: "Building Name", expectedKey: "address.streetAddress1" },
+    { label: "Apartment Name", expectedKey: "address.streetAddress1" },
     { label: "Residential PIN Code / Postal Code", expectedKey: "address.pincode" },
     { label: "Current City", expectedKey: "address.city" },
     { label: "State / Province", expectedKey: "address.state" },
@@ -115,11 +132,21 @@ async function runVerification() {
     { label: "12th Percentage (%)", expectedKey: "academics.twelfth.percentage" },
     { label: "HSC Junior College Name", expectedKey: "academics.twelfth.collegeName" },
     { label: "12th Passing Year", expectedKey: "academics.twelfth.passingYear" },
+    { label: "12th Stream / Discipline", expectedKey: "academics.twelfth.stream" },
+    { label: "12th Major Subjects", expectedKey: "academics.twelfth.subjects" },
+    { label: "12th Specialization", expectedKey: "academics.twelfth.specialization" },
     { label: "Graduation Cumulative CGPA", expectedKey: "academics.graduation.cgpa" },
     { label: "College / University Name", expectedKey: "academics.graduation.collegeName" },
     { label: "Degree / Course Name", expectedKey: "academics.graduation.degree" },
     { label: "Specialization / Branch", expectedKey: "academics.graduation.branch" },
     { label: "Year of Graduation", expectedKey: "academics.graduation.passingYear" },
+    { label: "Course Duration Start Date*", expectedKey: "academics.graduation.startDate" },
+    { label: "Course Duration End Date*", expectedKey: "academics.graduation.endDate" },
+    { label: "Start Date*", expectedKey: "academics.graduation.startDate" },
+    { label: "End Date*", expectedKey: "academics.graduation.endDate" },
+    { label: "Course Duration", expectedKey: "academics.graduation.courseDuration" },
+    { label: "Course Start Date", expectedKey: "academics.graduation.startDate" },
+    { label: "Course End Date", expectedKey: "academics.graduation.endDate" },
     { label: "Active Backlogs / Standing Arrears", expectedKey: "academics.graduation.backlogs" },
     { label: "PRN / Roll Number", expectedKey: "academics.graduation.prnNumber" },
 
@@ -194,7 +221,25 @@ async function runVerification() {
     { label: "Education Details", expectedKey: "academics.educationDetails" },
     { label: "Educational Qualification", expectedKey: "academics.educationDetails" },
     { label: "Education Summary", expectedKey: "academics.educationDetails" },
-    { label: "Total years of Experience:", expectedKey: "career.totalExperienceYears" }
+    { label: "Total years of Experience:", expectedKey: "career.totalExperienceYears" },
+
+    // TCS NextStep & Indian Enterprise Scoped Academic Sections
+    { label: "XII Grade Institute/University*", expectedKey: "academics.twelfth.collegeName" },
+    { label: "XII Grade Board of Education*", expectedKey: "academics.twelfth.board" },
+    { label: "XII Grade Specialization*", expectedKey: "academics.twelfth.specialization" },
+    { label: "XII Grade Year of Passing", expectedKey: "academics.twelfth.passingYear" },
+    { label: "XII Grade Percentage", expectedKey: "academics.twelfth.percentage" },
+    { label: "X Grade Institute/University*", expectedKey: "academics.tenth.schoolName" },
+    { label: "X Grade Board of Education*", expectedKey: "academics.tenth.board" },
+    { label: "X Grade Year of Passing", expectedKey: "academics.tenth.passingYear" },
+    { label: "X Grade Percentage", expectedKey: "academics.tenth.percentage" },
+    { label: "Graduation Institute/University*", expectedKey: "academics.graduation.collegeName" },
+    { label: "Graduation Specialization*", expectedKey: "academics.graduation.branch" },
+    { label: "12th Standard College Name", expectedKey: "academics.twelfth.collegeName" },
+    { label: "10th Standard School Name", expectedKey: "academics.tenth.schoolName" },
+    { label: "Junior College Name", expectedKey: "academics.twelfth.collegeName" },
+    { label: "12th Stream (PCMCS)", expectedKey: "academics.twelfth.stream" },
+    { label: "12th Major Subjects", expectedKey: "academics.twelfth.subjects" }
   ];
 
   testCases.forEach(({ label, expectedKey }) => {
@@ -269,6 +314,79 @@ async function runVerification() {
   const signalEduWithName = buildCombinedSignal({ label: "Education Details", fieldName: "name" });
   const matchEduWithName = matchLabel(signalEduWithName);
   assert(matchEduWithName && matchEduWithName.key === "academics.educationDetails", `Signal "Education Details" with name="name" -> academics.educationDetails [Got: ${matchEduWithName?.key || 'NONE'}]`);
+
+  // [3.3] TCS NextStep & Enterprise Section Scoping (XII Grade, X Grade, Graduation)
+  console.log("\n[3.3] Testing TCS NextStep Section Scoping (XII Grade vs X Grade vs Graduation):");
+  
+  // XII Grade: Institute/University* -> Shri D. L. Hindi Junior College
+  const sigXiiInst = buildCombinedSignal({ label: "Institute/University*", sectionHeading: "XII Grade" });
+  const matchXiiInst = matchLabel(sigXiiInst);
+  assert(matchXiiInst && matchXiiInst.key === "academics.twelfth.collegeName", `XII Grade "Institute/University*" -> academics.twelfth.collegeName [Got: ${matchXiiInst?.key || 'NONE'}]`);
+  assert(matchXiiInst && matchXiiInst.value.includes("Shri D. L. Hindi"), `XII Grade Institute Value -> "Shri D. L. Hindi Junior College, Bhusawal" [Got: "${matchXiiInst?.value}"]`);
+
+  // XII Grade: Specialization* -> Computer Science (PCM + CS)
+  const sigXiiSpec = buildCombinedSignal({ label: "Specialization*", sectionHeading: "XII Grade" });
+  const matchXiiSpec = matchLabel(sigXiiSpec);
+  assert(matchXiiSpec && matchXiiSpec.key === "academics.twelfth.specialization", `XII Grade "Specialization*" -> academics.twelfth.specialization [Got: ${matchXiiSpec?.key || 'NONE'}]`);
+  assert(matchXiiSpec && matchXiiSpec.value.includes("Computer Science"), `XII Grade Specialization Value -> "Computer Science (PCM + CS)" [Got: "${matchXiiSpec?.value}"]`);
+
+  // XII Grade: Board of Education* -> Maharashtra State Board
+  const sigXiiBoard = buildCombinedSignal({ label: "Board of Education*", sectionHeading: "XII Grade" });
+  const matchXiiBoard = matchLabel(sigXiiBoard);
+  assert(matchXiiBoard && matchXiiBoard.key === "academics.twelfth.board", `XII Grade "Board of Education*" -> academics.twelfth.board [Got: ${matchXiiBoard?.key || 'NONE'}]`);
+
+  // X Grade: Institute/University* -> B.Z. Urdu High School
+  const sigXInst = buildCombinedSignal({ label: "Institute/University*", sectionHeading: "X Grade" });
+  const matchXInst = matchLabel(sigXInst);
+  assert(matchXInst && matchXInst.key === "academics.tenth.schoolName", `X Grade "Institute/University*" -> academics.tenth.schoolName [Got: ${matchXInst?.key || 'NONE'}]`);
+  assert(matchXInst && matchXInst.value.includes("B.Z. Urdu High School"), `X Grade School Value -> "B.Z. Urdu High School & Jr. College..." [Got: "${matchXInst?.value}"]`);
+
+  // Graduation: Institute/University* -> G H Raisoni College
+  const sigGradInst = buildCombinedSignal({ label: "Institute/University*", sectionHeading: "Graduation Details" });
+  const matchGradInst = matchLabel(sigGradInst);
+  assert(matchGradInst && matchGradInst.key === "academics.graduation.collegeName", `Graduation "Institute/University*" -> academics.graduation.collegeName [Got: ${matchGradInst?.key || 'NONE'}]`);
+  assert(matchGradInst && matchGradInst.value.includes("G H Raisoni"), `Graduation College Value -> "G H Raisoni College..." [Got: "${matchGradInst?.value}"]`);
+
+  // [3.4] TCS NextStep 12th & 10th Marks & Radio Group Immunity Tests
+  console.log("\n[3.4] Testing 12th & 10th Marks Scoping & Subject-Wise Breakdown:");
+
+  // TCS NextStep Signal with Grading System Radio text included
+  const sigXiiMarksObt = buildCombinedSignal({ label: "Total Marks Obtained*", sectionHeading: "XII Grade / Equivalent Diploma", placeholder: "Marks CGPA" });
+  const matchXiiMarksObt = matchLabel(sigXiiMarksObt);
+  assert(matchXiiMarksObt && matchXiiMarksObt.key === "academics.twelfth.marksObtained", `XII Grade "Total Marks Obtained*" -> academics.twelfth.marksObtained [Got: ${matchXiiMarksObt?.key || 'NONE'}]`);
+  assert(matchXiiMarksObt && matchXiiMarksObt.value === "423", `XII Grade Marks Obtained Value -> "423" [Got: "${matchXiiMarksObt?.value}"]`);
+
+  const sigXiiMaxMarks = buildCombinedSignal({ label: "Total Maximum Marks*", sectionHeading: "XII Grade / Equivalent Diploma", placeholder: "Marks CGPA" });
+  const matchXiiMaxMarks = matchLabel(sigXiiMaxMarks);
+  assert(matchXiiMaxMarks && matchXiiMaxMarks.key === "academics.twelfth.totalMarks", `XII Grade "Total Maximum Marks*" -> academics.twelfth.totalMarks [Got: ${matchXiiMaxMarks?.key || 'NONE'}]`);
+  assert(matchXiiMaxMarks && matchXiiMaxMarks.value === "600", `XII Grade Maximum Marks Value -> "600" [Got: "${matchXiiMaxMarks?.value}"]`);
+
+  // 10th Marks
+  const sigXMarksObt = buildCombinedSignal({ label: "Total Marks Obtained*", sectionHeading: "X Grade", placeholder: "Marks CGPA" });
+  const matchXMarksObt = matchLabel(sigXMarksObt);
+  assert(matchXMarksObt && matchXMarksObt.key === "academics.tenth.marksObtained", `X Grade "Total Marks Obtained*" -> academics.tenth.marksObtained [Got: ${matchXMarksObt?.key || 'NONE'}]`);
+  assert(matchXMarksObt && matchXMarksObt.value === "448", `X Grade Marks Obtained Value -> "448" [Got: "${matchXMarksObt?.value}"]`);
+
+  const sigXMaxMarks = buildCombinedSignal({ label: "Total Maximum Marks*", sectionHeading: "X Grade", placeholder: "Marks CGPA" });
+  const matchXMaxMarks = matchLabel(sigXMaxMarks);
+  assert(matchXMaxMarks && matchXMaxMarks.key === "academics.tenth.totalMarks", `X Grade "Total Maximum Marks*" -> academics.tenth.totalMarks [Got: ${matchXMaxMarks?.key || 'NONE'}]`);
+  assert(matchXMaxMarks && matchXMaxMarks.value === "500", `X Grade Maximum Marks Value -> "500" [Got: "${matchXMaxMarks?.value}"]`);
+
+  // 12th Individual Subject Marks
+  const matchMaths = matchLabel("12th Mathematics Marks");
+  assert(matchMaths && matchMaths.value === "85", `12th Maths Marks -> "85" [Got: "${matchMaths?.value}"]`);
+
+  const matchPhysics = matchLabel("12th Physics Marks");
+  assert(matchPhysics && matchPhysics.value === "70", `12th Physics Marks -> "70" [Got: "${matchPhysics?.value}"]`);
+
+  const matchChem = matchLabel("12th Chemistry Marks");
+  assert(matchChem && matchChem.value === "79", `12th Chemistry Marks -> "79" [Got: "${matchChem?.value}"]`);
+
+  const matchCS = matchLabel("12th Computer Science Marks");
+  assert(matchCS && matchCS.value === "138", `12th Computer Science Marks -> "138" [Got: "${matchCS?.value}"]`);
+
+  const matchEng = matchLabel("12th English Marks");
+  assert(matchEng && matchEng.value === "51", `12th English Marks -> "51" [Got: "${matchEng?.value}"]`);
 
   // 4. Test Smart Boolean Classifier
   console.log("\n[4] Testing Smart Boolean (Yes/No) Classifier:");
