@@ -77,10 +77,52 @@ async function getResumeFile() {
  * Finds resume file inputs or drop zones and uploads DanishKhan_Resume.pdf
  * @returns {Promise<{ uploaded: boolean, filename: string, count: number }>}
  */
-async function autoUploadResume() {
+/**
+ * Detects whether an element or its container represents a Cover Letter upload or input.
+ * Used to strictly prevent DanishKhan_Resume.pdf from being attached to Cover Letter fields.
+ * @param {Element} element
+ * @returns {boolean}
+ */
+function isCoverLetterTarget(element) {
+  if (!element) return false;
+  const id = (element.id || '').toLowerCase();
+  const name = (element.name || '').toLowerCase();
+  const aria = (element.getAttribute?.('aria-label') || element.getAttribute?.('aria-labelledby') || '').toLowerCase();
+  const placeholder = (element.placeholder || '').toLowerCase();
+  const className = (typeof element.className === 'string' ? element.className : '').toLowerCase();
+
+  const container = (element.closest && typeof element.closest === 'function')
+    ? element.closest('label, div[class*="upload"], div[class*="drop"], div[class*="file"], div[class*="document"], div[class*="cover"], div[role="listitem"], .gf-listitem, .form-group, .field, section, fieldset, tr')
+    : element.parentElement;
+  const containerText = container ? (container.innerText || container.textContent || '').toLowerCase() : '';
+
+  const pattern = /\b(cover[_\s-]?letter|motivation[_\s-]?letter|letter[_\s-]?of[_\s-]?motivation|statement[_\s-]?of[_\s-]?purpose|\bsop\b|personal[_\s-]?statement)\b/i;
+
+  return pattern.test(id) ||
+         pattern.test(name) ||
+         pattern.test(aria) ||
+         pattern.test(placeholder) ||
+         pattern.test(className) ||
+         pattern.test(containerText);
+}
+
+/**
+ * Finds resume file inputs or drop zones and uploads DanishKhan_Resume.pdf
+ * Strictly excludes any Cover Letter inputs.
+ * If targetElement is provided, uploads specifically to that target without affecting others.
+ * @param {Element} [targetElement=null] - Optional specific field/dropzone to attach to
+ * @returns {Promise<{ uploaded: boolean, filename: string, count: number }>}
+ */
+async function autoUploadResume(targetElement = null) {
   const resumeFile = await getResumeFile();
   if (!resumeFile) {
     console.warn('[AutoApply Pro] Resume file not available for auto-upload.');
+    return { uploaded: false, filename: '', count: 0 };
+  }
+
+  // Strict Cover Letter Gate: NEVER attach resume PDF to Cover Letter!
+  if (targetElement && isCoverLetterTarget(targetElement)) {
+    console.log('[AutoApply Pro] Target is Cover Letter; strictly skipping resume PDF attachment.');
     return { uploaded: false, filename: '', count: 0 };
   }
 
@@ -88,25 +130,77 @@ async function autoUploadResume() {
   const dt = new DataTransfer();
   dt.items.add(resumeFile);
 
-  // 1. Look for all file inputs, including hidden or stylized ones (attach directly via DataTransfer)
-  const fileInputs = Array.from(document.querySelectorAll('input[type="file"], .gf-hidden-file-input'));
+  // A. Scoped Direct Upload to specific targetElement
+  if (targetElement) {
+    const input = targetElement.tagName?.toLowerCase() === 'input' && targetElement.type === 'file'
+      ? targetElement
+      : (targetElement.querySelector ? targetElement.querySelector('input[type="file"]') : null);
 
-  // Filter for resume-specific file inputs (ignore cover letter or profile photos if separate)
+    if (input && !isCoverLetterTarget(input)) {
+      try {
+        input.files = dt.files;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        uploadedCount++;
+      } catch (e) {}
+    }
+
+    const dropZone = (targetElement.closest && typeof targetElement.closest === 'function')
+      ? (targetElement.closest('[class*="dropzone"], [class*="drop"], [class*="upload"], label, .file-input-wrapper, [class*="resume"], div[role="listitem"], .gf-listitem, .gf-file-upload-container') || targetElement)
+      : targetElement;
+
+    if (dropZone && !isCoverLetterTarget(dropZone)) {
+      try {
+        const dragEnter = new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt });
+        const dragOver = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
+        const drop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
+
+        dropZone.dispatchEvent(dragEnter);
+        dropZone.dispatchEvent(dragOver);
+        dropZone.dispatchEvent(drop);
+      } catch (de) {}
+
+      const tag = dropZone.querySelector ? dropZone.querySelector('.gf-uploaded-file-tag, [class*="file-name"], [class*="uploaded-file"]') : null;
+      const filenameSpan = dropZone.querySelector ? dropZone.querySelector('.gf-uploaded-filename, [class*="file-name-text"]') : null;
+      if (tag) {
+        tag.style.display = 'block';
+        if (filenameSpan) filenameSpan.textContent = resumeFile.name;
+      }
+
+      showDirectAttachedBadge(dropZone, resumeFile.name);
+      highlightResumeDropzone(dropZone);
+      uploadedCount++;
+    }
+
+    return {
+      uploaded: uploadedCount > 0,
+      openedDialog: false,
+      filename: resumeFile.name,
+      count: uploadedCount
+    };
+  }
+
+  // B. Global Upload Mode: Strictly filter out any cover letters and photos
+  const fileInputs = Array.from(document.querySelectorAll('input[type="file"], .gf-hidden-file-input'))
+    .filter(input => !isCoverLetterTarget(input));
+
   const resumeInputs = fileInputs.filter(input => {
     const id = (input.id || '').toLowerCase();
     const name = (input.name || '').toLowerCase();
     const accept = (input.getAttribute('accept') || '').toLowerCase();
     const aria = (input.getAttribute('aria-label') || '').toLowerCase();
     
-    // Check parent label or container text
-    const container = input.closest('label, div[class*="upload"], div[class*="drop"], div[class*="file"], div[class*="resume"], div[class*="document"], div[role="listitem"], .gf-listitem, section, fieldset') || input.parentElement;
-    const containerText = container ? container.innerText.toLowerCase() : '';
+    const container = (input.closest && typeof input.closest === 'function')
+      ? (input.closest('label, div[class*="upload"], div[class*="drop"], div[class*="file"], div[class*="resume"], div[class*="document"], div[role="listitem"], .gf-listitem, section, fieldset') || input.parentElement)
+      : input.parentElement;
+    const containerText = container ? (container.innerText || container.textContent || '').toLowerCase() : '';
+
+    if (isCoverLetterTarget(input) || isCoverLetterTarget(container)) return false;
 
     const isResumeRegex = /(resume|cv\b|curriculum|biodata|profile|attachment|upload.*file|file.*upload|add.*file|document)/i;
-    const isCoverLetter = /cover[_\s-]?letter/i.test(id) || /cover[_\s-]?letter/i.test(name) || /cover[_\s-]?letter/i.test(containerText);
     const isPhoto = /photo|picture|avatar|image|signature/i.test(id) || /photo|signature/i.test(name) || /photo|signature/i.test(containerText);
 
-    if (isCoverLetter || isPhoto) return false;
+    if (isPhoto) return false;
 
     const acceptsDoc = accept.includes('pdf') || accept.includes('doc') || accept.includes('docx') || accept === '*' || accept === '';
 
@@ -119,22 +213,23 @@ async function autoUploadResume() {
            acceptsDoc;
   });
 
-  const targets = resumeInputs.length > 0 ? resumeInputs : fileInputs;
+  const targets = resumeInputs.length > 0 ? resumeInputs : (fileInputs.length === 1 ? fileInputs : []);
 
   for (const input of targets) {
+    if (isCoverLetterTarget(input)) continue;
     try {
-      // Assign to input if HTMLInputElement
       if (input.tagName && input.tagName.toLowerCase() === 'input') {
         input.files = dt.files;
       }
 
-      // Dispatch change and input events
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
-      // Find dropzone target or parent wrapper
-      const dropZone = input.closest('[class*="dropzone"], [class*="drop"], [class*="upload"], label, .file-input-wrapper, [class*="resume"], div[role="listitem"], .gf-listitem, .gf-file-upload-container') || input.parentElement;
-      if (dropZone) {
+      const dropZone = (input.closest && typeof input.closest === 'function')
+        ? (input.closest('[class*="dropzone"], [class*="drop"], [class*="upload"], label, .file-input-wrapper, [class*="resume"], div[role="listitem"], .gf-listitem, .gf-file-upload-container') || input.parentElement)
+        : input.parentElement;
+
+      if (dropZone && !isCoverLetterTarget(dropZone)) {
         try {
           const dragEnter = new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt });
           const dragOver = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt });
@@ -143,18 +238,16 @@ async function autoUploadResume() {
           dropZone.dispatchEvent(dragEnter);
           dropZone.dispatchEvent(dragOver);
           dropZone.dispatchEvent(drop);
-        } catch (de) {
-          // Synthetic DragEvents may be restricted in some browsers
-        }
+        } catch (de) {}
 
-        // Show uploaded tag if present in simulator or DOM
-        const tag = dropZone.querySelector('.gf-uploaded-file-tag, [class*="file-name"], [class*="uploaded-file"]');
-        const filenameSpan = dropZone.querySelector('.gf-uploaded-filename, [class*="file-name-text"]');
+        const tag = dropZone.querySelector ? dropZone.querySelector('.gf-uploaded-file-tag, [class*="file-name"], [class*="uploaded-file"]') : null;
+        const filenameSpan = dropZone.querySelector ? dropZone.querySelector('.gf-uploaded-filename, [class*="file-name-text"]') : null;
         if (tag) {
           tag.style.display = 'block';
           if (filenameSpan) filenameSpan.textContent = resumeFile.name;
         }
 
+        showDirectAttachedBadge(dropZone, resumeFile.name);
         highlightResumeDropzone(dropZone);
       }
 
@@ -164,20 +257,24 @@ async function autoUploadResume() {
     }
   }
 
-  // 3. Check for Google Forms Add file buttons where input is in Google Drive dialog
+  // C. Google Forms Add file modal fallback
   let openedDialog = false;
   if (uploadedCount === 0) {
     const gfAddButtons = Array.from(document.querySelectorAll('div[role="button"][aria-label*="Add file" i], .gf-add-file-btn, div[role="button"]')).filter(btn => {
       const text = (btn.innerText || btn.getAttribute('aria-label') || '').toLowerCase();
-      return (text.includes('add file') || text.includes('upload file')) && !btn.closest('#autoapply-pro-root');
+      return (text.includes('add file') || text.includes('upload file')) && !btn.closest('#autoapply-pro-root') && !isCoverLetterTarget(btn);
     });
 
     for (const btn of gfAddButtons) {
-      const container = btn.closest('div[role="listitem"], .gf-listitem, .gf-file-upload-container') || btn.parentElement;
-      const simTag = container?.querySelector('.gf-uploaded-file-tag');
-      const simFilenameSpan = container?.querySelector('.gf-uploaded-filename');
+      const container = (btn.closest && typeof btn.closest === 'function')
+        ? (btn.closest('div[role="listitem"], .gf-listitem, .gf-file-upload-container') || btn.parentElement)
+        : btn.parentElement;
 
-      // Test Harness Simulator check
+      if (isCoverLetterTarget(container)) continue;
+
+      const simTag = container?.querySelector?.('.gf-uploaded-file-tag');
+      const simFilenameSpan = container?.querySelector?.('.gf-uploaded-filename');
+
       if (simTag) {
         simTag.style.display = 'block';
         if (simFilenameSpan) simFilenameSpan.textContent = resumeFile.name;
@@ -186,7 +283,6 @@ async function autoUploadResume() {
         break;
       }
 
-      // Live Google Forms Modal Interaction
       try {
         btn.click();
         openedDialog = true;
@@ -196,10 +292,8 @@ async function autoUploadResume() {
         }
       } catch (e) {}
 
-      // Wait 350ms for Google Drive picker or iframe to mount
       await new Promise(r => setTimeout(r, 350));
 
-      // Inspect any newly mounted file inputs or accessible iframes
       const modalFileInputs = Array.from(document.querySelectorAll('div[role="dialog"] input[type="file"], iframe'));
       for (const mItem of modalFileInputs) {
         if (mItem.tagName.toLowerCase() === 'input') {
@@ -221,31 +315,11 @@ async function autoUploadResume() {
               uploadedCount++;
               break;
             }
-          } catch (e) {
-            // Cross-origin iframe security barrier
-          }
+          } catch (e) {}
         }
       }
 
       if (uploadedCount > 0) break;
-    }
-  }
-
-  // 4. Also check for dropzone divs without an explicit <input type="file"> in same scope
-  if (uploadedCount === 0) {
-    const dropAreas = document.querySelectorAll('[class*="dropzone"], [class*="drop-zone"], [data-testid*="dropzone"], [data-qa*="dropzone"], [class*="file-upload"], [class*="resume-upload"], .upload-box, [class*="document-upload"]');
-    for (const dropArea of dropAreas) {
-      const text = (dropArea.innerText || '').toLowerCase();
-      if (/drag.*drop|upload.*resume|upload.*file|attach.*cv|resume|cv\b/i.test(text)) {
-        try {
-          const drop = new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt });
-          dropArea.dispatchEvent(drop);
-          highlightResumeDropzone(dropArea);
-          uploadedCount++;
-        } catch (e) {
-          // ignore
-        }
-      }
     }
   }
 
@@ -257,21 +331,127 @@ async function autoUploadResume() {
   };
 }
 
+/**
+ * Displays a sleek, non-intrusive green confirmation badge confirming instant resume attachment
+ */
+function showDirectAttachedBadge(container, filename = 'DanishKhan_Resume.pdf') {
+  if (!container || typeof document === 'undefined') return;
+
+  const existing = container.querySelector('.autoapply-attached-badge');
+  if (existing) existing.remove();
+
+  const badge = document.createElement('div');
+  badge.className = 'autoapply-attached-badge';
+  badge.innerHTML = `<span style="font-size:12px;margin-right:4px;">⚡</span><span>${filename} Attached</span>`;
+  badge.style.cssText = `
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+    color: #ecfdf5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    margin-top: 6px;
+    z-index: 1000;
+    pointer-events: none;
+    animation: aapBadgeFadeIn 0.25s ease-out;
+  `;
+
+  try {
+    container.appendChild(badge);
+    setTimeout(() => {
+      badge.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      badge.style.opacity = '0';
+      badge.style.transform = 'translateY(-4px)';
+      setTimeout(() => badge.remove(), 450);
+    }, 3500);
+  } catch (e) {}
+}
+
 function highlightResumeDropzone(element) {
   if (!element) return;
   const originalBorder = element.style.borderColor;
   const originalTransition = element.style.transition;
+  const originalBoxShadow = element.style.boxShadow;
 
-  element.style.transition = 'border-color 0.3s ease';
-  element.style.borderColor = 'rgba(74, 222, 128, 0.6)';
+  element.style.transition = 'border-color 0.3s ease, box-shadow 0.3s ease';
+  element.style.borderColor = 'rgba(16, 185, 129, 0.8)';
+  element.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
 
   setTimeout(() => {
     element.style.borderColor = originalBorder;
+    element.style.boxShadow = originalBoxShadow;
     element.style.transition = originalTransition;
-  }, 2000);
+  }, 2500);
+}
+
+/**
+ * Direct Hover Resume Auto-Attachment (Zero-Click)
+ * Automatically attaches DanishKhan_Resume.pdf when the user hovers over any Resume upload field or dropzone.
+ * Strictly ignores Cover Letter fields.
+ */
+function initDirectHoverResumeUploader() {
+  if (typeof document === 'undefined') return;
+
+  function bindTarget(el) {
+    if (!el || el.dataset?.autoapplyResumeHoverBound === 'true') return;
+    if (isCoverLetterTarget(el)) return; // Strictly ignore cover letters!
+
+    el.dataset.autoapplyResumeHoverBound = 'true';
+
+    const onHoverOrFocus = async () => {
+      // Debounce: if already attached to this element in this session, don't repeat
+      if (el.dataset?.autoapplyResumeAttached === 'true') return;
+      el.dataset.autoapplyResumeAttached = 'true';
+
+      try {
+        const res = await autoUploadResume(el);
+        if (res?.uploaded) {
+          showDirectAttachedBadge(el, res.filename || 'DanishKhan_Resume.pdf');
+        }
+      } catch (err) {
+        console.warn('[AutoApply Pro] Direct hover resume upload notice:', err);
+      }
+    };
+
+    el.addEventListener('pointerenter', onHoverOrFocus, { passive: true });
+    el.addEventListener('mouseenter', onHoverOrFocus, { passive: true });
+    el.addEventListener('focus', onHoverOrFocus, { passive: true });
+  }
+
+  function scanAndBind() {
+    const candidates = document.querySelectorAll(
+      'input[type="file"], [class*="dropzone"], [class*="drop-zone"], [data-testid*="dropzone"], [data-qa*="dropzone"], [class*="file-upload"], [class*="resume-upload"], .upload-box, [class*="document-upload"], .gf-file-upload-container, .gf-add-file-btn, div[role="button"][aria-label*="Add file" i], div[role="button"][aria-label*="Resume" i]'
+    );
+    candidates.forEach(bindTarget);
+  }
+
+  scanAndBind();
+
+  // Watch for dynamic modal opens or multi-step wizard changes
+  if (typeof MutationObserver !== 'undefined' && document.body) {
+    const observer = new MutationObserver(() => {
+      scanAndBind();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 }
 
 if (typeof window !== 'undefined') {
   window.autoUploadResume = autoUploadResume;
   window.getResumeFile = getResumeFile;
+  window.isCoverLetterTarget = isCoverLetterTarget;
+  window.initDirectHoverResumeUploader = initDirectHoverResumeUploader;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    autoUploadResume,
+    getResumeFile,
+    isCoverLetterTarget,
+    initDirectHoverResumeUploader
+  };
 }

@@ -1106,7 +1106,7 @@ const JobDetector = {
  * @returns {boolean}
  */
 function isOpenEndedQuestion(text) {
-  if (!text || text.length < 10) return false;
+  if (!text || text.length < 5) return false;
   // Strictly guard against numeric, salary, experience, notice period, contact, and factual screening fields
   if (/\b(salary|ctc|package|compensation|remuneration|lpa|inr|rs\b|rupees?|stipend|phone|mobile|pincode|zip|dob|birth|age|cgpa|gpa|percentage|marks|gender|marital|aadhaar|pan\b|passport|passing|batch|backlog|ppo)\b/i.test(text)) {
     return false;
@@ -1114,18 +1114,24 @@ function isOpenEndedQuestion(text) {
   if (/\b(how many months|months?[\s_()/-]*of[\s_()/-]*experience|experience[\s_()/-]*in[\s_()/-]*months?|experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*experience|how soon.*(start|join)|notice[_\s-]?period|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|availability.*(days)?|relevant.*experience)\b/i.test(text)) {
     return false;
   }
-  return /\b(why|describe|explain|tell us|what makes|biggest|accomplishment|challenge|project|internship|experience with|motivation|strengths?|weakness(es)?|interests?|cover letter|additional information|briefly describe|summary of experience|about yourself|vision|proudest|share.*details|significant|details on)\b/i.test(text);
+  return /\b(why|describe|explain|tell us|tell me|give an example|walk us through|what makes|biggest|accomplishment|challenge|project|internship|experience with|motivation|strengths?|weakness(es)?|interests?|cover letter|additional information|additional[_\s-]?info|message|pitch|fit[_\s-]?in[_\s-]?this[_\s-]?role|fit.*role|why.*hire|why.*choose|briefly describe|summary of experience|about yourself|vision|proudest|share.*details|significant|details on|situation where|handle.*situation|how would you|how do you|how did you|critical.*work|feedback|disagreement|conflict|three words|describe our company)\b/i.test(text);
 }
 
 /**
  * Smart resolver for Boolean (Yes/No) questions.
  * Inspects question text and returns the optimal candidate answer ("Yes" or "No").
+ * Returns null if the question is open-ended or not a recognized boolean question.
  * @param {string} text - The question text
- * @returns {string} - "Yes" or "No"
+ * @returns {string|null} - "Yes", "No", or null
  */
 function resolveBooleanQuestion(text) {
-  if (!text) return "Yes";
+  if (!text) return null;
   const t = text.toLowerCase();
+
+  // If text is clearly an open-ended essay or WH-question, NEVER resolve as boolean!
+  if (isOpenEndedQuestion(t) || /^(what|why|how|where|when|who|describe|explain|tell me|tell us)\b/i.test(t)) {
+    return null;
+  }
 
   // Negative questions (Convictions, Backlogs, Sponsorship in India, Career Gaps, Disciplinary Actions)
   if (/\b(convict|criminal|felony|court|misdemeanor|disciplinary|backlogs?|arrears?|gaps?\b|relative|former.*employee|worked.*before|previously.*applied|sponsorship.*india|require.*visa.*india)\b/i.test(t)) {
@@ -1137,7 +1143,12 @@ function resolveBooleanQuestion(text) {
     return "Yes";
   }
 
-  return "Yes";
+  // Fallback for explicit boolean phrasing (are you, do you, will you, have you, etc.)
+  if (/\b(are you|do you|will you|have you|can you|would you|is there|did you|confirm|agree|declare|consent)\b/i.test(t)) {
+    return "Yes";
+  }
+
+  return null;
 }
 
 const GENERIC_ATTR_WORDS = /^(name|text|field|input|value|data|info|item|entry|form|box|txt|val|string|content|undefined|null|id|custom|control|element|el)(\d*|_?\d+)$/i;

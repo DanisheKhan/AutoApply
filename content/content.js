@@ -57,6 +57,11 @@
     initFieldPopup(candidateProfile);
   }
 
+  // Initialize Direct Hover Resume Auto-Attachment (Zero Click, strictly excluding Cover Letter)
+  if (typeof window.initDirectHoverResumeUploader === 'function') {
+    window.initDirectHoverResumeUploader();
+  }
+
   // Listen for storage changes across tabs
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener((changes, area) => {

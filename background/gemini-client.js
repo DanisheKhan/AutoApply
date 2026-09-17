@@ -44,13 +44,23 @@ async function generateAnswerWithGemini({ question, jobContext = "", maxLength }
   }
 
   const customInstructions = profile?.gemini?.customInstructions || "";
+  const isCoverLetter = /cover[_\s-]?letter|motivation[_\s-]?letter|letter.*motivation/i.test(qLower);
+  const is3Words = /(three|3)\s*words|describe.*company/i.test(qLower);
 
-  // Length constraint: if a char limit exists, enforce it; otherwise demand a COMPLETE detailed answer
-  const lengthConstraint = maxLength
-    ? `Keep response strictly under ${maxLength} characters. Write as many complete sentences as fit.`
-    : "Write a complete, detailed, compelling answer of 3 to 4 full sentences (minimum 80 words). Do NOT stop mid-sentence. The answer must be fully finished.";
+  // Length constraint: if a char limit or specific format exists, enforce it
+  let lengthConstraint = "";
+  if (is3Words) {
+    lengthConstraint = "Respond with ONLY three strong, descriptive words or short phrases separated by commas. No complete sentences. Example: Innovative, Mission-driven, High-impact.";
+  } else if (isCoverLetter) {
+    lengthConstraint = "Write a complete, professional, 3-paragraph Cover Letter tailored to this company and position. Highlight production projects (Madina Perfumes, CodeRace) and internship experience at Meet Bros.";
+  } else if (maxLength) {
+    const safeTarget = Math.max(80, Math.min(maxLength - 25, Math.floor(maxLength * 0.85)));
+    lengthConstraint = `STRICT CHARACTER LIMIT: Must be strictly under ${maxLength} characters total (target ~${safeTarget} characters). Write 1 or 2 concise, complete, punchy sentences that finish completely within this limit. MUST end with a period. NEVER exceed ${maxLength} characters.`;
+  } else {
+    lengthConstraint = "Write a complete, compelling, professional answer of 2 to 3 full sentences (approx 50 to 90 words). The answer must be fully finished and end with a period.";
+  }
 
-  const systemPrompt = `You are an AI career assistant writing job application answers directly for candidate Mohammad Danish Khan.
+  const systemPrompt = `You are an elite career assistant drafting job application answers directly as candidate Mohammad Danish Khan.
 
 CANDIDATE PROFILE:
 - Name: Mohammad Danish Khan | B.Tech in Artificial Intelligence, CGPA 7.79, Summer 2026 graduate
@@ -60,17 +70,17 @@ CANDIDATE PROFILE:
   • CodeRace — multi-user DSA tracking platform with PostgreSQL/Supabase live leaderboards & streak calculations
   • Madina Perfumes — live e-commerce store with Razorpay HMAC SHA256 webhook verification & Shiprocket API dispatch
   • Meet Bros — 10-month internship, shipped 3 production web apps, reduced development time by 25%
-  • Muskan Hospital, Vega Star — freelance client projects
 - Experience: 12 months total (10-month Full Stack Intern + freelance)
-- Notice Period: Immediate | Expected CTC: 5 LPA | Location: Bhusawal, Maharashtra | Open to relocate
+- Notice Period: Immediate | Location: Bhusawal, Maharashtra | Open to relocate
 
-ANSWER RULES:
-- Write in first person ("I")
+ANSWER RULES & TONE:
+- Write in first person ("I", "I'm").
+- Tone: Speak like an articulate, confident, enthusiastic human software engineer. Sound natural, direct, and human.
+- FORBIDDEN: Do NOT write robotic resume dumps like "With 12 months of full-stack experience using...", "As a B.Tech graduate...", or dry credential listings.
+- When asked how you fit the role, why hire you, or a general message/pitch to the team, open with confidence and purpose (for example: "I'm a strong fit for this role with hands-on experience in full-stack web development using React.js, Node.js, Express.js, and MongoDB. I'm a quick learner, problem solver, and eager to contribute while growing with the team.")
 - ${lengthConstraint}
-- Be specific — mention real projects, real numbers, real technologies from the profile above
-- Sound authentic and passionate, not generic
-- No greetings, no "Dear Hiring Manager", no bullet points, no quotes around the answer, no meta-commentary
-- CRITICAL: Write the COMPLETE answer. Never leave it unfinished.
+- No meta-commentary, no preambles (never say "Here is an answer:"), no quotes around the response.
+- CRITICAL: Write a COMPLETE response with full sentences. Every sentence must end cleanly with proper punctuation (no dangling words or mid-sentence cutoffs).
 ${customInstructions ? `\nCustom Instructions: ${customInstructions}` : ""}`;
 
   const userPrompt = `Job / Page Context: ${jobContext ? jobContext.slice(0, 400) : "Software Engineering Position"}
@@ -120,7 +130,27 @@ Complete Answer (write the full answer now, do not stop early):`;
     const text = textPart?.text;
 
     if (text && text.trim()) {
-      return text.trim();
+      let cleaned = text.trim()
+        .replace(/^["']|["']$/g, '')
+        .replace(/^```[a-z]*\s*|\s*```$/gi, '')
+        .replace(/^(here is|sure,? here is|certainly,? here is|answer:)\s*/i, '')
+        .trim();
+      if (maxLength && cleaned.length > maxLength) {
+        // Find the last complete sentence boundary (., !, ?) within maxLength
+        const sentenceBoundary = cleaned.slice(0, maxLength).lastIndexOf('.');
+        if (sentenceBoundary > Math.floor(maxLength * 0.5)) {
+          cleaned = cleaned.slice(0, sentenceBoundary + 1).trim();
+        } else {
+          // If no sentence boundary in range, find last space to avoid cut words
+          const lastSpace = cleaned.slice(0, maxLength - 1).lastIndexOf(' ');
+          if (lastSpace > Math.floor(maxLength * 0.5)) {
+            cleaned = cleaned.slice(0, lastSpace).trim() + '.';
+          } else {
+            cleaned = cleaned.slice(0, maxLength);
+          }
+        }
+      }
+      return cleaned;
     }
   } catch (err) {
     clearTimeout(timeoutId);
@@ -128,7 +158,7 @@ Complete Answer (write the full answer now, do not stop early):`;
   }
 
   // Graceful fallback on API error/timeout
-  return generateInstantFallbackAnswer(question, profile);
+  return generateInstantFallbackAnswer(question, profile, maxLength);
 }
 
 
@@ -160,9 +190,23 @@ async function tryFallbackModel({ question, jobContext, apiKey, systemPrompt, us
  * Instant, tailored candidate responses matching Mohammad Danish Khan's real projects & bio.
  * Responds in 0ms with zero latency across 15+ screening question categories.
  */
-function generateInstantFallbackAnswer(question, profile) {
+function generateInstantFallbackAnswer(question, profile, maxLength) {
   const p = profile || (typeof DEFAULT_PROFILE !== 'undefined' ? DEFAULT_PROFILE : {});
   const q = (question || "").toLowerCase();
+
+  // Helper to ensure open-ended fallbacks fit within character limits cleanly without cut-off words
+  const constrain = (text) => {
+    if (!maxLength || text.length <= maxLength) return text;
+    const lastPeriod = text.slice(0, maxLength).lastIndexOf('.');
+    if (lastPeriod > Math.floor(maxLength * 0.5)) {
+      return text.slice(0, lastPeriod + 1).trim();
+    }
+    const lastSpace = text.slice(0, maxLength - 1).lastIndexOf(' ');
+    if (lastSpace > Math.floor(maxLength * 0.5)) {
+      return text.slice(0, lastSpace).trim() + '.';
+    }
+    return text.slice(0, maxLength);
+  };
 
   // 1. Factual & Numeric Questions (Intercept early to prevent long essay answers!)
   if (/\b(expected.*(salary|ctc|package|compensation|remuneration)|annual.*expected|salary.*expect|desired.*(salary|ctc)|target.*ctc)\b/i.test(q)) {
@@ -204,43 +248,68 @@ function generateInstantFallbackAnswer(question, profile) {
     return p.address?.city || "Bhusawal";
   }
 
+  // 1b. Role Fit / Message to Recruiter / Why hire / Suitability / Additional information
+  if (/how.*fit|fit.*role|why.*(hire|choose)|message|additional[_\s-]?info|about[_\s-]?you|why.*suitable|pitch/i.test(q)) {
+    return constrain("I'm a strong fit for this role with hands-on experience in full-stack web development using React.js, Node.js, Express.js, and MongoDB. I'm a quick learner, problem solver, and eager to contribute while growing with the team.");
+  }
+
   // Why join / Motivation
   if (/why.*(join|company|team|role|hire|work with us|interested in)|passion|motivation|reason/i.test(q)) {
-    return `I am eager to join your engineering team to contribute my full-stack web development skills across React, Node.js, Express, MongoDB, and Supabase. Having built and shipped production platforms like Madina Perfumes and CodeRace alongside solving 500+ Java DSA problems, I thrive on engineering fast, scalable user experiences and solving challenging technical problems.`;
+    return constrain("I am eager to join your engineering team to contribute my full-stack web development skills across React, Node.js, Express, MongoDB, and Supabase. Having built and shipped production platforms like Madina Perfumes and CodeRace alongside solving 500+ Java DSA problems, I thrive on engineering fast, scalable user experiences and solving challenging technical problems.");
   }
 
   // Projects & Accomplishments
   if (/project|built|challenge|achievement|accomplishment|coderace|madina|production|portfolio|proudest/i.test(q)) {
-    return `In building CodeRace (a multi-user DSA tracking platform), I architected a normalized PostgreSQL/Supabase schema to maintain competitive live leaderboards and streak calculations with low query latency. Additionally, while engineering Madina Perfumes, I implemented secure HMAC SHA256 webhook verification for Razorpay payments and automated dispatch workflows with the Shiprocket API.`;
+    return constrain("In building CodeRace (a multi-user DSA tracking platform), I architected a normalized PostgreSQL/Supabase schema to maintain competitive live leaderboards and streak calculations with low query latency. Additionally, while engineering Madina Perfumes, I implemented secure HMAC SHA256 webhook verification for Razorpay payments and automated dispatch workflows with the Shiprocket API.");
   }
 
   // Tech Stack & Skills (Open-ended essays)
   if (/stack|technology|tech|match|experience with|skill|tool|framework/i.test(q)) {
-    return `My core technical stack centers on React.js, Node.js, Express, MongoDB, Next.js, and Supabase, backed by a strong foundation in Java DSA (500+ problems solved). I focus on modular component architecture, robust RESTful API design, secure JWT authentication, and building clean, high-performance web applications.`;
+    return constrain("My core technical stack centers on React.js, Node.js, Express, MongoDB, Next.js, and Supabase, backed by a strong foundation in Java DSA (500+ problems solved). I focus on modular component architecture, robust RESTful API design, secure JWT authentication, and building clean, high-performance web applications.");
   }
 
   // Strengths & Self-description
   if (/strength|greatest|about yourself|describe yourself|introduce|background|summary/i.test(q)) {
-    return `My greatest strength is rapid full-stack execution combined with strong algorithmic problem-solving. Having delivered real client projects while graduating with a B.Tech in Artificial Intelligence (CGPA 7.79, zero backlogs), I learn new frameworks quickly and take full ownership of features from frontend UI to backend deployment.`;
+    return constrain("My greatest strength is rapid full-stack execution combined with strong algorithmic problem-solving. Having delivered real client projects while graduating with a B.Tech in Artificial Intelligence (CGPA 7.79, zero backlogs), I learn new frameworks quickly and take full ownership of features from frontend UI to backend deployment.");
   }
 
   // Weakness / Areas of improvement
   if (/weakness|area.*improvement|challenge.*overcome/i.test(q)) {
-    return `Earlier in my development journey, I would occasionally focus extensively on pixel-perfect UI before finalizing data flow. I have since adopted a test-first, API-driven development methodology that balances rapid delivery with clean architectural boundaries.`;
+    return constrain("Earlier in my development journey, I would occasionally focus extensively on pixel-perfect UI before finalizing data flow. I have since adopted a test-first, API-driven development methodology that balances rapid delivery with clean architectural boundaries.");
+  }
+
+  // Critical Feedback / Conflict / Handling Criticism
+  if (/critical.*work|handling.*criticism|receive.*feedback|critical\b.*feedback|feedback.*work|critic(al|ism)|disagree.*team|conflict/i.test(q)) {
+    return constrain("When receiving critical feedback on my work, I welcome it with an open mindset as an opportunity for continuous improvement. I focus on understanding the objective reasoning behind the critique, ask clarifying questions to ensure full alignment, and collaborate constructively with my team member to reach the best technical solution for the product and codebase.");
+  }
+
+  // 3 words or phrases / Describe company
+  if (/(three|3)\s*words|describe.*(our\s*)?company|words.*describe/i.test(q)) {
+    return "Innovative, Mission-driven, High-impact";
   }
 
   // Teamwork & Leadership
-  if (/team|collaborat|conflict|lead|cross-functional/i.test(q)) {
-    return `During my 10-month internship at Meet Bros, I collaborated closely with designers and product owners to ship 3 production web applications. I actively participated in code reviews, authored comprehensive technical documentation, and helped streamline front-end workflows by 25%.`;
+  if (/team|collaborat|lead|cross-functional/i.test(q)) {
+    return constrain("During my 10-month internship at Meet Bros, I collaborated closely with designers and product owners to ship 3 production web applications. I actively participated in code reviews, authored comprehensive technical documentation, and helped streamline front-end workflows by 25%.");
   }
 
-  // Problem Solving / Debugging
-  if (/debug|problem[_\s-]?solving|troubleshoot|bug|incident/i.test(q)) {
-    return `When diagnosing complex issues, I use a systematic root-cause approach—inspecting network request payloads, isolating state mutations in React/Redux dev tools, and tracing database query plans to resolve bottlenecks at their source.`;
+  // Cover Letter / Letter of Motivation
+  if (/cover[_\s-]?letter|motivation[_\s-]?letter|letter.*motivation|statement.*purpose/i.test(q)) {
+    return `Dear Hiring Team,\n\nI am writing to express my strong enthusiasm for this engineering opportunity. As a B.Tech Artificial Intelligence graduate (CGPA 7.79) with 12 months of total engineering experience—including a 10-month Full Stack Developer internship at Meet Bros—I specialize in architecting performant, resilient web applications using React.js, Node.js, Express, MongoDB, Next.js, and Supabase, complemented by solving 500+ Java DSA algorithmic challenges.\n\nIn my production projects, I engineered CodeRace, a competitive DSA tracking platform featuring live leaderboards and low-latency database queries on Supabase/PostgreSQL. Furthermore, for Madina Perfumes, I developed secure HMAC SHA256 webhook verification for Razorpay payment processing and automated dispatch pipelines with the Shiprocket API. At Meet Bros, I shipped three client web applications while streamlining front-end workflows by 25% through reusable design systems and clean component state management.\n\nI am confident that my strong engineering ownership, rigorous problem-solving mindset, and dedication to rapid execution will make an immediate positive impact on your team. I look forward to the opportunity to discuss how my technical skills align with your engineering roadmap.\n\nSincerely,\nMohammad Danish Khan\nFull Stack Developer | danishkhan.jsx@gmail.com | +91 9322990946`;
+  }
+
+  // Deadlines & High-Pressure Environments
+  if (/deadline|pressure|fast-paced|tight schedule|priorit/i.test(q)) {
+    return constrain("When operating under tight deadlines, I prioritize ruthlessly by breaking deliverables into core MVP functionality versus secondary enhancements. During my client freelancing and Meet Bros internship, I used agile sprint planning, automated testing, and proactive status communication to ensure every milestone was delivered on schedule without compromising software quality.");
+  }
+
+  // Continuous Learning / New Tech
+  if (/learn|new technology|framework|adapt|up-to-date/i.test(q)) {
+    return constrain("I maintain a disciplined learning habit by building practical proofs of concept whenever exploring new tools. When transitioning to Next.js and Supabase for recent projects, I quickly mastered server-side rendering, Row-Level Security policies, and real-time event streaming within days by studying official documentation and implementing live prototypes.");
   }
 
   // Default Universal Fallback
-  return `As a B.Tech Artificial Intelligence graduate with production full-stack experience (React, Node.js, Express, MongoDB, Supabase) and strong Java DSA problem-solving skills (500+ solved), I am excited to build scalable, high-performance web solutions and create meaningful impact on your team.`;
+  return constrain("I'm a passionate Full-Stack Developer with hands-on experience across React.js, Node.js, Express.js, and MongoDB, complemented by 500+ solved Java DSA problems. I'm eager to contribute clean, scalable code and grow alongside your engineering team.");
 }
 
 /**

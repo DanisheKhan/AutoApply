@@ -638,19 +638,23 @@
     const tag = element.tagName ? element.tagName.toLowerCase() : '';
     const isTextarea = tag === 'textarea';
 
-    // 1. Open-Ended AI Mode (ONLY if field is genuinely an open-ended essay question AND has no direct candidate value)
-    if (suggestions.isOpenEnded && (!currentTargetValue || isTextarea)) {
+    // 1. Open-Ended AI Mode:
+    // If suggestions says isOpenEnded, OR it's a textarea/contenteditable without a concrete profile match, switch to AI mode
+    const hasConcreteProfileValue = currentTargetValue && currentTargetValue !== 'Yes' && currentTargetValue !== 'No';
+    if ((suggestions.isOpenEnded || isTextarea || element.isContentEditable) && (!hasConcreteProfileValue || isTextarea)) {
       currentMode = 'ai';
       btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
       insertBtn.title = `Insert AI (Right-click for options)`;
     }
-    // 2. Resume Mode
-    else if (suggestions.isResume || element.type === 'file') {
-      currentMode = 'resume';
-      btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span><span class="aap-btn-label">Attach Resume</span>`;
-      insertBtn.title = `Attach Resume (Right-click for options)`;
+    // 2. Resume Field: Direct auto-attach on focus/click and suppress redundant popup button
+    else if (suggestions.isResume || (element.type === 'file' && typeof isCoverLetterTarget === 'function' && !isCoverLetterTarget(element))) {
+      if (typeof autoUploadResume === 'function' && element.dataset?.autoapplyResumeAttached !== 'true') {
+        element.dataset.autoapplyResumeAttached = 'true';
+        autoUploadResume(element).catch(() => {});
+      }
+      hideAll();
+      return;
     }
     // 3. Standard Field Value Insert Mode
     else if (currentTargetValue !== null && currentTargetValue !== undefined && currentTargetValue !== '') {
@@ -668,7 +672,7 @@
         btnGroup.className = 'aap-btn-group visible';
         insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
         insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
-      } else if (suggestions.isOpenEnded) {
+      } else if (suggestions.isOpenEnded || isTextarea || element.isContentEditable) {
         currentMode = 'ai';
         btnGroup.className = 'aap-btn-group visible';
         insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
@@ -773,6 +777,16 @@
       return;
     }
 
+    // Step 2c: If field is a textarea, contenteditable, or open-ended, ALWAYS draft an AI response
+    const isAnchorOpenEnded = currentAnchor.tagName?.toLowerCase() === 'textarea' || currentAnchor.isContentEditable || (currentSuggestions && currentSuggestions.isOpenEnded);
+    if (isAnchorOpenEnded) {
+      const promptText = currentLabel && !/^(answer|your\s+answer|your\s+response|response|input)$/i.test(currentLabel.trim())
+        ? currentLabel
+        : (currentFingerprint?.surroundingText || currentLabel || document.title);
+      await triggerAiGenerationForField(currentAnchor, promptText);
+      return;
+    }
+
     // Step 3: Nothing found locally → call Gemini with the full fingerprint
     // Show spinner while Gemini works
     insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Thinking...</span>`;
@@ -843,21 +857,54 @@
    * Generates AI answer with Gemini and applies it to the anchor field.
    */
   async function triggerAiGenerationForField(anchor, label) {
-
     if (!anchor) return;
     insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Drafting...</span>`;
     btnGroup.className = 'aap-btn-group visible';
     try {
       let answer = '';
-      const promptText = label || document.title || 'Job application response';
+      let promptText = (label || '').trim();
+
+      // Retrieve full placeholder if present and combine with prompt
+      const ph = (anchor.placeholder || anchor.getAttribute?.('placeholder') || '').trim();
+      if (ph) {
+        if (!promptText || /^(answer|your\s+answer|your\s+response|response|input|question:?|message|notes?|comments?|additional[_\s-]?info(rmation)?)$/i.test(promptText)) {
+          promptText = promptText ? `${promptText}: ${ph}` : ph;
+        } else if (!promptText.toLowerCase().includes(ph.toLowerCase()) && ph.length > 10) {
+          promptText = `${promptText} (${ph})`;
+        }
+      }
+
+      if (!promptText || /^(answer|your\s+answer|your\s+response|response|input|question:?)$/i.test(promptText)) {
+        promptText = (currentFingerprint?.surroundingText || (typeof getElementLabel === 'function' ? getElementLabel(anchor) : '') || document.title || 'Job application response').trim();
+      }
+
+      // Detect character limit from attribute or container text (e.g. "Message should not exceed 300 characters")
+      let maxLen = currentFingerprint?.maxLength || null;
+      if (!maxLen) {
+        if (anchor.maxLength && anchor.maxLength > 0 && anchor.maxLength < 100000) maxLen = anchor.maxLength;
+        const attrMl = anchor.getAttribute ? anchor.getAttribute('maxlength') : null;
+        if (!maxLen && attrMl && !isNaN(parseInt(attrMl, 10))) maxLen = parseInt(attrMl, 10);
+      }
+      if (!maxLen) {
+        const surr = currentFingerprint?.surroundingText || anchor?.parentElement?.innerText || anchor?.closest('.form-group, .field, [class*="container"]')?.innerText || '';
+        const limitMatch = surr.match(/(?:not\s+exceed|maximum(?:\s+of)?|max\.?|limit(?:\s+is)?|up\s+to|at\s+most)\s*(\d{2,4})\s*(?:characters?|chars?)/i)
+          || surr.match(/(\d{2,4})\s*(?:characters?|chars?)\s*(?:maximum|max|limit)/i);
+        if (limitMatch) maxLen = parseInt(limitMatch[1], 10);
+      }
+
       if (typeof sendAiRequest === 'function') {
-        answer = await sendAiRequest(promptText);
+        answer = await sendAiRequest(promptText, { maxLength: maxLen });
       } else if (typeof generateAnswerWithGemini === 'function') {
-        answer = await generateAnswerWithGemini({ question: promptText, jobContext: document.title }, activeProfile);
+        answer = await generateAnswerWithGemini({ question: promptText, jobContext: document.title, maxLength: maxLen }, activeProfile);
       } else if (typeof generateInstantFallbackAnswer === 'function') {
-        answer = generateInstantFallbackAnswer(promptText);
+        answer = generateInstantFallbackAnswer(promptText, activeProfile, maxLen);
       } else if (typeof getInstantFallbackAnswer === 'function') {
         answer = getInstantFallbackAnswer(promptText);
+      }
+
+      // Guarantee fallback if provider returned empty
+      if (!answer && typeof generateInstantFallbackAnswer === 'function') {
+        answer = generateInstantFallbackAnswer(promptText, activeProfile, maxLen);
       }
 
       if (answer) {

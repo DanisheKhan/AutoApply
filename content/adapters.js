@@ -434,19 +434,45 @@ function getElementLabel(element) {
   if (element.id) labels.push(element.id);
 
   // 4. Preceding sibling label or span
-  const prevSibling = element.previousElementSibling;
-  if (prevSibling && prevSibling.innerText && prevSibling.innerText.length < 120) {
-    labels.push(prevSibling.innerText.trim());
+  let prevSibling = element.previousElementSibling;
+  const genericLabelRegex = /^(answer|your\s+answer|your\s+response|response|question:?|question\s*\d+:?|\*)$/i;
+
+  if (prevSibling && prevSibling.innerText) {
+    const prevText = prevSibling.innerText.trim();
+    if (prevText && !genericLabelRegex.test(prevText) && prevText.length < 150) {
+      labels.push(prevText);
+    } else if (genericLabelRegex.test(prevText)) {
+      // If immediate sibling is just "Answer" or "Question:", look further up for the actual question text
+      let siblingScan = prevSibling.previousElementSibling;
+      while (siblingScan) {
+        const sText = (siblingScan.innerText || siblingScan.textContent || '').trim();
+        if (sText && sText.length > 5 && sText.length < 300) {
+          labels.unshift(sText);
+          break;
+        }
+        siblingScan = siblingScan.previousElementSibling;
+      }
+    }
   }
 
   // 5. Parent container heading / question block (Google Forms, Greenhouse, Lever, ATS)
   const container = typeof element.closest === 'function' 
-    ? element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr, .Qr7Oae, .geS5n, .vQx30e, .c2gGi, .gf-listitem')
+    ? element.closest('.form-group, .field, .input-group, .form-row, div[role="listitem"], .application-question, .form-item, tr, .Qr7Oae, .geS5n, .vQx30e, .c2gGi, .gf-listitem, .card, [class*="question"], [class*="card"], [class*="item"]')
     : null;
   if (container && typeof container.querySelector === 'function') {
-    const heading = container.querySelector('h1, h2, h3, h4, h5, h6, .label, .title, legend, .dir-ltr, .M7eMe, [role="heading"], .HoPnR, .F9vfv, .HoControl, td:first-child, th:first-child');
+    const heading = container.querySelector('h1, h2, h3, h4, h5, h6, .label, .title, legend, .dir-ltr, .M7eMe, [role="heading"], .HoPnR, .F9vfv, .HoControl, p, [class*="question-text"], [class*="title"], td:first-child, th:first-child');
     if (heading && heading !== element && heading.innerText) {
-      labels.push(heading.innerText.trim());
+      const hText = heading.innerText.trim();
+      if (!labels.includes(hText)) {
+        labels.unshift(hText);
+      }
+      // If heading is generic like "Message" and element has a descriptive placeholder, prepend/include it
+      if (element.placeholder && /^(message|notes?|comments?|additional[_\s-]?info(rmation)?|tell\s+us|response|answer)\b/i.test(hText)) {
+        const ph = element.placeholder.trim();
+        if (ph.length > 5 && !labels.includes(ph)) {
+          labels.unshift(ph);
+        }
+      }
     }
   }
 
@@ -485,6 +511,26 @@ function getElementLabel(element) {
     }
   } catch (e) {}
 
+  // 6b. Deep Ancestral Climbing when label is still empty or generic
+  const hasSubstantiveLabel = labels.some(l => l && l.length > 4 && !genericLabelRegex.test(l));
+  if (!hasSubstantiveLabel && typeof document !== 'undefined') {
+    let curr = element.parentElement;
+    for (let depth = 0; depth < 6 && curr && curr !== document.body; depth++, curr = curr.parentElement) {
+      const candidates = curr.querySelectorAll('p, h1, h2, h3, h4, h5, h6, [role="heading"], div[class*="question"], div[class*="prompt"], div[class*="title"], div[class*="label"], legend');
+      for (const cand of candidates) {
+        if (cand.contains(element) || cand === element) continue;
+        const cText = (cand.innerText || cand.textContent || '').replace(/\s+/g, ' ').trim();
+        if (cText && cText.length > 10 && (cText.includes('?') || /\b(why|what|how|describe|explain|tell|give|experience|situation|details|strengths?)\b/i.test(cText))) {
+          if (!labels.includes(cText)) {
+            labels.unshift(cText);
+            break;
+          }
+        }
+      }
+      if (labels.some(l => l && l.length > 10)) break;
+    }
+  }
+
   return labels.join(' ').replace(/\s+/g, ' ').trim();
 }
 
@@ -506,7 +552,11 @@ function buildFieldFingerprint(element) {
   const placeholder = element.placeholder || '';
   const fieldName = element.name || '';
   const fieldId = element.id || '';
-  const maxLength = (element.maxLength && element.maxLength > 0) ? element.maxLength : null;
+  let maxLength = (element.maxLength && element.maxLength > 0 && element.maxLength < 100000) ? element.maxLength : null;
+  if (!maxLength && element.getAttribute) {
+    const ml = element.getAttribute('maxlength');
+    if (ml && !isNaN(parseInt(ml, 10))) maxLength = parseInt(ml, 10);
+  }
   const ariaLabel = element.getAttribute ? (element.getAttribute('aria-label') || '') : '';
 
   // Collect data-* attributes as flat object
@@ -535,7 +585,7 @@ function buildFieldFingerprint(element) {
   let surroundingText = '';
   try {
     const container = element.closest
-      ? (element.closest('.form-group, .form-row, fieldset, .field, .application-question, tr, [role="listitem"], .Qr7Oae, .geS5n')
+      ? (element.closest('.form-group, .form-row, fieldset, .field, .application-question, tr, [role="listitem"], .Qr7Oae, .geS5n, .card, [class*="question"], [class*="card"], [class*="item"], section, article')
          || element.parentElement?.parentElement)
       : null;
     if (container) {
@@ -544,9 +594,18 @@ function buildFieldFingerprint(element) {
       surroundingText = ((clone.innerText || clone.textContent || '')
         .replace(/\s+/g, ' ')
         .trim()
-        .slice(0, 250));
+        .slice(0, 1000));
     }
   } catch (e) {}
+
+  // Detect character limit from surrounding text (e.g. "Message should not exceed 300 characters")
+  if (!maxLength && surroundingText) {
+    const limitMatch = surroundingText.match(/(?:not\s+exceed|maximum(?:\s+of)?|max\.?|limit(?:\s+is)?|up\s+to|at\s+most)\s*(\d{2,4})\s*(?:characters?|chars?)/i)
+      || surroundingText.match(/(\d{2,4})\s*(?:characters?|chars?)\s*(?:maximum|max|limit)/i);
+    if (limitMatch) {
+      maxLength = parseInt(limitMatch[1], 10);
+    }
+  }
 
   // Walk up DOM tree to find nearest preceding section heading (h1–h6, legend, fieldset, section title)
   let sectionHeading = '';
@@ -1963,20 +2022,21 @@ function extractCandidateSkills(profile) {
 }
 
 // 13. Communication with Background Worker for AI Essay Generation
-function sendAiRequest(question) {
+function sendAiRequest(question, options = {}) {
+  const maxLength = typeof options === 'object' ? options?.maxLength : (typeof options === 'number' ? options : null);
   return new Promise((resolve, reject) => {
     try {
       if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id && chrome.runtime.sendMessage) {
         chrome.runtime.sendMessage({
           action: "GENERATE_AI_ANSWER",
-          payload: { question, jobContext: document.title }
+          payload: { question, jobContext: document.title, maxLength }
         }, (res) => {
           if (chrome.runtime.lastError || !res || !res.success) {
             if (typeof generateAnswerWithGemini === 'function') {
               const p = window.DEFAULT_PROFILE || {};
-              generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
+              generateAnswerWithGemini({ question, jobContext: document.title, maxLength }, p).then(resolve).catch(reject);
             } else if (typeof generateInstantFallbackAnswer === 'function') {
-              resolve(generateInstantFallbackAnswer(question));
+              resolve(generateInstantFallbackAnswer(question, window.DEFAULT_PROFILE, maxLength));
             } else {
               reject(new Error(res?.error || chrome.runtime.lastError?.message || "Failed to generate AI response."));
             }
@@ -1986,15 +2046,15 @@ function sendAiRequest(question) {
         });
       } else if (typeof generateAnswerWithGemini === 'function') {
         const p = window.DEFAULT_PROFILE || {};
-        generateAnswerWithGemini({ question, jobContext: document.title }, p).then(resolve).catch(reject);
+        generateAnswerWithGemini({ question, jobContext: document.title, maxLength }, p).then(resolve).catch(reject);
       } else if (typeof generateInstantFallbackAnswer === 'function') {
-        resolve(generateInstantFallbackAnswer(question));
+        resolve(generateInstantFallbackAnswer(question, window.DEFAULT_PROFILE, maxLength));
       } else {
         reject(new Error("Gemini AI client not available."));
       }
     } catch (err) {
       if (typeof generateInstantFallbackAnswer === 'function') {
-        resolve(generateInstantFallbackAnswer(question));
+        resolve(generateInstantFallbackAnswer(question, window.DEFAULT_PROFILE, maxLength));
       } else {
         reject(err);
       }
@@ -2082,8 +2142,13 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   const type = element ? (element.type || 'text').toLowerCase() : 'text';
 
   const _isOpenEndedFn = (typeof isOpenEndedQuestion === 'function') ? isOpenEndedQuestion : _heuristics.isOpenEndedQuestion;
-  const isResume = /resume|cv\b|curriculum|biodata|upload.*file|file.*upload|add.*file/i.test(lLower) || type === 'file';
-  const isOpenEnded = typeof _isOpenEndedFn === 'function' ? _isOpenEndedFn(label) : false;
+  const isCoverLetter = (typeof isCoverLetterTarget === 'function') ? isCoverLetterTarget(element) : /cover[_\s-]?letter|motivation[_\s-]?letter/i.test(lLower);
+  const isResume = !isCoverLetter && (/resume|cv\b|curriculum|biodata|upload.*file|file.*upload|add.*file/i.test(lLower) || (type === 'file' && !isCoverLetter));
+  const isTextarea = tag === 'textarea' || (element && (element.isContentEditable || element.getAttribute?.('contenteditable') === 'true'));
+  let isOpenEnded = typeof _isOpenEndedFn === 'function' ? _isOpenEndedFn(label) : false;
+  if (!isOpenEnded && (isTextarea || isCoverLetter) && !/address|street|skills?|bio\b/i.test(lLower)) {
+    isOpenEnded = true;
+  }
 
   const suggestions = [];
 
@@ -2118,6 +2183,22 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "MERN Stack", value: "React.js, Node.js, Express.js, MongoDB" });
     suggestions.push({ label: "Full Stack", value: "React, Node.js, Express, MongoDB, Supabase, Java DSA, REST APIs, Tailwind CSS" });
     suggestions.push({ label: "Java & DSA", value: "Java, Data Structures & Algorithms (500+ problems solved)" });
+  }
+
+  // 1c. Role Fit / Message to Recruiter / Additional Information
+  else if (/\b(message|fit[_\s-]?in[_\s-]?this[_\s-]?role|how.*fit|why.*hire|why.*choose|additional[_\s-]?info(rmation)?|note|comments?|pitch)\b/i.test(lLower) || (isTextarea && /message/i.test(lLower))) {
+    suggestions.push({
+      label: "Role Fit & Pitch",
+      value: "I'm a strong fit for this role with hands-on experience in full-stack web development using React.js, Node.js, Express.js, and MongoDB. I'm a quick learner, problem solver, and eager to contribute while growing with the team."
+    });
+    suggestions.push({
+      label: "Short Fit (< 150 chars)",
+      value: "I'm a strong fit with hands-on experience in React.js, Node.js, Express.js, and MongoDB, eager to contribute to high-impact web products."
+    });
+    suggestions.push({
+      label: "Project Highlights",
+      value: "Full-stack developer experienced in React, Node.js, Express, MongoDB, and Supabase. Shipped live platforms like Madina Perfumes and CodeRace."
+    });
   }
 
   // 2. Screening & Work Authorization
@@ -2299,12 +2380,14 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     }
   }
 
-  // Fallback to Boolean Question resolver
+  // Fallback to Boolean Question resolver (ONLY if not open-ended and actually boolean phrasing or radio/checkbox)
   const _resolveBoolFn = (typeof resolveBooleanQuestion === 'function') ? resolveBooleanQuestion : _heuristics.resolveBooleanQuestion;
-  if (suggestions.length === 0 && typeof _resolveBoolFn === 'function' && (/\?|whether|confirm|agree|declare|are you|do you|will you|have you/i.test(label) || (element && (element.type === 'radio' || element.type === 'checkbox')))) {
+  if (!isOpenEnded && suggestions.length === 0 && typeof _resolveBoolFn === 'function' && (/\b(whether|confirm|agree|declare|consent|are you|do you|will you|have you|can you|would you|is there|did you)\b/i.test(label) || (element && (element.type === 'radio' || element.type === 'checkbox')))) {
     const boolAns = _resolveBoolFn(label);
-    suggestions.push({ label: "Screening Match", value: boolAns });
-    suggestions.push({ label: "Alternative", value: boolAns === "Yes" ? "No" : "Yes" });
+    if (boolAns) {
+      suggestions.push({ label: "Screening Match", value: boolAns });
+      suggestions.push({ label: "Alternative", value: boolAns === "Yes" ? "No" : "Yes" });
+    }
   }
 
   return {

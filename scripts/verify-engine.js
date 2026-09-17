@@ -4,6 +4,7 @@ const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion, JobDetector
 const { generateInstantFallbackAnswer } = require('../background/gemini-client.js');
 const { RESUME_DATA } = require('../assets/resume-data.js');
 const { getFieldSuggestions } = require('../content/adapters.js');
+const { isCoverLetterTarget } = require('../content/resume-uploader.js');
 
 async function runVerification() {
   console.log("==================================================");
@@ -49,11 +50,14 @@ async function runVerification() {
   assert(DEFAULT_PROFILE.credentials.defaultPassword === "Danishe@1257", "Portal default password verified (Danishe@1257)");
   assert(DEFAULT_PROFILE.projects.length >= 5, "Featured projects loaded (5+ projects)");
 
-  // 2. Resume PDF Asset Verification
-  console.log("\n[2] Checking Bundled Resume Asset:");
+  // 2. Resume PDF Asset & Cover Letter Isolation Verification
+  console.log("\n[2] Checking Bundled Resume Asset & Cover Letter Isolation:");
   assert(RESUME_DATA && RESUME_DATA.filename === "DanishKhan_Resume.pdf", "Resume PDF asset filename verified");
   assert(RESUME_DATA.sizeBytes === 340082, "Resume byte size verified (340,082 bytes)");
   assert(typeof RESUME_DATA.base64 === 'string' && RESUME_DATA.base64.length > 10000, "Resume Base64 payload valid");
+  assert(isCoverLetterTarget({ id: "cover-letter-upload", name: "cover_letter" }) === true, "Cover Letter input identified and isolated");
+  assert(isCoverLetterTarget({ id: "resume-file-input", name: "resume" }) === false, "Resume input correctly not marked as Cover Letter");
+  assert(isCoverLetterTarget({ placeholder: "Upload your cover letter or motivation statement" }) === true, "Motivation statement identified as Cover Letter");
 
   // 3. Field Heuristics Pattern Matching Tests (Simulating diverse ATS & Form labels)
   console.log("\n[3] Testing Field Heuristic Pattern Matchers (50+ Real-World Edge Cases):");
@@ -412,11 +416,31 @@ async function runVerification() {
   assert(!isOpenEndedQuestion("Your relevant experience (in months) *"), "Relevant experience rejected from AI question classification");
   assert(!isOpenEndedQuestion("How soon can you start? (in days) *"), "How soon can you start rejected from AI question classification");
 
-  const instantWhy = generateInstantFallbackAnswer("Why should we hire you for this role?", DEFAULT_PROFILE);
-  assert(instantWhy.includes("full-stack") && instantWhy.includes("React"), "Instant fallback generated high-impact 'Why hire' answer");
+  assert(isOpenEndedQuestion("What three words or phrases best describe our company? *"), "Identified 'What three words describe company' as open-ended");
+  assert(resolveBooleanQuestion("What three words or phrases best describe our company? *") === null, "'What three words' rejected from boolean question resolution");
+  assert(isOpenEndedQuestion("How would you handle a situation where another team member was critical of your work?"), "Identified 'How would you handle critical team member' as open-ended");
+  assert(resolveBooleanQuestion("How would you handle a situation where another team member was critical of your work?") === null, "'Critical feedback' rejected from boolean question resolution");
 
-  const instantProj = generateInstantFallbackAnswer("Tell us about your production projects and accomplishments.", DEFAULT_PROFILE);
-  assert(instantProj.includes("CodeRace") || instantProj.includes("Madina Perfumes"), "Instant fallback references real projects (CodeRace / Madina)");
+  const instant3Words = generateInstantFallbackAnswer("What three words or phrases best describe our company? *", DEFAULT_PROFILE);
+  assert(instant3Words.includes("Innovative"), "Instant fallback generates rich 3-word company description");
+
+  const instantCriticism = generateInstantFallbackAnswer("How would you handle a situation where another team member was critical of your work?", DEFAULT_PROFILE);
+  assert(instantCriticism.includes("critical feedback") || instantCriticism.includes("continuous improvement"), "Instant fallback generates constructive answer for critical feedback");
+
+  const instantCoverLetter = generateInstantFallbackAnswer("Please write a cover letter for this position", DEFAULT_PROFILE);
+  assert(instantCoverLetter.includes("CodeRace") && instantCoverLetter.includes("Madina"), "Instant fallback generates tailored Cover Letter referencing candidate projects");
+
+  // Role fit / Message tests matching user request
+  assert(isOpenEndedQuestion("How do you fit in this role/Any additional information"), "Identified 'How do you fit in this role' as open-ended");
+  assert(isOpenEndedQuestion("Message"), "Identified 'Message' as open-ended question");
+
+  const instantRoleFit = generateInstantFallbackAnswer("How do you fit in this role/Any additional information", DEFAULT_PROFILE, 300);
+  assert(instantRoleFit.includes("strong fit for this role") && instantRoleFit.includes("React.js") && instantRoleFit.includes("MongoDB"), "Instant fallback generates confident, natural role fit pitch");
+  assert(instantRoleFit.length <= 300, `Role fit answer length (${instantRoleFit.length}) respects 300 character limit`);
+
+  const instantMessage = generateInstantFallbackAnswer("Message", DEFAULT_PROFILE, 300);
+  assert(instantMessage.includes("strong fit for this role"), "Message field generates confident role fit pitch");
+  assert(instantMessage.length <= 300, `Message answer length (${instantMessage.length}) respects 300 character limit`);
 
   // 6. Test Gemini AI Field Inference Engine
   console.log("\n[6] Testing Gemini AI Field Inference Engine:");
