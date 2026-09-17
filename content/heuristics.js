@@ -992,9 +992,45 @@ const JobDetector = {
     'billing address', 'credit card number', 'sign in to your account', 'post a comment'
   ],
 
+  NON_JOB_DOMAINS: [
+    'chatgpt.com',
+    'openai.com',
+    'claude.ai',
+    'anthropic.com',
+    'gemini.google.com',
+    'perplexity.ai',
+    'poe.com',
+    'deepseek.com',
+    'mistral.ai',
+    'copilot.microsoft.com',
+    'github.com',
+    'gitlab.com',
+    'stackoverflow.com',
+    'youtube.com',
+    'google.com',
+    'bing.com',
+    'reddit.com',
+    'facebook.com',
+    'instagram.com',
+    'twitter.com',
+    'x.com',
+    'netflix.com',
+    'spotify.com',
+    'amazon.com',
+    'flipkart.com',
+    'wikipedia.org'
+  ],
+
   analyzePage(doc = (typeof document !== 'undefined' ? document : null), urlObj = (typeof window !== 'undefined' ? window.location : null)) {
     if (!doc || !urlObj) {
       return { isJobForm: false, platform: 'Standby', confidence: 0, fieldCount: 0, reason: 'No DOM/URL' };
+    }
+
+    // Pre-check: strictly exclude non-job utility/AI/social sites unless explicitly Google Forms
+    const host = (urlObj.hostname || '').toLowerCase();
+    const isGoogleForms = host.includes('docs.google.com') && (urlObj.pathname || '').includes('/forms');
+    if (!isGoogleForms && this.NON_JOB_DOMAINS.some(d => host === d || host.endsWith('.' + d))) {
+      return { isJobForm: false, platform: 'Excluded Non-Job Site', confidence: 0, fieldCount: 0, reason: 'Excluded site (AI assistant, search, social, or code repo)' };
     }
 
     // 1. Check direct portal matches
@@ -1198,6 +1234,29 @@ function buildCombinedSignal({ label = '', placeholder = '', fieldName = '', fie
     .trim();
 }
 
+/**
+ * Global utility to test if the active tab is an excluded non-job application site
+ * (e.g. ChatGPT, Claude, social media, shopping, video, code repositories)
+ * @param {Location|Object} [urlObj]
+ * @returns {boolean}
+ */
+function isExcludedDomain(urlObj = (typeof window !== 'undefined' ? window.location : null)) {
+  if (!urlObj || !urlObj.hostname) return false;
+  const host = (urlObj.hostname || '').toLowerCase();
+  if (host.includes('docs.google.com')) {
+    const path = (urlObj.pathname || '').toLowerCase();
+    return !path.includes('/forms');
+  }
+  const EXCLUDED = [
+    'chatgpt.com', 'openai.com', 'claude.ai', 'anthropic.com', 'gemini.google.com',
+    'perplexity.ai', 'poe.com', 'deepseek.com', 'mistral.ai', 'copilot.microsoft.com',
+    'github.com', 'gitlab.com', 'stackoverflow.com', 'youtube.com', 'google.com',
+    'bing.com', 'reddit.com', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+    'netflix.com', 'spotify.com', 'amazon.com', 'flipkart.com', 'wikipedia.org'
+  ];
+  return EXCLUDED.some(d => host === d || host.endsWith('.' + d));
+}
+
 if (typeof window !== 'undefined') {
   window.FIELD_PATTERNS = FIELD_PATTERNS;
   window.isOpenEndedQuestion = isOpenEndedQuestion;
@@ -1206,6 +1265,7 @@ if (typeof window !== 'undefined') {
   window.formatCandidateDate = formatCandidateDate;
   window.formatAadhaarNumber = formatAadhaarNumber;
   window.buildCombinedSignal = buildCombinedSignal;
+  window.isExcludedDomain = isExcludedDomain;
 }
 if (typeof self !== 'undefined') {
   self.FIELD_PATTERNS = FIELD_PATTERNS;
@@ -1215,6 +1275,7 @@ if (typeof self !== 'undefined') {
   self.formatCandidateDate = formatCandidateDate;
   self.formatAadhaarNumber = formatAadhaarNumber;
   self.buildCombinedSignal = buildCombinedSignal;
+  self.isExcludedDomain = isExcludedDomain;
 }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -1224,6 +1285,7 @@ if (typeof module !== 'undefined' && module.exports) {
     JobDetector,
     formatCandidateDate,
     formatAadhaarNumber,
-    buildCombinedSignal
+    buildCombinedSignal,
+    isExcludedDomain
   };
 }

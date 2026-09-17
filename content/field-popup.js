@@ -512,6 +512,7 @@
    * Evaluates event target to check if it's an actionable form field.
    */
   function handleTriggerEvent(e) {
+    if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
     if (!isWidgetEnabled || activationMode === 'disabled') return;
 
     const target = e.target;

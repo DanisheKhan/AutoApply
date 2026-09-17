@@ -4,6 +4,12 @@
  */
 
 (async function initAutoApply() {
+  // Domain guard: If on an excluded site (ChatGPT, Claude, YouTube, GitHub, etc.), stand by completely
+  if (typeof isExcludedDomain === 'function' && isExcludedDomain()) {
+    console.log("[AutoApply Pro] Standing by: active site is an excluded web application (AI assistant, search, or social).");
+    return;
+  }
+
   console.log("[AutoApply Pro] Content script loaded on:", window.location.href);
 
   // 1. Fetch Candidate Profile from Storage / Background Worker

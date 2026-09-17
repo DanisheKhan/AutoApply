@@ -1,10 +1,10 @@
 // Comprehensive automated verification test suite for AutoApply Pro engine
 const { DEFAULT_PROFILE } = require('../default-profile.js');
-const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion, JobDetector, formatCandidateDate, formatAadhaarNumber } = require('../content/heuristics.js');
+const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion, JobDetector, formatCandidateDate, formatAadhaarNumber, isExcludedDomain } = require('../content/heuristics.js');
 const { generateInstantFallbackAnswer } = require('../background/gemini-client.js');
 const { RESUME_DATA } = require('../assets/resume-data.js');
 const { getFieldSuggestions } = require('../content/adapters.js');
-const { isCoverLetterTarget } = require('../content/resume-uploader.js');
+const { isCoverLetterTarget, isResumeTarget } = require('../content/resume-uploader.js');
 
 async function runVerification() {
   console.log("==================================================");
@@ -50,14 +50,41 @@ async function runVerification() {
   assert(DEFAULT_PROFILE.credentials.defaultPassword === "Danishe@1257", "Portal default password verified (Danishe@1257)");
   assert(DEFAULT_PROFILE.projects.length >= 5, "Featured projects loaded (5+ projects)");
 
-  // 2. Resume PDF Asset & Cover Letter Isolation Verification
-  console.log("\n[2] Checking Bundled Resume Asset & Cover Letter Isolation:");
+  // 2. Resume PDF Asset, Cover Letter Isolation & ChatGPT Exclusion Verification
+  console.log("\n[2] Checking Bundled Resume Asset, Cover Letter Isolation & ChatGPT Domain Guards:");
   assert(RESUME_DATA && RESUME_DATA.filename === "DanishKhan_Resume.pdf", "Resume PDF asset filename verified");
   assert(RESUME_DATA.sizeBytes === 340082, "Resume byte size verified (340,082 bytes)");
   assert(typeof RESUME_DATA.base64 === 'string' && RESUME_DATA.base64.length > 10000, "Resume Base64 payload valid");
   assert(isCoverLetterTarget({ id: "cover-letter-upload", name: "cover_letter" }) === true, "Cover Letter input identified and isolated");
   assert(isCoverLetterTarget({ id: "resume-file-input", name: "resume" }) === false, "Resume input correctly not marked as Cover Letter");
   assert(isCoverLetterTarget({ placeholder: "Upload your cover letter or motivation statement" }) === true, "Motivation statement identified as Cover Letter");
+
+  // ChatGPT & Non-Job Domain Exclusion Tests
+  assert(isExcludedDomain({ hostname: "chatgpt.com", pathname: "/" }) === true, "ChatGPT domain excluded (chatgpt.com)");
+  assert(isExcludedDomain({ hostname: "chat.openai.com", pathname: "/c/test-chat-id" }) === true, "OpenAI ChatGPT subdomain excluded (chat.openai.com)");
+  assert(isExcludedDomain({ hostname: "claude.ai", pathname: "/chat" }) === true, "Claude AI domain excluded (claude.ai)");
+  assert(isExcludedDomain({ hostname: "gemini.google.com", pathname: "/app" }) === true, "Gemini Google web app excluded (gemini.google.com)");
+  assert(isExcludedDomain({ hostname: "perplexity.ai", pathname: "/" }) === true, "Perplexity AI excluded (perplexity.ai)");
+  assert(isExcludedDomain({ hostname: "docs.google.com", pathname: "/forms/d/e/1FAIpQLSc..." }) === false, "Google Forms NOT excluded (allows job applications)");
+  assert(isExcludedDomain({ hostname: "boards.greenhouse.io", pathname: "/airbnb/jobs/123" }) === false, "Greenhouse ATS NOT excluded");
+  assert(isExcludedDomain({ hostname: "jobs.lever.co", pathname: "/spotify" }) === false, "Lever ATS NOT excluded");
+
+  // Strict Resume Target Verification Tests
+  const mockChatGptFileInput = { tagName: "INPUT", type: "file", className: "hidden", id: "", name: "", placeholder: "" };
+  assert(isResumeTarget(mockChatGptFileInput) === false, "ChatGPT generic hidden file input rejected from resume upload");
+
+  const mockPhotoInput = { id: "profile-picture-upload", name: "user_photo", className: "avatar-upload" };
+  assert(isResumeTarget(mockPhotoInput) === false, "Profile photo / avatar input rejected from resume upload");
+
+  const mockCoverLetterFile = { id: "applicant-cover-letter", name: "cover_letter" };
+  assert(isResumeTarget(mockCoverLetterFile) === false, "Cover letter input rejected from resume upload");
+
+  const mockResumeInput = { id: "resume-file-input", name: "resume", className: "upload-resume" };
+  assert(isResumeTarget(mockResumeInput) === true, "Legitimate resume file input verified");
+
+  const mockCvDropzone = { className: "dropzone-cv-upload", textContent: "Drag and drop your CV or Curriculum Vitae here" };
+  assert(isResumeTarget(mockCvDropzone) === true, "Legitimate CV dropzone verified");
+
 
   // 3. Field Heuristics Pattern Matching Tests (Simulating diverse ATS & Form labels)
   console.log("\n[3] Testing Field Heuristic Pattern Matchers (50+ Real-World Edge Cases):");
@@ -598,12 +625,15 @@ async function runVerification() {
   const customFormCheck = JobDetector.analyzePage(createMockDoc('Company Careers Portal: Please upload your resume, enter your b.tech college name, cgpa, and expected ctc.'), { hostname: 'careers.startup.io', pathname: '/apply' });
   assert(customFormCheck.isJobForm === true, "Generic domain with career keywords identified as Job Application Form");
 
-  // Negative checks (Non-job pages must be classified as Standby / Non-Job Page)
+  // Negative checks (Non-job pages must be classified as Standby / Non-Job Page or Excluded Non-Job Site)
+  const chatgptCheck = JobDetector.analyzePage(createMockDoc('Send a message to ChatGPT...'), { hostname: 'chatgpt.com', pathname: '/' });
+  assert(chatgptCheck.isJobForm === false && chatgptCheck.platform === 'Excluded Non-Job Site', "ChatGPT web composer rejected as Excluded Non-Job Site");
+
   const youtubeCheck = JobDetector.analyzePage(createMockDoc('Search YouTube. Post a comment. Subscribe to channel.'), { hostname: 'www.youtube.com', pathname: '/watch' });
-  assert(youtubeCheck.isJobForm === false && youtubeCheck.platform === 'Non-Job Page', "YouTube video page rejected from Job Form classification");
+  assert(youtubeCheck.isJobForm === false && (youtubeCheck.platform === 'Non-Job Page' || youtubeCheck.platform === 'Excluded Non-Job Site'), "YouTube video page rejected from Job Form classification");
 
   const wikipediaCheck = JobDetector.analyzePage(createMockDoc('Wikipedia, the free encyclopedia. Search Wikipedia for articles and references.'), { hostname: 'en.wikipedia.org', pathname: '/wiki/JavaScript' });
-  assert(wikipediaCheck.isJobForm === false && wikipediaCheck.platform === 'Non-Job Page', "Wikipedia search page rejected from Job Form classification");
+  assert(wikipediaCheck.isJobForm === false && (wikipediaCheck.platform === 'Non-Job Page' || wikipediaCheck.platform === 'Excluded Non-Job Site'), "Wikipedia search page rejected from Job Form classification");
 
   const checkoutCheck = JobDetector.analyzePage(createMockDoc('Shopping Cart - Checkout. Enter billing address, credit card number, and cvv.'), { hostname: 'www.amazon.in', pathname: '/checkout' });
   assert(checkoutCheck.isJobForm === false && checkoutCheck.platform === 'Non-Job Page', "eCommerce checkout page rejected from Job Form classification");

@@ -107,23 +107,94 @@ function isCoverLetterTarget(element) {
 }
 
 /**
+ * Detects whether an element or container is specifically a Resume / CV upload field.
+ * Strictly distinguishes Resume fields from Cover Letters, general file attachments,
+ * photos, and AI assistant prompt file uploaders (e.g. ChatGPT, Claude).
+ * @param {Element} element
+ * @returns {boolean}
+ */
+function isResumeTarget(element) {
+  if (!element) return false;
+  if (isCoverLetterTarget(element)) return false;
+
+  const id = (element.id || '').toLowerCase();
+  const name = (element.name || '').toLowerCase();
+  const aria = (element.getAttribute?.('aria-label') || element.getAttribute?.('aria-labelledby') || '').toLowerCase();
+  const placeholder = (element.placeholder || '').toLowerCase();
+  const title = (element.title || element.getAttribute?.('title') || '').toLowerCase();
+  const testId = (element.getAttribute?.('data-testid') || element.getAttribute?.('data-qa') || element.getAttribute?.('data-automation-id') || '').toLowerCase();
+  const className = (typeof element.className === 'string' ? element.className : '').toLowerCase();
+
+  // Explicit negative check: photos, avatars, headshots, invoices, videos, audio
+  if (/\b(photo|avatar|profile[_\s-]?pic|picture|headshot|logo|invoice|receipt|video|audio)\b/i.test(id + ' ' + name + ' ' + aria + ' ' + className + ' ' + testId)) {
+    return false;
+  }
+
+  // 1. Direct attribute match for Resume / CV
+  const resumeStrictRegex = /\b(resume|cv\b|curriculum[_\s-]?vitae|biodata)\b/i;
+  if (resumeStrictRegex.test(id) || resumeStrictRegex.test(name) || resumeStrictRegex.test(aria) || resumeStrictRegex.test(title) || resumeStrictRegex.test(testId) || resumeStrictRegex.test(placeholder)) {
+    return true;
+  }
+
+  // 2. Class name check with resume
+  if (/\b(resume|cv)[_\s-]?upload|upload[_\s-]?(resume|cv)|resume[_\s-]?drop|drop[_\s-]?resume\b/i.test(className)) {
+    return true;
+  }
+
+  // 3. Container / Label context check (walk up nearest upload container)
+  const container = (element.closest && typeof element.closest === 'function')
+    ? element.closest('label, div[class*="upload"], div[class*="drop"], div[class*="file"], div[role="listitem"], .gf-listitem, .form-group, .field, section, fieldset, tr')
+    : element.parentElement;
+  
+  if (container) {
+    const containerText = (container.innerText || container.textContent || '').slice(0, 500).toLowerCase();
+    if (resumeStrictRegex.test(containerText)) {
+      return true;
+    }
+  }
+
+  // 4. Preceding sibling check
+  const prevSibling = element.previousElementSibling;
+  if (prevSibling) {
+    const prevText = (prevSibling.innerText || prevSibling.textContent || '').slice(0, 150).toLowerCase();
+    if (resumeStrictRegex.test(prevText)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Finds resume file inputs or drop zones and uploads DanishKhan_Resume.pdf
- * Strictly excludes any Cover Letter inputs.
+ * Strictly excludes any Cover Letter inputs and verifies authentic Resume targets.
  * If targetElement is provided, uploads specifically to that target without affecting others.
  * @param {Element} [targetElement=null] - Optional specific field/dropzone to attach to
  * @returns {Promise<{ uploaded: boolean, filename: string, count: number }>}
  */
 async function autoUploadResume(targetElement = null) {
+  // Domain guard: Never upload resume on ChatGPT, Claude, social, etc.
+  if (typeof isExcludedDomain === 'function' && isExcludedDomain()) {
+    console.log('[AutoApply Pro] autoUploadResume skipped: active site is excluded.');
+    return { uploaded: false, filename: '', count: 0 };
+  }
+
   const resumeFile = await getResumeFile();
   if (!resumeFile) {
     console.warn('[AutoApply Pro] Resume file not available for auto-upload.');
     return { uploaded: false, filename: '', count: 0 };
   }
 
-  // Strict Cover Letter Gate: NEVER attach resume PDF to Cover Letter!
-  if (targetElement && isCoverLetterTarget(targetElement)) {
-    console.log('[AutoApply Pro] Target is Cover Letter; strictly skipping resume PDF attachment.');
-    return { uploaded: false, filename: '', count: 0 };
+  // Strict Resume and Cover Letter Gate: MUST be a verified resume target and NEVER Cover Letter
+  if (targetElement) {
+    if (isCoverLetterTarget(targetElement)) {
+      console.log('[AutoApply Pro] Target is Cover Letter; strictly skipping resume PDF attachment.');
+      return { uploaded: false, filename: '', count: 0 };
+    }
+    if (!isResumeTarget(targetElement)) {
+      console.log('[AutoApply Pro] Target is not a verified Resume/CV upload field; skipping attachment.');
+      return { uploaded: false, filename: '', count: 0 };
+    }
   }
 
   let uploadedCount = 0;
@@ -396,14 +467,24 @@ function highlightResumeDropzone(element) {
 function initDirectHoverResumeUploader() {
   if (typeof document === 'undefined') return;
 
+  // Domain guard: Never run on ChatGPT, Claude, social, or utility sites
+  if (typeof isExcludedDomain === 'function' && isExcludedDomain()) {
+    console.log('[AutoApply Pro] Direct hover resume upload disabled on excluded site.');
+    return;
+  }
+
   function bindTarget(el) {
     if (!el || el.dataset?.autoapplyResumeHoverBound === 'true') return;
+    if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
+    if (!isResumeTarget(el)) return; // Strictly only bind to verified Resume fields!
     if (isCoverLetterTarget(el)) return; // Strictly ignore cover letters!
 
     el.dataset.autoapplyResumeHoverBound = 'true';
 
     const onHoverOrFocus = async () => {
-      // Debounce: if already attached to this element in this session, don't repeat
+      // Re-verify domain and target safety
+      if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
+      if (!isResumeTarget(el) || isCoverLetterTarget(el)) return;
       if (el.dataset?.autoapplyResumeAttached === 'true') return;
       el.dataset.autoapplyResumeAttached = 'true';
 
@@ -423,6 +504,7 @@ function initDirectHoverResumeUploader() {
   }
 
   function scanAndBind() {
+    if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
     const candidates = document.querySelectorAll(
       'input[type="file"], [class*="dropzone"], [class*="drop-zone"], [data-testid*="dropzone"], [data-qa*="dropzone"], [class*="file-upload"], [class*="resume-upload"], .upload-box, [class*="document-upload"], .gf-file-upload-container, .gf-add-file-btn, div[role="button"][aria-label*="Add file" i], div[role="button"][aria-label*="Resume" i]'
     );
@@ -444,7 +526,15 @@ if (typeof window !== 'undefined') {
   window.autoUploadResume = autoUploadResume;
   window.getResumeFile = getResumeFile;
   window.isCoverLetterTarget = isCoverLetterTarget;
+  window.isResumeTarget = isResumeTarget;
   window.initDirectHoverResumeUploader = initDirectHoverResumeUploader;
+}
+if (typeof self !== 'undefined') {
+  self.autoUploadResume = autoUploadResume;
+  self.getResumeFile = getResumeFile;
+  self.isCoverLetterTarget = isCoverLetterTarget;
+  self.isResumeTarget = isResumeTarget;
+  self.initDirectHoverResumeUploader = initDirectHoverResumeUploader;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -452,6 +542,7 @@ if (typeof module !== 'undefined' && module.exports) {
     autoUploadResume,
     getResumeFile,
     isCoverLetterTarget,
+    isResumeTarget,
     initDirectHoverResumeUploader
   };
 }
