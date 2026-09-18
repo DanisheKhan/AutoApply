@@ -469,6 +469,27 @@ async function runVerification() {
   assert(instantMessage.includes("strong fit for this role"), "Message field generates confident role fit pitch");
   assert(instantMessage.length <= 300, `Message answer length (${instantMessage.length}) respects 300 character limit`);
 
+  // Address rejection from open-ended questions & factual fallbacks
+  assert(!isOpenEndedQuestion("Full Address *"), "Full Address rejected from AI question classification");
+  assert(!isOpenEndedQuestion("Permanent Residential Address"), "Permanent Address rejected from AI question classification");
+  assert(!isOpenEndedQuestion("Address (Line 1) *"), "Address Line 1 rejected from AI question classification");
+
+  const fallbackFullAddress = generateInstantFallbackAnswer("Full Address *", DEFAULT_PROFILE);
+  assert(fallbackFullAddress.includes("Near Mujib Members House") && fallbackFullAddress.includes("425201"), `Instant fallback returns Full Address -> "${fallbackFullAddress}"`);
+  assert(!fallbackFullAddress.includes("passionate Full-Stack Developer"), "Instant fallback for Address NEVER returns developer bio pitch");
+
+  const fallbackAddrLine1 = generateInstantFallbackAnswer("Address (Line 1) *", DEFAULT_PROFILE);
+  assert(fallbackAddrLine1 === DEFAULT_PROFILE.address.streetAddress1, `Instant fallback returns Address Line 1 -> "${fallbackAddrLine1}"`);
+
+  const fallbackAddrLine2 = generateInstantFallbackAnswer("Address Line 2", DEFAULT_PROFILE);
+  assert(fallbackAddrLine2 === DEFAULT_PROFILE.address.streetAddress2, `Instant fallback returns Address Line 2 -> "${fallbackAddrLine2}"`);
+
+  const fallbackCity = generateInstantFallbackAnswer("City", DEFAULT_PROFILE);
+  assert(fallbackCity === "Bhusawal", `Instant fallback returns City -> "${fallbackCity}"`);
+
+  const fallbackPincode = generateInstantFallbackAnswer("Pincode", DEFAULT_PROFILE);
+  assert(fallbackPincode === "425201", `Instant fallback returns Pincode -> "${fallbackPincode}"`);
+
   // 6. Test Gemini AI Field Inference Engine
   console.log("\n[6] Testing Gemini AI Field Inference Engine:");
   const { inferFieldWithGemini } = require('../background/gemini-client.js');
@@ -511,6 +532,12 @@ async function runVerification() {
   const inferredEducation = await inferFieldWithGemini({ label: "Education Details", tag: "input" }, DEFAULT_PROFILE);
   assert(inferredEducation.includes("B.Tech") && inferredEducation.includes("Artificial Intelligence"), `AI Inferred Education Details: contains B.Tech AI`);
 
+  const inferredFullAddress = await inferFieldWithGemini({ label: "Full Address *", tag: "textarea" }, DEFAULT_PROFILE);
+  assert(inferredFullAddress.includes("Near Mujib Members House"), `AI Inferred Full Address: contains Near Mujib Members House`);
+
+  const inferredStreetAddress = await inferFieldWithGemini({ label: "Address (Line 1) *", tag: "input" }, DEFAULT_PROFILE);
+  assert(inferredStreetAddress === DEFAULT_PROFILE.address.streetAddress1, `AI Inferred Street Address 1: "${inferredStreetAddress}"`);
+
   const inferredExpYearsDropdown = await inferFieldWithGemini({ label: "Total years of Experience:", tag: "select", options: ["Select...", "0-1 Years", "1-2 Years", "2-3 Years", "3+ Years"] }, DEFAULT_PROFILE);
   assert(inferredExpYearsDropdown === "1-2 Years" || inferredExpYearsDropdown === "0-1 Years", `AI Inferred Experience dropdown: "${inferredExpYearsDropdown}"`);
 
@@ -531,6 +558,20 @@ async function runVerification() {
 
   const eduSugg = getFieldSuggestions(null, "Education Details", DEFAULT_PROFILE);
   assert(eduSugg.primary && eduSugg.primary.value.includes("B.Tech"), `Education Details Suggestion -> "${eduSugg.primary?.value}"`);
+
+  // Address Suggestions Tests (including textarea)
+  const mockTextarea = { tagName: 'TEXTAREA', type: 'textarea', getAttribute: () => null };
+  const fullAddressSugg = getFieldSuggestions(mockTextarea, "Full Address *", DEFAULT_PROFILE);
+  assert(fullAddressSugg.primary && fullAddressSugg.primary.value.includes("Near Mujib Members House"), `Full Address Suggestion -> "${fullAddressSugg.primary?.value}"`);
+  assert(fullAddressSugg.isOpenEnded === false, "Full Address in textarea is NOT marked as open-ended");
+  assert(fullAddressSugg.alternatives.length > 0, `Full Address has alternative chips (${fullAddressSugg.alternatives.length})`);
+
+  const mockLine1Input = { tagName: 'INPUT', type: 'text', getAttribute: () => null };
+  const line1Sugg = getFieldSuggestions(mockLine1Input, "Address (Line 1) *", DEFAULT_PROFILE);
+  assert(line1Sugg.primary && line1Sugg.primary.value === DEFAULT_PROFILE.address.streetAddress1, `Address Line 1 Suggestion -> "${line1Sugg.primary?.value}"`);
+
+  const line2Sugg = getFieldSuggestions(mockLine1Input, "Address (Line 2)", DEFAULT_PROFILE);
+  assert(line2Sugg.primary && line2Sugg.primary.value === DEFAULT_PROFILE.address.streetAddress2, `Address Line 2 Suggestion -> "${line2Sugg.primary?.value}"`);
 
   const expYearsSugg = getFieldSuggestions(null, "Total years of Experience:", DEFAULT_PROFILE);
   assert(expYearsSugg.primary && expYearsSugg.primary.value === "1", `Total Experience Years Suggestion -> "${expYearsSugg.primary?.value}"`);

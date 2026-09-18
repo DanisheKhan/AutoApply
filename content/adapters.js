@@ -1472,7 +1472,13 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
 
       // Domain intelligent fallbacks for Google Forms text inputs
       if (!matchedVal) {
-        if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
+        if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(questionText) && !/email/i.test(questionText)) {
+          matchedVal = profile.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony";
+        } else if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(questionText)) {
+          matchedVal = profile.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon";
+        } else if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(questionText) && !/email|line[_\s-]?1|line[_\s-]?2/i.test(questionText)) {
+          matchedVal = profile.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India";
+        } else if (/ppo|pre[_\s-]?placement|post.*internship/i.test(questionText)) {
           matchedVal = "Yes";
         } else if (/stipend|program.*structure|program.*details|gone.*through.*program|clear.*stipend/i.test(questionText)) {
           matchedVal = "Yes";
@@ -1567,7 +1573,7 @@ async function fillGoogleForms(profile, options = { aiAnswers: false }) {
       try {
         highlightElementThinking(targetField);
         let aiVal = null;
-        if (targetField.tagName.toLowerCase() === 'textarea' || isOpenEndedQuestion(questionText)) {
+        if (isOpenEndedQuestion(questionText) && !/address|street|location/i.test(questionText)) {
           aiVal = await sendAiRequest(questionText);
         } else {
           aiVal = await sendInferFieldAiRequest({
@@ -1769,8 +1775,8 @@ async function fillLinkedInEasyApply(profile, options = { aiAnswers: false }) {
       continue;
     }
 
-    // AI custom answers for textareas
-    if (options.aiAnswers && tag === 'textarea' && !isElementAlreadyFilled(el)) {
+    // AI custom answers for textareas (strictly open-ended, non-address)
+    if (options.aiAnswers && (tag === 'textarea' || el.isContentEditable) && isOpenEndedQuestion(label) && !/address|street/i.test(label) && !isElementAlreadyFilled(el)) {
       highlightElementThinking(el);
       const answer = await sendAiRequest(label);
       if (answer && setNativeValue(el, answer)) {
@@ -2146,7 +2152,7 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
   const isResume = !isCoverLetter && (/resume|cv\b|curriculum|biodata|upload.*file|file.*upload|add.*file/i.test(lLower) || (type === 'file' && !isCoverLetter));
   const isTextarea = tag === 'textarea' || (element && (element.isContentEditable || element.getAttribute?.('contenteditable') === 'true'));
   let isOpenEnded = typeof _isOpenEndedFn === 'function' ? _isOpenEndedFn(label) : false;
-  if (!isOpenEnded && (isTextarea || isCoverLetter) && !/address|street|skills?|bio\b/i.test(lLower)) {
+  if (!isOpenEnded && (isTextarea || isCoverLetter) && !/address|street|location|city|state|country|pincode|postal|zip|skills?|tech.*stack|education|qualif|degree|summary|bio\b/i.test(lLower)) {
     isOpenEnded = true;
   }
 
@@ -2335,8 +2341,18 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
     suggestions.push({ label: "University", value: p.academics?.graduation?.university || "KBC North Maharashtra University" });
   }
 
-  // 5. Address & Socials
-  else if (/\b(current[_\s-]?location|present[_\s-]?location|work[_\s-]?location|your[_\s-]?location)\b/i.test(lLower)) {
+  // 5. Address & Location
+  else if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(lLower) && !/email/i.test(lLower)) {
+    suggestions.push({ label: "Street Address 1", value: p.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony" });
+    suggestions.push({ label: "Full Address", value: p.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India" });
+  } else if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(lLower)) {
+    suggestions.push({ label: "Street Address 2", value: p.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon" });
+  } else if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(lLower) && !/email|mac|ip|web|line[_\s-]?1|line[_\s-]?2/i.test(lLower)) {
+    suggestions.push({ label: "Full Address", value: p.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India" });
+    suggestions.push({ label: "Street Line 1", value: p.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony" });
+    suggestions.push({ label: "Street Line 2", value: p.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon" });
+    suggestions.push({ label: "City & State", value: `${p.address?.city || 'Bhusawal'}, ${p.address?.state || 'Maharashtra'}` });
+  } else if (/\b(current[_\s-]?location|present[_\s-]?location|work[_\s-]?location|your[_\s-]?location)\b/i.test(lLower)) {
     suggestions.push({ label: "Current Location", value: p.address?.city || "Bhusawal" });
     suggestions.push({ label: "City & State", value: "Bhusawal, Maharashtra" });
     suggestions.push({ label: "Preferred: Pune", value: "Pune" });
@@ -2420,8 +2436,9 @@ async function fillSelectedElements(elements, profile, options = { aiAnswers: tr
     const _isOpenEndedFn = (typeof isOpenEndedQuestion === 'function') ? isOpenEndedQuestion : (typeof _heuristics !== 'undefined' ? _heuristics.isOpenEndedQuestion : null);
     const isOpenEnded = (typeof _isOpenEndedFn === 'function') ? _isOpenEndedFn(labelText) : false;
 
-    // A. Open-ended question AI generation
-    if (options.aiAnswers && (tag === 'textarea' || el.isContentEditable || isOpenEnded)) {
+    // A. Open-ended question AI generation (Strictly for genuine open-ended questions, NEVER address/factual)
+    const isFactualOrAddress = /address|street|city|state|zip|pincode|location|skills?|education|experience|salary|notice|phone|email/i.test(labelText);
+    if (options.aiAnswers && isOpenEnded && !isFactualOrAddress) {
       try {
         if (typeof highlightElementThinking === 'function') highlightElementThinking(el);
         let answer = '';

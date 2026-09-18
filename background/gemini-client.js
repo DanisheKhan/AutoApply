@@ -30,8 +30,8 @@ function normalizeModelName(modelName) {
 async function generateAnswerWithGemini({ question, jobContext = "", maxLength }, profile) {
   const qLower = (question || "").toLowerCase();
 
-  // Fast intercept for short numeric/factual questions so LLM never writes an essay for salary/experience/days!
-  if (/\b(salary|ctc|compensation|remuneration|lpa|inr|months?[\s_()/-]*of|experience[\s_()/-]*in[\s_()/-]*months?|how soon.*(start|join)|notice.*period|start.*in days|join.*in days)\b/i.test(qLower)) {
+  // Fast intercept for short numeric/factual/address questions so LLM never writes an essay for salary/experience/days/address!
+  if (/\b(address|street|location|city|state|pincode|postal|zip|salary|ctc|compensation|remuneration|lpa|inr|months?[\s_()/-]*of|experience[\s_()/-]*in[\s_()/-]*months?|how soon.*(start|join)|notice.*period|start.*in days|join.*in days)\b/i.test(qLower) && !/why|describe|explain|tell|motivation|experience with/i.test(qLower)) {
     return generateInstantFallbackAnswer(question, profile);
   }
 
@@ -244,8 +244,37 @@ function generateInstantFallbackAnswer(question, profile, maxLength) {
     return p.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management, Jalgaon)";
   }
 
+  // Address & Location Intercepts
+  if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(q) && !/email/i.test(q)) {
+    return p.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony";
+  }
+
+  if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(q)) {
+    return p.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon";
+  }
+
+  if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(q) && !/email|mac|ip|web|line[_\s-]?1|line[_\s-]?2/i.test(q)) {
+    return p.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India";
+  }
+
   if (/\b(current[_\s-]?location|present[_\s-]?location|your[_\s-]?location|work[_\s-]?location)\b/i.test(q)) {
     return p.address?.city || "Bhusawal";
+  }
+
+  if (/\b(city|town)\b/i.test(q) && !/state|country/i.test(q)) {
+    return p.address?.city || "Bhusawal";
+  }
+
+  if (/\b(state|province)\b/i.test(q) && !/country|city|district/i.test(q)) {
+    return p.address?.state || "Maharashtra";
+  }
+
+  if (/\b(pin[_\s-]?code|postal[_\s-]?code|zip[_\s-]?code|pincode|zip)\b/i.test(q)) {
+    return p.address?.pincode || "425201";
+  }
+
+  if (/\bcountry\b/i.test(q) && !/code|isd|dial/i.test(q)) {
+    return p.address?.country || "India";
   }
 
   // 1b. Role Fit / Message to Recruiter / Why hire / Suitability / Additional information
@@ -469,6 +498,20 @@ Designation: Full Stack Developer.`;
 
     // Country
     if (/\bcountry\b/i.test(s) && !/code|isd|dial|county/i.test(s)) return "India";
+
+    // Street Address / Full Address
+    if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(s) && !/email/i.test(s)) {
+      return profile?.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony";
+    }
+    if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(s)) {
+      return profile?.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon";
+    }
+    if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(s) && !/email|mac|ip|web|line[_\s-]?1|line[_\s-]?2/i.test(s)) {
+      return profile?.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India";
+    }
+    if (/\b(pin[_\s-]?code|postal[_\s-]?code|zip[_\s-]?code|pincode|zip)\b/i.test(s)) {
+      return profile?.address?.pincode || "425201";
+    }
 
     // City / Location
     if (/\bcity\b|\bcurrent.*location\b/i.test(s) && !/state|country/i.test(s)) return "Bhusawal";

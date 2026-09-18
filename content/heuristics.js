@@ -1143,8 +1143,8 @@ const JobDetector = {
  */
 function isOpenEndedQuestion(text) {
   if (!text || text.length < 5) return false;
-  // Strictly guard against numeric, salary, experience, notice period, contact, and factual screening fields
-  if (/\b(salary|ctc|package|compensation|remuneration|lpa|inr|rs\b|rupees?|stipend|phone|mobile|pincode|zip|dob|birth|age|cgpa|gpa|percentage|marks|gender|marital|aadhaar|pan\b|passport|passing|batch|backlog|ppo)\b/i.test(text)) {
+  // Strictly guard against address, location, numeric, salary, experience, notice period, contact, and factual screening fields
+  if (/\b(address|street|location|city|state|country|pincode|postal|zip|salary|ctc|package|compensation|remuneration|lpa|inr|rs\b|rupees?|stipend|phone|mobile|dob|birth|age|cgpa|gpa|percentage|marks|gender|marital|aadhaar|pan\b|passport|passing|batch|backlog|ppo|email|name)\b/i.test(text)) {
     return false;
   }
   if (/\b(how many months|months?[\s_()/-]*of[\s_()/-]*experience|experience[\s_()/-]*in[\s_()/-]*months?|experience[\s_()/-]*in[\s_()/-]*years?|years?[\s_()/-]*of[\s_()/-]*experience|how soon.*(start|join)|notice[_\s-]?period|when.*can.*you.*(start|join)|(start|join)[\s_()/-]*in[\s_()/-]*days|availability.*(days)?|relevant.*experience)\b/i.test(text)) {

@@ -638,11 +638,20 @@
 
     const tag = element.tagName ? element.tagName.toLowerCase() : '';
     const isTextarea = tag === 'textarea';
+    const isContentEditable = Boolean(element.isContentEditable || element.getAttribute?.('contenteditable') === 'true');
 
-    // 1. Open-Ended AI Mode:
-    // If suggestions says isOpenEnded, OR it's a textarea/contenteditable without a concrete profile match, switch to AI mode
-    const hasConcreteProfileValue = currentTargetValue && currentTargetValue !== 'Yes' && currentTargetValue !== 'No';
-    if ((suggestions.isOpenEnded || isTextarea || element.isContentEditable) && (!hasConcreteProfileValue || isTextarea)) {
+    // Check if the field is clearly an address, personal, or factual field
+    const isAddressOrFactual = /\b(address|street|city|state|country|pincode|postal|zip|salary|ctc|notice|experience|months|years|phone|mobile|email|name|full[_\s-]?name|degree|college|university|education|skills?)\b/i.test(currentLabel);
+
+    // Has a concrete profile value (not just boolean Yes/No default)
+    const hasConcreteProfileValue = Boolean(currentTargetValue && currentTargetValue !== 'Yes' && currentTargetValue !== 'No');
+
+    // Truly open-ended AI question:
+    // Suggestions says isOpenEnded AND it's NOT an address or factual field AND there's no concrete profile value
+    const isTrulyOpenEnded = (suggestions.isOpenEnded || ((isTextarea || isContentEditable) && !hasConcreteProfileValue && !isAddressOrFactual)) && !isAddressOrFactual;
+
+    // 1. Open-Ended AI Mode: ONLY if truly open-ended AND no concrete profile value
+    if (isTrulyOpenEnded && !hasConcreteProfileValue) {
       currentMode = 'ai';
       btnGroup.className = 'aap-btn-group visible';
       insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
@@ -673,7 +682,7 @@
         btnGroup.className = 'aap-btn-group visible';
         insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
         insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
-      } else if (suggestions.isOpenEnded || isTextarea || element.isContentEditable) {
+      } else if (isTrulyOpenEnded) {
         currentMode = 'ai';
         btnGroup.className = 'aap-btn-group visible';
         insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
@@ -761,7 +770,19 @@
       const ph = (currentAnchor.placeholder || currentAnchor.getAttribute?.('placeholder') || '').trim();
       const lbl = (typeof getElementLabel === 'function' ? getElementLabel(currentAnchor) : ph).trim();
       const combined = `${lbl} ${ph} ${currentAnchor.name || ''} ${currentAnchor.id || ''}`.toLowerCase();
-      if (/skills?|tech.*stack|technolog/i.test(combined) && !/years?|months?|exp/i.test(combined)) {
+      if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(combined) && !/email/i.test(combined)) {
+        valToApply = profile.address?.streetAddress1 || "Near Mujib Members House, Khadka, New Eidgah Colony";
+      } else if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(combined)) {
+        valToApply = profile.address?.streetAddress2 || "Bhusawal (Rural), Dist. Jalgaon";
+      } else if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(combined) && !/email|mac|ip|web|line[_\s-]?1|line[_\s-]?2/i.test(combined)) {
+        valToApply = profile.address?.fullAddress || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India";
+      } else if (/\b(city|town)\b/i.test(combined) && !/state|country/i.test(combined)) {
+        valToApply = profile.address?.city || "Bhusawal";
+      } else if (/\b(state|province)\b/i.test(combined) && !/country|city|district/i.test(combined)) {
+        valToApply = profile.address?.state || "Maharashtra";
+      } else if (/\b(pin[_\s-]?code|postal[_\s-]?code|zip[_\s-]?code|pincode|zip)\b/i.test(combined)) {
+        valToApply = profile.address?.pincode || "425201";
+      } else if (/skills?|tech.*stack|technolog/i.test(combined) && !/years?|months?|exp/i.test(combined)) {
         valToApply = profile.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL";
       } else if (/education|qualif/i.test(combined) && !/10th|12th|school|college|degree/i.test(combined)) {
         valToApply = profile.educationSummary || "B.Tech in Artificial Intelligence (CGPA: 7.79, 2022-2026, G H Raisoni College of Engineering and Management)";
@@ -778,8 +799,9 @@
       return;
     }
 
-    // Step 2c: If field is a textarea, contenteditable, or open-ended, ALWAYS draft an AI response
-    const isAnchorOpenEnded = currentAnchor.tagName?.toLowerCase() === 'textarea' || currentAnchor.isContentEditable || (currentSuggestions && currentSuggestions.isOpenEnded);
+    // Step 2c: If field is a textarea, contenteditable, or open-ended, draft an AI response ONLY if not factual/address
+    const isAnchorFactualOrAddress = /\b(address|street|city|state|country|pin|postal|zip|salary|ctc|notice|experience|months|years|phone|mobile|email|name|full[_\s-]?name)\b/i.test(currentLabel);
+    const isAnchorOpenEnded = !isAnchorFactualOrAddress && (currentAnchor.tagName?.toLowerCase() === 'textarea' || currentAnchor.isContentEditable || (currentSuggestions && currentSuggestions.isOpenEnded));
     if (isAnchorOpenEnded) {
       const promptText = currentLabel && !/^(answer|your\s+answer|your\s+response|response|input)$/i.test(currentLabel.trim())
         ? currentLabel
@@ -893,7 +915,14 @@
         if (limitMatch) maxLen = parseInt(limitMatch[1], 10);
       }
 
-      if (typeof sendAiRequest === 'function') {
+      // Safety guard: If promptText is actually an address or factual field, never draft an AI essay
+      if (/\b(street[_\s-]?address[_\s-]?1|address[_\s-]?\(?line[_\s-]?1\)?|address[_\s-]?1|house[_\s-]?no|flat[_\s-]?no|building|apartment)\b/i.test(promptText) && !/email/i.test(promptText)) {
+        answer = activeProfile?.address?.streetAddress1 || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE?.address?.streetAddress1 : '') || "Near Mujib Members House, Khadka, New Eidgah Colony";
+      } else if (/\b(street[_\s-]?address[_\s-]?2|address[_\s-]?\(?line[_\s-]?2\)?|address[_\s-]?2|colony|locality|landmark)\b/i.test(promptText)) {
+        answer = activeProfile?.address?.streetAddress2 || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE?.address?.streetAddress2 : '') || "Bhusawal (Rural), Dist. Jalgaon";
+      } else if (/\b(full[_\s-]?address|complete[_\s-]?address|residential[_\s-]?address|permanent[_\s-]?address|current[_\s-]?address|correspondence[_\s-]?address|present[_\s-]?address|\baddress\b)\b/i.test(promptText) && !/email|mac|ip|web/i.test(promptText)) {
+        answer = activeProfile?.address?.fullAddress || (typeof window !== 'undefined' ? window.DEFAULT_PROFILE?.address?.fullAddress : '') || "Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India";
+      } else if (typeof sendAiRequest === 'function') {
         answer = await sendAiRequest(promptText, { maxLength: maxLen });
       } else if (typeof generateAnswerWithGemini === 'function') {
         answer = await generateAnswerWithGemini({ question: promptText, jobContext: document.title, maxLength: maxLen }, activeProfile);
