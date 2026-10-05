@@ -1199,17 +1199,27 @@
       }
     });
 
-    // Copy button click
+    // Copy button click - copies text and immediately closes HUD box
     copyBtn.addEventListener('click', async () => {
       const val = textarea.value;
       try {
-        await navigator.clipboard.writeText(val);
-        copyText.textContent = "Copied!";
-        setTimeout(() => {
-          if (copyText) copyText.textContent = "Copy";
-        }, 1800);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(val);
+        } else {
+          textarea.select();
+          document.execCommand('copy');
+        }
+        showToast("✓ Copied to clipboard!");
+        dismissResultHud();
       } catch (err) {
-        showToast("Unable to copy to clipboard.");
+        try {
+          textarea.select();
+          document.execCommand('copy');
+          showToast("✓ Copied to clipboard!");
+          dismissResultHud();
+        } catch (copyErr) {
+          showToast("Unable to copy to clipboard.");
+        }
       }
     });
 

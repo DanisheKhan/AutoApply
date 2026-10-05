@@ -177,8 +177,8 @@
       return;
     }
 
-    // Alt + X: Visual AI Snip (Gemini Vision screen question solver)
-    if (e.altKey && (e.key === 'x' || e.key === 'X' || (e.shiftKey && (e.key === 'V' || e.key === 'v')))) {
+    // Alt + V or Alt + X: Visual AI Snip (Gemini Vision screen question solver)
+    if (e.altKey && (e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V')) {
       e.preventDefault();
       e.stopPropagation();
       if (typeof window.activateVisualSnip === 'function') {
