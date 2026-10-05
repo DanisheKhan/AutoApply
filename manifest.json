@@ -7,7 +7,8 @@
     "storage",
     "unlimitedStorage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",
@@ -31,6 +32,26 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "commands": {
+    "trigger_visual_snip": {
+      "suggested_key": {
+        "default": "Alt+X"
+      },
+      "description": "Visual AI Snip & Autofill"
+    },
+    "trigger_autofill": {
+      "suggested_key": {
+        "default": "Alt+Shift+F"
+      },
+      "description": "1-Click Form Autofill"
+    },
+    "trigger_snip": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Snip & Fill Area"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
@@ -44,6 +65,7 @@
         "content/adapters.js",
         "content/field-popup.js",
         "content/snip-selector.js",
+        "content/visual-snip.js",
         "content/content.js"
       ],
       "run_at": "document_idle"

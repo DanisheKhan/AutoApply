@@ -40,6 +40,38 @@ function setNativeValue(element, value) {
   }
 
   const targetTag = (target.tagName || '').toLowerCase();
+  const inputType = (target.type || target.getAttribute?.('type') || '').toLowerCase();
+
+  // HTML5 Date Input normalizer: strictly mandates "yyyy-MM-dd" format to prevent browser validation errors
+  if (targetTag === 'input' && inputType === 'date' && value !== null && value !== undefined) {
+    const rawVal = String(value).trim();
+    const dmyMatch = rawVal.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+    if (dmyMatch) {
+      const d = dmyMatch[1].padStart(2, '0');
+      const m = dmyMatch[2].padStart(2, '0');
+      const y = dmyMatch[3];
+      value = `${y}-${m}-${d}`;
+    } else {
+      const ymdMatch = rawVal.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      if (ymdMatch) {
+        const y = ymdMatch[1];
+        const m = ymdMatch[2].padStart(2, '0');
+        const d = ymdMatch[3].padStart(2, '0');
+        value = `${y}-${m}-${d}`;
+      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(rawVal)) {
+        value = "2005-06-01";
+      }
+    }
+  }
+
+  // HTML5 Month Input normalizer: strictly mandates "yyyy-MM" format
+  if (targetTag === 'input' && inputType === 'month' && value !== null && value !== undefined) {
+    const rawVal = String(value).trim();
+    const ymMatch = rawVal.match(/^(\d{4})[\/\-\.](\d{1,2})$/);
+    if (ymMatch) {
+      value = `${ymMatch[1]}-${ymMatch[2].padStart(2, '0')}`;
+    }
+  }
 
   try {
     target.focus();
@@ -2185,10 +2217,10 @@ function getFieldSuggestions(element, customLabel = '', profile = {}) {
 
   // 1b. Technical Skills & Core Stack
   else if (/\b(primary[_\s-]?skills?|key[_\s-]?skills?|technical[_\s-]?skills?|core[_\s-]?skills?|top[_\s-]?skills?|skill[_\s-]?set|skills?|technolog(y|ies)|proficienc(y|ies)|tech[_\s-]?stack|area[_\s-]?of[_\s-]?expertise|tools?[_\s-]?(and|&|\/)?[_\s-]?technologies)\b/i.test(lLower) && !/years?|months?|exp\b|experience\b|rating|level|scale|cert|how[_\s-]?many/i.test(lLower)) {
-    suggestions.push({ label: "Primary Skills", value: p.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java DSA, REST APIs, Git, SQL" });
+    suggestions.push({ label: "Primary Skills", value: p.skillsSummary || "React.js, Node.js, Express.js, MongoDB, JavaScript, TypeScript, Tailwind CSS, Supabase, Next.js, Java, REST APIs, Git, SQL" });
     suggestions.push({ label: "MERN Stack", value: "React.js, Node.js, Express.js, MongoDB" });
-    suggestions.push({ label: "Full Stack", value: "React, Node.js, Express, MongoDB, Supabase, Java DSA, REST APIs, Tailwind CSS" });
-    suggestions.push({ label: "Java & DSA", value: "Java, Data Structures & Algorithms (500+ problems solved)" });
+    suggestions.push({ label: "Full Stack", value: "React, Node.js, Express, MongoDB, Supabase, Java, REST APIs, Tailwind CSS" });
+    suggestions.push({ label: "Java & DSA", value: "Java, Data Structures & Algorithms" });
   }
 
   // 1c. Role Fit / Message to Recruiter / Additional Information

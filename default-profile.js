@@ -8,7 +8,7 @@ const DEFAULT_PROFILE = {
     apiKey: "",
     model: "gemini-3.6-flash",
     tone: "professional_concise",
-    customInstructions: "Answer job application screening questions highlighting my full-stack web development skills (React, Node.js, Express, MongoDB, Supabase, Tailwind CSS, REST APIs), real-world freelance & client projects (Madina Perfumes, Muskan Hospital, Vega Star, AURA Restauracja), and strong Java DSA foundation (500+ problems solved). Showcase dual-track experience in rapid client delivery and robust software engineering practices. Keep answers clear, authentic, and high-impact."
+    customInstructions: "Answer job application screening questions highlighting my full-stack web development skills (React, Node.js, Express, MongoDB, Supabase, Tailwind CSS, REST APIs), real-world freelance & client projects (Madina Perfumes, Muskan Hospital, Vega Star, AURA Restauracja), and strong Java foundation in Data Structures and Algorithms. Showcase dual-track experience in rapid client delivery and robust software engineering practices. Keep answers clear, authentic, and high-impact."
   },
 
   // Personal Information
@@ -256,10 +256,10 @@ const DEFAULT_PROFILE = {
     {
       name: "CodeRace",
       type: "Personal / Product",
-      tagline: "DSA Progress Tracking & Competition Platform",
+      tagline: "Developer Progress Tracking & Competition Platform",
       stack: "React.js, Supabase, PostgreSQL, Vercel",
       url: "https://coderace-danishkhan.vercel.app",
-      description: "Full-stack platform tracking a 502-question DSA sheet across multiple users with topic progress bars, streaks, and a live leaderboard. Normalized PostgreSQL schema with Supabase Auth multi-user sign-up."
+      description: "Full-stack platform tracking practice questions across multiple users with topic progress bars, streaks, and a live leaderboard. Normalized PostgreSQL schema with Supabase Auth multi-user sign-up."
     },
     {
       name: "Hospital Management System (HMS)",
@@ -342,7 +342,7 @@ CONTACT: +91 9322990946 | danishkhan.jsx@gmail.com
 PORTFOLIO: https://itsdanishkhan.me | LINKEDIN: https://linkedin.com/in/danish-jsx | GITHUB: https://github.com/Danishekhan
 
 PROFESSIONAL SUMMARY:
-Full-Stack Web Developer proficient in MERN Stack (React.js, Node.js, Express.js, MongoDB), Supabase, PostgreSQL, Next.js, and Tailwind CSS. Strong algorithmic problem-solving foundation in Java Data Structures & Algorithms (500+ problems solved). Proven track record across commercial client projects (e-commerce, healthcare, hospitality), production internships, and scalable personal products with automated CI/CD. Target roles: Junior Developer / Full Stack / React Developer (Dual-track freelancing & enterprise placements).
+Full-Stack Web Developer proficient in MERN Stack (React.js, Node.js, Express.js, MongoDB), Supabase, PostgreSQL, Next.js, and Tailwind CSS. Strong algorithmic problem-solving foundation in Java, Data Structures, and Algorithms. Proven track record across commercial client projects (e-commerce, healthcare, hospitality), production internships, and scalable personal products with automated CI/CD. Target roles: Junior Developer / Full Stack / React Developer (Dual-track freelancing & enterprise placements).
 
 EDUCATION:
 - B.Tech in Artificial Intelligence: G H Raisoni College of Engineering and Management, Jalgaon (Autonomous), KBC NMU University. Graduated Summer 2026. Final CGPA: 7.79/10. Zero backlogs.
@@ -366,7 +366,7 @@ CLIENT & FREELANCE PROJECTS:
 5. Pinch Beverages: Formulated technical proposal and specs (₹17K static / ₹38K platform) rendered with ReportLab PDF generator.
 
 PERSONAL & PRODUCT PROJECTS:
-1. CodeRace (coderace-danishkhan.vercel.app): Full-stack DSA practice platform tracking a 502-question sheet with streaks, leaderboards, and normalized PostgreSQL / Supabase Auth.
+1. CodeRace (coderace-danishkhan.vercel.app): Full-stack developer progress tracking platform with streaks, live leaderboards, and normalized PostgreSQL / Supabase Auth.
 2. Hospital Management System (HMS): Subscription-model clinic ERP covering OPD, admissions, analytics, staff, Rx prescriptions, and patient records.
 3. Gradify: Student Result and Marksheet Portal with automated CGPA calculation.
 4. FocusFlow: Browser extension for deep-work focus tracking.

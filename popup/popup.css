@@ -330,6 +330,17 @@ body {
   border-color: rgba(255, 255, 255, 0.24);
 }
 
+/* Visual AI Snip Button */
+.btn-visual:hover {
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.btn-visual:hover .btn-icon-box {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
 /* Unified Icon Box across ALL buttons */
 .btn-icon-box {
   width: 30px;

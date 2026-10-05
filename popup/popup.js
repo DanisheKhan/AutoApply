@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tagEl = document.getElementById('platform-tag');
   const autofillBtn = document.getElementById('btn-autofill');
   const snipBtn = document.getElementById('btn-snip-fill');
+  const visualSnipBtn = document.getElementById('btn-visual-snip');
   const aiBtn = document.getElementById('btn-ai-fill');
   const statusMsg = document.getElementById('status-message');
   const optionsBtn = document.getElementById('btn-open-options');
@@ -112,20 +113,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  const CONTENT_FILES = [
+    "assets/resume-data.js",
+    "default-profile.js",
+    "content/heuristics.js",
+    "content/resume-uploader.js",
+    "content/adapters.js",
+    "content/field-popup.js",
+    "content/snip-selector.js",
+    "content/visual-snip.js",
+    "content/content.js"
+  ];
+
+  function isRestrictedUrl(url) {
+    if (!url) return false;
+    return /^(chrome|chrome-extension|edge|devtools|about|view-source):/i.test(url) ||
+      url.includes('chromewebstore.google.com');
+  }
+
+  function dispatchTabAction(tabId, message, onResult) {
+    if (!tab || isRestrictedUrl(tab.url)) {
+      if (statusMsg) {
+        statusMsg.className = "status-message";
+        statusMsg.textContent = "Cannot run on Chrome system or Web Store pages.";
+      }
+      return;
+    }
+
+    chrome.tabs.sendMessage(tabId, message, async (res) => {
+      if (chrome.runtime.lastError) {
+        // Tab was open before reload or content script unattached.
+        // Auto-inject content scripts on the fly!
+        if (chrome.scripting && chrome.scripting.executeScript) {
+          try {
+            await chrome.scripting.executeScript({
+              target: { tabId },
+              files: CONTENT_FILES
+            });
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabId, message, (retryRes) => {
+                if (chrome.runtime.lastError) {
+                  if (statusMsg) {
+                    statusMsg.className = "status-message";
+                    statusMsg.textContent = "Please refresh the page once (F5).";
+                  }
+                } else if (onResult) {
+                  onResult(retryRes);
+                }
+              });
+            }, 70);
+            return;
+          } catch (injectErr) {
+            console.warn("[AutoApply Pro] Auto-inject fallback failed:", injectErr);
+          }
+        }
+
+        if (statusMsg) {
+          statusMsg.className = "status-message";
+          statusMsg.textContent = "Please refresh the page once (F5).";
+        }
+      } else if (onResult) {
+        onResult(res);
+      }
+    });
+  }
+
   // Autofill Click
   autofillBtn.addEventListener('click', () => {
     autofillBtn.disabled = true;
     statusMsg.className = "status-message thinking";
     statusMsg.textContent = "⚡ Dispatching form autofill...";
 
-    chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_AUTOFILL" }, (res) => {
+    dispatchTabAction(tab.id, { action: "TRIGGER_AUTOFILL" }, (res) => {
       autofillBtn.disabled = false;
-      if (chrome.runtime.lastError) {
-        statusMsg.className = "status-message";
-        statusMsg.textContent = "Please reload the job page once to activate.";
-        return;
-      }
-
       if (res && res.success && res.result) {
         statusMsg.className = "status-message success";
         statusMsg.textContent = `✓ Filled ${res.result.filledCount} fields on ${res.result.platform}!`;
@@ -136,19 +196,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Snip & Fill Click
+  // Snip & Fill Click (DOM Area Selection)
   if (snipBtn) {
     snipBtn.addEventListener('click', () => {
-      chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_SNIP_FILL" }, () => {
-        if (chrome.runtime.lastError) {
-          if (statusMsg) {
-            statusMsg.className = "status-message";
-            statusMsg.textContent = "Please reload the job page once to activate.";
-          }
-        } else {
-          // Close the popup so user can immediately drag to select on the webpage
-          window.close();
-        }
+      dispatchTabAction(tab.id, { action: "TRIGGER_SNIP_FILL" }, () => {
+        window.close();
+      });
+    });
+  }
+
+  // Visual AI Snip Click (Screen Pixel Capture + Gemini Multimodal Vision)
+  if (visualSnipBtn) {
+    visualSnipBtn.addEventListener('click', () => {
+      dispatchTabAction(tab.id, { action: "TRIGGER_VISUAL_SNIP" }, () => {
+        window.close();
       });
     });
   }
@@ -159,14 +220,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusMsg.className = "status-message thinking";
     statusMsg.textContent = "✨ Calling Gemini AI for custom essays...";
 
-    chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_AI_FILL" }, (res) => {
+    dispatchTabAction(tab.id, { action: "TRIGGER_AI_FILL" }, (res) => {
       aiBtn.disabled = false;
-      if (chrome.runtime.lastError) {
-        statusMsg.className = "status-message";
-        statusMsg.textContent = "Please reload the job page once to activate.";
-        return;
-      }
-
       if (res && res.success && res.result) {
         statusMsg.className = "status-message success";
         statusMsg.textContent = `✓ Generated ${res.result.aiCount} tailored answers!`;
@@ -185,14 +240,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusMsg.className = "status-message thinking";
       statusMsg.textContent = "Attaching DanishKhan_Resume.pdf...";
 
-      chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_UPLOAD_RESUME" }, (res) => {
+      dispatchTabAction(tab.id, { action: "TRIGGER_UPLOAD_RESUME" }, (res) => {
         resumeBtn.disabled = false;
-        if (chrome.runtime.lastError) {
-          statusMsg.className = "status-message";
-          statusMsg.textContent = "Please reload the job page once to activate.";
-          return;
-        }
-
         if (res && res.success && res.result && res.result.uploaded) {
           statusMsg.className = "status-message success";
           statusMsg.textContent = `✓ Attached ${res.result.filename || 'DanishKhan_Resume.pdf'}!`;

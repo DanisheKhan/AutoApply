@@ -65,9 +65,9 @@ async function generateAnswerWithGemini({ question, jobContext = "", maxLength }
 CANDIDATE PROFILE:
 - Name: Mohammad Danish Khan | B.Tech in Artificial Intelligence, CGPA 7.79, Summer 2026 graduate
 - Tech Stack: React.js, Node.js, Express.js, MongoDB, Next.js, Supabase, PostgreSQL, Tailwind CSS, TypeScript
-- DSA: Java, 500+ problems solved on LeetCode/competitive platforms
+- Core & Problem Solving: Java, Data Structures & Algorithms, Object-Oriented Programming
 - Production Projects:
-  • CodeRace — multi-user DSA tracking platform with PostgreSQL/Supabase live leaderboards & streak calculations
+  • CodeRace — multi-user progress tracking platform with PostgreSQL/Supabase live leaderboards & streak calculations
   • Madina Perfumes — live e-commerce store with Razorpay HMAC SHA256 webhook verification & Shiprocket API dispatch
   • Meet Bros — 10-month internship, shipped 3 production web apps, reduced development time by 25%
 - Experience: 12 months total (10-month Full Stack Intern + freelance)
@@ -284,7 +284,7 @@ function generateInstantFallbackAnswer(question, profile, maxLength) {
 
   // Why join / Motivation
   if (/why.*(join|company|team|role|hire|work with us|interested in)|passion|motivation|reason/i.test(q)) {
-    return constrain("I am eager to join your engineering team to contribute my full-stack web development skills across React, Node.js, Express, MongoDB, and Supabase. Having built and shipped production platforms like Madina Perfumes and CodeRace alongside solving 500+ Java DSA problems, I thrive on engineering fast, scalable user experiences and solving challenging technical problems.");
+    return constrain("I am eager to join your engineering team to contribute my full-stack web development skills across React, Node.js, Express, MongoDB, and Supabase. Having built and shipped production platforms like Madina Perfumes and CodeRace with a strong foundation in Java and modern web technologies, I thrive on engineering fast, scalable user experiences and solving challenging technical problems.");
   }
 
   // Projects & Accomplishments
@@ -294,7 +294,7 @@ function generateInstantFallbackAnswer(question, profile, maxLength) {
 
   // Tech Stack & Skills (Open-ended essays)
   if (/stack|technology|tech|match|experience with|skill|tool|framework/i.test(q)) {
-    return constrain("My core technical stack centers on React.js, Node.js, Express, MongoDB, Next.js, and Supabase, backed by a strong foundation in Java DSA (500+ problems solved). I focus on modular component architecture, robust RESTful API design, secure JWT authentication, and building clean, high-performance web applications.");
+    return constrain("My core technical stack centers on React.js, Node.js, Express, MongoDB, Next.js, and Supabase, backed by a strong foundation in Java, Data Structures, and clean software architecture. I focus on modular component architecture, robust RESTful API design, secure JWT authentication, and building clean, high-performance web applications.");
   }
 
   // Strengths & Self-description
@@ -324,7 +324,7 @@ function generateInstantFallbackAnswer(question, profile, maxLength) {
 
   // Cover Letter / Letter of Motivation
   if (/cover[_\s-]?letter|motivation[_\s-]?letter|letter.*motivation|statement.*purpose/i.test(q)) {
-    return `Dear Hiring Team,\n\nI am writing to express my strong enthusiasm for this engineering opportunity. As a B.Tech Artificial Intelligence graduate (CGPA 7.79) with 12 months of total engineering experience—including a 10-month Full Stack Developer internship at Meet Bros—I specialize in architecting performant, resilient web applications using React.js, Node.js, Express, MongoDB, Next.js, and Supabase, complemented by solving 500+ Java DSA algorithmic challenges.\n\nIn my production projects, I engineered CodeRace, a competitive DSA tracking platform featuring live leaderboards and low-latency database queries on Supabase/PostgreSQL. Furthermore, for Madina Perfumes, I developed secure HMAC SHA256 webhook verification for Razorpay payment processing and automated dispatch pipelines with the Shiprocket API. At Meet Bros, I shipped three client web applications while streamlining front-end workflows by 25% through reusable design systems and clean component state management.\n\nI am confident that my strong engineering ownership, rigorous problem-solving mindset, and dedication to rapid execution will make an immediate positive impact on your team. I look forward to the opportunity to discuss how my technical skills align with your engineering roadmap.\n\nSincerely,\nMohammad Danish Khan\nFull Stack Developer | danishkhan.jsx@gmail.com | +91 9322990946`;
+    return `Dear Hiring Team,\n\nI am writing to express my strong enthusiasm for this engineering opportunity. As a B.Tech Artificial Intelligence graduate (CGPA 7.79) with 12 months of total engineering experience—including a 10-month Full Stack Developer internship at Meet Bros—I specialize in architecting performant, resilient web applications using React.js, Node.js, Express, MongoDB, Next.js, and Supabase, complemented by strong problem-solving skills in Java.\n\nIn my production projects, I engineered CodeRace, a developer progress tracking platform featuring live leaderboards and low-latency database queries on Supabase/PostgreSQL. Furthermore, for Madina Perfumes, I developed secure HMAC SHA256 webhook verification for Razorpay payment processing and automated dispatch pipelines with the Shiprocket API. At Meet Bros, I shipped three client web applications while streamlining front-end workflows by 25% through reusable design systems and clean component state management.\n\nI am confident that my strong engineering ownership, rigorous problem-solving mindset, and dedication to rapid execution will make an immediate positive impact on your team. I look forward to the opportunity to discuss how my technical skills align with your engineering roadmap.\n\nSincerely,\nMohammad Danish Khan\nFull Stack Developer | danishkhan.jsx@gmail.com | +91 9322990946`;
   }
 
   // Deadlines & High-Pressure Environments
@@ -338,7 +338,7 @@ function generateInstantFallbackAnswer(question, profile, maxLength) {
   }
 
   // Default Universal Fallback
-  return constrain("I'm a passionate Full-Stack Developer with hands-on experience across React.js, Node.js, Express.js, and MongoDB, complemented by 500+ solved Java DSA problems. I'm eager to contribute clean, scalable code and grow alongside your engineering team.");
+  return constrain("I'm a passionate Full-Stack Developer with hands-on experience across React.js, Node.js, Express.js, and MongoDB, complemented by strong fundamentals in Java and Data Structures. I'm eager to contribute clean, scalable code and grow alongside your engineering team.");
 }
 
 /**
@@ -406,13 +406,13 @@ async function inferFieldWithGemini({
 Location: Bhusawal, Jalgaon, Maharashtra - 425201, India.
 Citizenship: Indian. Marital Status: Single. Religion: Islam.
 Degree: B.Tech in Artificial Intelligence (2022-2026), CGPA 7.79, Zero Backlogs, G H Raisoni College of Engineering, KBC North Maharashtra University.
-Tech Stack: React.js, Node.js, Express.js, MongoDB, Supabase, Next.js, Java DSA (500+ solved).
+Tech Stack: React.js, Node.js, Express.js, MongoDB, Supabase, Next.js, Java, Data Structures.
 Experience: 12 months total (10-month Full Stack Intern at Meet Bros, Freelance: Madina Perfumes, Muskan Hospital, Vega Star).
 Expected CTC: 5.0 LPA (5,00,000 INR). Current CTC: 0 INR (Fresher/Intern).
 Passport: Indian AH927400, Valid till 2035. Notice Period: Immediate (0 Days).
 Current Location: Bhusawal, Maharashtra. Willing to relocate: Yes (Pune, Bengaluru, Mumbai, Hyderabad, Gurgaon, Remote).
 Email: danishkhan.jsx@gmail.com. Phone: 9322990946 (+91 9322990946).
-Headline: Full-Stack Web Developer | React, Node.js, Express, MongoDB, Supabase, Java DSA.
+Headline: Full-Stack Web Developer | React, Node.js, Express, MongoDB, Supabase, Java.
 Designation: Full Stack Developer.`;
 
   /**
@@ -736,6 +736,235 @@ async function testGeminiApiKey(apiKey, model = DEFAULT_MODEL) {
   }
 }
 
+/**
+ * Multimodal Visual Question Solver for AutoApply Pro.
+ * Analyzes a cropped screenshot using Gemini Vision API, cross-references
+ * candidate Mohammad Danish Khan's master bio-data, and extracts the answer.
+ * @param {Object} params
+ * @param {string} params.imageBase64 - The screenshot (base64 string or data URL).
+ * @param {string} [params.questionHint] - Optional DOM hint/label if an input was detected.
+ * @param {number} [params.maxLength] - Optional character limit constraint.
+ * @param {Object} profile - Candidate master profile.
+ * @returns {Promise<{ detectedQuestion: string, answer: string, isNumericOrShort: boolean, fieldType: string }>}
+ */
+async function analyzeVisionWithGemini({ imageBase64, questionHint = "", maxLength }, profile) {
+  if (!imageBase64) {
+    throw new Error("No image data provided for visual analysis.");
+  }
+
+  const p = profile || (typeof DEFAULT_PROFILE !== 'undefined' ? DEFAULT_PROFILE : {});
+  const apiKey = p?.gemini?.apiKey || "";
+  let model = normalizeModelName(p?.gemini?.model || DEFAULT_MODEL);
+
+  const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, '').trim();
+
+  // If no API key configured, use fallback or hint
+  if (!apiKey || apiKey.trim() === "") {
+    if (questionHint) {
+      const fallbackAns = generateInstantFallbackAnswer(questionHint, p, maxLength);
+      return {
+        detectedQuestion: questionHint,
+        answer: fallbackAns,
+        isNumericOrShort: fallbackAns.length < 50,
+        fieldType: 'text'
+      };
+    }
+    return {
+      detectedQuestion: "Visual Question (API Key required for Vision)",
+      answer: "Please add your Gemini API key in AutoApply Pro settings to enable AI Vision.",
+      isNumericOrShort: false,
+      fieldType: 'text'
+    };
+  }
+
+  const systemInstructions = `You are an elite AI assistant for candidate Mohammad Danish Khan filling out a job application.
+The candidate took a screenshot of a specific form question, label, or input field on their screen.
+
+CANDIDATE MASTER PROFILE (MOHAMMAD DANISH KHAN):
+- Full Name: Mohammad Danish Khan Naeem Khan (Short: Danish Khan)
+- Certificate / Formal Name: Mohammad Danish Khan
+- First Name: Mohammad Danish | Middle: Khan | Last: Naeem Khan
+- Gender: Male | DOB: 01/06/2005 (1st June 2005) | Blood Group: O+ / AB+
+- Nationality: Indian | Mother Tongue: Urdu | Religion: Islam
+- Category: Open / Economically Weaker Section (EWS)
+- Contact: Mobile +91 9322990946 (Plain: 9322990946) | Email: danishkhan.jsx@gmail.com
+- Portfolio: https://itsdanishkhan.me | GitHub: https://github.com/Danishekhan | LinkedIn: https://linkedin.com/in/danish-jsx | LeetCode: https://leetcode.com/u/Danishekhan/
+- Address: Near Mujib Members House, Khadka, New Eidgah Colony, Bhusawal (Rural), Dist. Jalgaon, Maharashtra - 425201, India (City: Bhusawal, State: Maharashtra, PIN: 425201)
+- Govt IDs: PAN: NNPPK5977P | Aadhaar: 2708 8362 2036 | Passport: AH927400 (Issued: Mumbai, 30/09/2025, Expiry: 29/09/2035) | Voter ID: ZUT5583885
+
+ACADEMICS & EDUCATION:
+- Degree: Bachelor of Technology (B.Tech) in Artificial Intelligence / Computer Science
+- College: G H Raisoni College of Engineering and Management, Jalgaon (Autonomous)
+- University: Kavayitri Bahinabai Chaudhari North Maharashtra University (KBC NMU), Jalgaon
+- Duration: 2022 to 2026 (Summer 2026 Graduate)
+- Final Degree CGPA: 7.79 / 10 (Sem I: 7.94, Sem II: 8.21, Sem III: 8.14, Sem IV: 7.48, Sem V: 6.14, Sem VI: 8.24)
+- PRN / Enroll: 2022100101010928 | Roll No: 22111032
+- Class 12th (HSC - Science): March 2022, Shri D. L. Hindi Jr. College Bhusawal, Marks: 423 / 600 (70.50% / 70%), Seat: S058734
+- Class 10th (SSC): March 2020, B.Z. Urdu High School Bhusawal, Marks: 448 / 500 (89.60%), Seat: D174071
+
+WORK EXPERIENCE:
+- Meet Bros (Remote) | Role: Website & UI/UX Designer & Developer Intern | Duration: June 2025 – March 2026 (10 months)
+  * Shipped 3 production-level web applications (Vegeta Star Film, Dynameet, HarryOm) using React.js, Node.js, Express.js, and Tailwind CSS.
+  * Reduced front-end development time by ~25% using reusable UI component design systems and achieved up to 30% faster page loads via code splitting.
+- Total Work Experience: 12 months (10-month internship + freelance) / 1 year.
+
+FEATURED PROJECTS:
+1. CodeRace (coderace-danishkhan.vercel.app): Full-stack developer practice & progress tracking platform with live Supabase & PostgreSQL leaderboards and streak calculations.
+2. Madina Perfumes (madinaperfumes.in): Production e-commerce store built with React, Vite, Supabase, Tailwind CSS, Razorpay HMAC SHA256 webhook payments, and automated Shiprocket API fulfillment.
+3. Muskan Hospital (muskanhospital.in): Public healthcare client portal with doctor schedules and inquiry workflows.
+4. Vega Star Entertainment: Luxury cinema & film portfolio client platform.
+5. Home Share: Property listing platform with MERN stack & JWT auth.
+
+TECHNICAL SKILLS:
+- Languages: JavaScript (ES6+), TypeScript, Java, HTML5, CSS3, Python, SQL
+- Frontend: React.js, Next.js, Redux Toolkit, Tailwind CSS, Framer Motion, Responsive UI/UX
+- Backend & DB: Node.js, Express.js, MongoDB, PostgreSQL, Supabase, RESTful APIs, JWT Auth
+- Core: Java, Data Structures & Algorithms, Object-Oriented Programming
+- Tools: Git, GitHub, Docker, Postman, Chrome DevTools, Vercel
+
+CAREER & JOB PREFERENCES:
+- Target Roles: Full Stack Developer / React.js Developer / Software Engineer
+- Current CTC: 0 INR (Internship)
+- Expected CTC: 5.0 LPA / 5,00,000 INR
+- Notice Period: Immediate / 0 Days
+- Willing to Relocate: Yes | Open to Remote/Hybrid/On-site: Yes
+
+TASK INSTRUCTIONS:
+1. Read the attached screenshot very carefully. Identify the question, prompt, or label.
+2. Formulate the exact value or response based on Danish's profile.
+3. If it's a short factual/numeric field (e.g. salary, notice period, graduation year, CGPA, phone, pincode, gender, single word, Yes/No):
+   - Return JUST the clean direct value without any fluff or complete sentences.
+4. If it's an essay or open-ended question (e.g. "Why should we hire you?", "Describe your experience with React", "Cover letter", "Tell us about a bug you fixed"):
+   - Write a compelling, natural, confident 1st-person answer ("I", "my") grounded in Danish's real projects and metrics.
+${maxLength ? `5. STRICT CHAR LIMIT: Answer must be under ${maxLength} characters.` : ""}
+
+OUTPUT FORMAT:
+Respond with a strict JSON object:
+{
+  "detectedQuestion": "<Brief label or question detected from the image>",
+  "answer": "<The exact answer to insert into the form>",
+  "isNumericOrShort": <true if short/factual value, false if sentence/essay>,
+  "fieldType": "<'text' | 'textarea' | 'number' | 'select' | 'radio'>"
+}`;
+
+  const userPrompt = questionHint
+    ? `Nearby field context hint: "${questionHint}". Inspect the screenshot and output JSON now:`
+    : `Inspect the screenshot and output JSON now:`;
+
+  const url = `${GEMINI_API_ENDPOINT}/${model}:generateContent?key=${apiKey.trim()}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "image/png",
+                  data: cleanBase64
+                }
+              },
+              {
+                text: `${systemInstructions}\n\n${userPrompt}`
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.25,
+          maxOutputTokens: 800
+        }
+      })
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      console.warn(`[AutoApply Pro] Vision API returned HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const textPart = parts.find(p => p.text && !p.thought) || parts.find(p => p.text) || parts[0];
+    const rawText = textPart?.text || "";
+
+    if (rawText) {
+      // Clean json string (strip markdown code fences)
+      let cleaned = rawText.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      try {
+        const parsed = JSON.parse(cleaned);
+        let extractedAnswer = (parsed.answer || parsed.response || parsed.value || parsed.text || "").trim();
+        let qTitle = parsed.detectedQuestion || questionHint || "Detected Field";
+
+        if (!extractedAnswer) {
+          // If it was a qualification header or section without a specific question, summarize Danish's qualifications
+          extractedAnswer = generateInstantFallbackAnswer(qTitle, p, maxLength) ||
+            "Mohammad Danish Khan | B.Tech in Artificial Intelligence (CGPA 7.79) | 10-month Web & UI/UX Developer Intern at Meet Bros | Built Madina Perfumes (React, Supabase, Razorpay, Shiprocket) & CodeRace (PostgreSQL progress tracker) | Stack: React.js, Node.js, Express, MongoDB, TypeScript, Tailwind CSS, Java.";
+        }
+
+        return {
+          detectedQuestion: qTitle,
+          answer: extractedAnswer,
+          isNumericOrShort: Boolean(parsed.isNumericOrShort || extractedAnswer.length < 40),
+          fieldType: parsed.fieldType || "text"
+        };
+      } catch (jsonErr) {
+        // Fallback: extract answer from text directly
+        let fallbackText = cleaned;
+        if (!fallbackText) {
+          fallbackText = "Mohammad Danish Khan | B.Tech in AI (CGPA 7.79) | Full-Stack Web Developer (React, Node.js, Express, MongoDB, Supabase, Tailwind CSS)";
+        }
+        return {
+          detectedQuestion: questionHint || "Detected Field",
+          answer: fallbackText,
+          isNumericOrShort: fallbackText.length < 40,
+          fieldType: "text"
+        };
+      }
+    }
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn("[AutoApply Pro] Vision API call failed/timed out:", err.message);
+  }
+
+  // Graceful fallback
+  if (questionHint) {
+    const fallbackAns = generateInstantFallbackAnswer(questionHint, p, maxLength);
+    return {
+      detectedQuestion: questionHint,
+      answer: fallbackAns,
+      isNumericOrShort: fallbackAns.length < 50,
+      fieldType: 'text'
+    };
+  }
+
+  return {
+    detectedQuestion: "Screen Section",
+    answer: "Mohammad Danish Khan | Full-Stack Web Developer | React.js, Node.js, Express.js, MongoDB, Supabase",
+    isNumericOrShort: false,
+    fieldType: 'text'
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { generateAnswerWithGemini, inferFieldWithGemini, testGeminiApiKey, generateInstantFallbackAnswer };
+  module.exports = {
+    generateAnswerWithGemini,
+    inferFieldWithGemini,
+    analyzeVisionWithGemini,
+    testGeminiApiKey,
+    generateInstantFallbackAnswer
+  };
 }

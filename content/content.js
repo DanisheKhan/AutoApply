@@ -4,10 +4,9 @@
  */
 
 (async function initAutoApply() {
-  // Domain guard: If on an excluded site (ChatGPT, Claude, YouTube, GitHub, etc.), stand by completely
-  if (typeof isExcludedDomain === 'function' && isExcludedDomain()) {
-    console.log("[AutoApply Pro] Standing by: active site is an excluded web application (AI assistant, search, or social).");
-    return;
+  const isExcluded = (typeof isExcludedDomain === 'function' && isExcludedDomain());
+  if (isExcluded) {
+    console.log("[AutoApply Pro] Standby mode on excluded web application. In-field widgets disabled, manual actions & shortcuts active.");
   }
 
   console.log("[AutoApply Pro] Content script loaded on:", window.location.href);
@@ -41,11 +40,6 @@
     candidateProfile = window.DEFAULT_PROFILE;
   }
 
-  if (!candidateProfile) {
-    console.error("[AutoApply Pro] Unable to load candidate profile.");
-    return;
-  }
-
   // 2. Handlers for Autofill Actions
   const handleAutofill = async () => {
     return await runAutoApply(candidateProfile, { aiAnswers: false });
@@ -55,17 +49,19 @@
     return await runAutoApply(candidateProfile, { aiAnswers: true });
   };
 
-  // 3. Initialize In-Field Quick Fill Popover (Floating bar removed per user request)
+  // 3. Initialize In-Field Quick Fill Popover (only if not on excluded domain)
   const existingHud = document.getElementById('autoapply-pro-root');
   if (existingHud) existingHud.remove();
 
-  if (typeof initFieldPopup === 'function') {
-    initFieldPopup(candidateProfile);
-  }
+  if (!isExcluded) {
+    if (typeof initFieldPopup === 'function') {
+      initFieldPopup(candidateProfile);
+    }
 
-  // Initialize Direct Hover Resume Auto-Attachment (Zero Click, strictly excluding Cover Letter)
-  if (typeof window.initDirectHoverResumeUploader === 'function') {
-    window.initDirectHoverResumeUploader();
+    // Initialize Direct Hover Resume Auto-Attachment (Zero Click)
+    if (typeof window.initDirectHoverResumeUploader === 'function') {
+      window.initDirectHoverResumeUploader();
+    }
   }
 
   // Listen for storage changes across tabs
@@ -131,6 +127,14 @@
         return false;
       }
 
+      if (request.action === "TRIGGER_VISUAL_SNIP") {
+        if (typeof window.activateVisualSnip === 'function') {
+          window.activateVisualSnip(candidateProfile);
+        }
+        sendResponse({ success: true });
+        return false;
+      }
+
       if (request.action === "GET_PAGE_STATUS") {
         const isEnabled = typeof window.isFieldPopupEnabled === 'function'
           ? window.isFieldPopupEnabled()
@@ -169,6 +173,16 @@
       e.stopPropagation();
       if (typeof window.activateSnipSelector === 'function') {
         window.activateSnipSelector(candidateProfile);
+      }
+      return;
+    }
+
+    // Alt + X: Visual AI Snip (Gemini Vision screen question solver)
+    if (e.altKey && (e.key === 'x' || e.key === 'X' || (e.shiftKey && (e.key === 'V' || e.key === 'v')))) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof window.activateVisualSnip === 'function') {
+        window.activateVisualSnip(candidateProfile);
       }
       return;
     }

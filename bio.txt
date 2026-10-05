@@ -132,7 +132,7 @@ Key Contributions    :
 
 2. CodeRace (coderace-danishkhan.vercel.app)
    - Stack   : React.js, Supabase, PostgreSQL
-   - Overview: Full-stack DSA practice and progress tracking platform to compete with peers; tracks a 502-question DSA sheet with real-time leaderboards, streaks, and progress analytics.
+   - Overview: Full-stack developer progress tracking platform to compete with peers; tracks question progress with real-time leaderboards, streaks, and analytics.
 
 3. Gradify
    - Stack   : Database schema design & Web Stack

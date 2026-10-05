@@ -138,9 +138,86 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (action === "CAPTURE_VISIBLE_TAB") {
+    const captureOptions = { format: "png" };
+    const windowId = (typeof sender?.tab?.windowId === 'number') ? sender.tab.windowId : null;
+
+    const doCapture = (targetWin) => {
+      try {
+        chrome.tabs.captureVisibleTab(targetWin, captureOptions, (dataUrl) => {
+          if (chrome.runtime.lastError || !dataUrl) {
+            if (targetWin !== null) {
+              doCapture(null);
+              return;
+            }
+            console.warn("[AutoApply Pro] captureVisibleTab error:", chrome.runtime.lastError?.message);
+            sendResponse({
+              success: false,
+              error: chrome.runtime.lastError?.message || "Failed to capture visible tab"
+            });
+          } else {
+            sendResponse({ success: true, dataUrl });
+          }
+        });
+      } catch (err) {
+        if (targetWin !== null) {
+          doCapture(null);
+        } else {
+          sendResponse({ success: false, error: err.message });
+        }
+      }
+    };
+
+    doCapture(windowId);
+    return true; // Keep channel open for async response
+  }
+
+  if (action === "ANALYZE_VISION_SNIP") {
+    chrome.storage.local.get(['candidateProfile', 'geminiApiKey']).then(async (res) => {
+      let profile = res.candidateProfile || DEFAULT_PROFILE;
+      if (profile && typeof DEFAULT_PROFILE !== 'undefined') {
+        profile = normalizeCandidateProfile(profile);
+        profile.gemini = profile.gemini || {};
+        if (!profile.gemini.apiKey || profile.gemini.apiKey.trim() === '') {
+          profile.gemini.apiKey = res.geminiApiKey || DEFAULT_PROFILE.gemini?.apiKey || '';
+        }
+      }
+      try {
+        const result = await analyzeVisionWithGemini(payload, profile);
+        sendResponse({ success: true, result });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    }).catch((err) => {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  }
+
   if (action === "OPEN_OPTIONS") {
     chrome.runtime.openOptionsPage();
     sendResponse({ success: true });
     return false;
   }
 });
+
+// 3. Native Chrome Commands Dispatcher (Alt+X, Alt+Shift+F, Alt+Shift+S)
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab || !tab.id) return;
+
+      if (command === "trigger_visual_snip") {
+        chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_VISUAL_SNIP" });
+      } else if (command === "trigger_autofill") {
+        chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_AUTOFILL" });
+      } else if (command === "trigger_snip") {
+        chrome.tabs.sendMessage(tab.id, { action: "TRIGGER_SNIP_FILL" });
+      }
+    } catch (e) {
+      console.warn("[AutoApply Pro] onCommand dispatch error:", e);
+    }
+  });
+}
+

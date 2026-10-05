@@ -140,8 +140,13 @@ const FIELD_PATTERNS = [
     key: "personal.dob",
     regex: /\b(dob|birth[_\s-]?date|date[_\s-]?of[_\s-]?birth|birthday|applicant[_\s-]?dob)\b/i,
     getValue: (p, el) => {
-      if (el && el.type === "date") return p.personal?.dob || "2005-06-01";
-      const ph = (el && el.placeholder ? el.placeholder.toLowerCase() : "");
+      const target = el ? (el.tagName?.toLowerCase() === 'input' ? el : el.querySelector?.('input')) : null;
+      const type = (target?.type || target?.getAttribute?.('type') || el?.type || el?.getAttribute?.('type') || '').toLowerCase();
+      if (type === "date") return p.personal?.dob || "2005-06-01";
+      if (typeof formatCandidateDate === 'function') {
+        return formatCandidateDate(p.personal?.dob || "2005-06-01", target || el);
+      }
+      const ph = (target?.placeholder || el?.placeholder || "").toLowerCase();
       if (ph.includes("yyyy-mm-dd") || ph.includes("yyyy/mm/dd")) return p.personal?.dob || "2005-06-01";
       if (ph.includes("mm/dd/yyyy")) return "06/01/2005";
       return p.personal?.dobFormatted || "01/06/2005";
