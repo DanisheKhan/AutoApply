@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const platformEl = document.getElementById('detected-platform');
   const tagEl = document.getElementById('platform-tag');
+  const liveDotEl = document.getElementById('platform-live-dot');
   const autofillBtn = document.getElementById('btn-autofill');
   const snipBtn = document.getElementById('btn-snip-fill');
   const visualSnipBtn = document.getElementById('btn-visual-snip');
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       platformEl.textContent = "Ready on Standby";
       tagEl.textContent = "STANDBY";
       tagEl.className = "badge-tag standby";
+      if (liveDotEl) liveDotEl.classList.remove('job-active');
       if (statusMsg) statusMsg.textContent = "Open any job application or press Alt+Shift+F";
       return;
     }
@@ -96,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       platformEl.textContent = response.platform || "Job Application";
       tagEl.textContent = "JOB FORM";
       tagEl.className = "badge-tag job-active";
+      if (liveDotEl) liveDotEl.classList.add('job-active');
       if (statusMsg) {
         statusMsg.className = "status-message success";
         statusMsg.textContent = response.fieldCount 
@@ -106,6 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       platformEl.textContent = response.platform || "Standard Web Page";
       tagEl.textContent = "STANDBY";
       tagEl.className = "badge-tag standby";
+      if (liveDotEl) liveDotEl.classList.remove('job-active');
       if (statusMsg) {
         statusMsg.className = "status-message";
         statusMsg.textContent = "Standing by. Autofill activates on job forms or via shortcut.";
