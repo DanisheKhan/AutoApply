@@ -461,32 +461,31 @@ function showDirectAttachedBadge(container, filename = 'DanishKhan_Resume.pdf') 
 
   const badge = document.createElement('div');
   badge.className = 'autoapply-attached-badge';
-  badge.innerHTML = `<span style="font-size:12px;margin-right:4px;">⚡</span><span>${filename} Attached</span>`;
+  badge.innerHTML = `<span style="font-size:11px;margin-right:4px;">✓</span><span>${filename} Attached</span>`;
   badge.style.cssText = `
     display: inline-flex;
     align-items: center;
-    background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-    color: #ecfdf5;
+    background: #111215;
+    border: 1px solid #1a4d36;
+    color: #34d399;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 9999px;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     margin-top: 6px;
     z-index: 1000;
     pointer-events: none;
-    animation: aapBadgeFadeIn 0.25s ease-out;
   `;
 
   try {
     container.appendChild(badge);
     setTimeout(() => {
-      badge.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      badge.style.transition = 'opacity 0.3s ease';
       badge.style.opacity = '0';
-      badge.style.transform = 'translateY(-4px)';
-      setTimeout(() => badge.remove(), 450);
-    }, 3500);
+      setTimeout(() => badge.remove(), 350);
+    }, 3000);
   } catch (e) {}
 }
 
@@ -494,17 +493,14 @@ function highlightResumeDropzone(element) {
   if (!element) return;
   const originalBorder = element.style.borderColor;
   const originalTransition = element.style.transition;
-  const originalBoxShadow = element.style.boxShadow;
 
-  element.style.transition = 'border-color 0.3s ease, box-shadow 0.3s ease';
-  element.style.borderColor = 'rgba(16, 185, 129, 0.8)';
-  element.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+  element.style.transition = 'border-color 0.2s ease';
+  element.style.borderColor = '#10b981';
 
   setTimeout(() => {
     element.style.borderColor = originalBorder;
-    element.style.boxShadow = originalBoxShadow;
     element.style.transition = originalTransition;
-  }, 2500);
+  }, 2000);
 }
 
 /**

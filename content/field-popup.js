@@ -155,7 +155,7 @@
         padding: 0;
       }
 
-      /* Unified Rounded Minimal Icon Button */
+      /* Minimal Classic Icon Button */
       .aap-btn-group {
         position: fixed;
         display: none;
@@ -163,17 +163,16 @@
         justify-content: center;
         width: 24px;
         height: 24px;
-        background: #18181b;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 9999px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        background: #111215;
+        border: 1px solid #28292e;
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
         z-index: 2147483647;
         pointer-events: auto !important;
         user-select: none;
         overflow: hidden;
-        will-change: transform, left, top;
-        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
-        animation: aap-fade-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: left, top;
+        transition: background-color 0.12s ease, border-color 0.12s ease;
       }
 
       .aap-btn-group.visible {
@@ -181,10 +180,8 @@
       }
 
       .aap-btn-group:hover {
-        background: #27272a;
-        border-color: rgba(255, 255, 255, 0.32);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-        transform: scale(1.06);
+        background: #1b1c21;
+        border-color: #3b3d46;
       }
 
       /* Inner Action Button */
@@ -196,9 +193,9 @@
         height: 100%;
         padding: 0;
         background: transparent;
-        color: #f4f4f5;
+        color: #a1a1aa;
         border: none;
-        border-radius: 9999px;
+        border-radius: 5px;
         cursor: pointer;
         outline: none;
         transition: color 0.12s ease;
@@ -209,12 +206,11 @@
       }
 
       .aap-insert-btn:active {
-        opacity: 0.85;
-        transform: scale(0.94);
+        background: #16171b;
       }
 
       .aap-insert-btn .aap-icon {
-        color: #d4d4d8;
+        color: currentColor;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -225,32 +221,32 @@
         display: block;
       }
 
-      /* Success Feedback - Clean & Minimal without glow */
+      /* Success Feedback - Minimal Classic without glow */
       .aap-btn-group.success {
-        border-color: rgba(74, 222, 128, 0.5) !important;
+        border-color: #10b981 !important;
+        background: #10261b !important;
       }
       .aap-btn-group.success .aap-insert-btn,
       .aap-btn-group.success .aap-icon {
-        color: #4ade80 !important;
+        color: #10b981 !important;
       }
 
-      /* Dropdown Menu Overlay - Minimal Dark */
+      /* Dropdown Menu Overlay - Minimal Classic */
       .aap-menu {
         position: fixed;
         display: none;
         flex-direction: column;
         min-width: 200px;
         max-width: 300px;
-        background: #18181b;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+        background: #121316;
+        border: 1px solid #28292e;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
         padding: 4px;
         z-index: 2147483647;
         pointer-events: auto !important;
         user-select: none;
-        will-change: transform, left, top;
-        animation: aap-fade-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: left, top;
       }
 
       .aap-menu.visible {
@@ -268,7 +264,7 @@
 
       .aap-menu-divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.08);
+        background: #1f2025;
         margin: 3px 0;
       }
 
@@ -278,7 +274,7 @@
         justify-content: space-between;
         gap: 8px;
         padding: 6px 8px;
-        border-radius: 5px;
+        border-radius: 4px;
         font-size: 11.5px;
         color: #e4e4e7;
         cursor: pointer;
@@ -286,12 +282,12 @@
       }
 
       .aap-menu-item:hover {
-        background: rgba(255, 255, 255, 0.08);
+        background: #1c1d22;
         color: #ffffff;
       }
 
       .aap-menu-item:active {
-        background: rgba(255, 255, 255, 0.12);
+        background: #16171b;
       }
 
       .aap-menu-item-left {

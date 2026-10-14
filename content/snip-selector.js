@@ -114,45 +114,44 @@
         transform: translateX(-50%);
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        background: #18181b;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 8px 18px;
-        border-radius: 9999px;
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
-        color: #f4f4f5;
-        font-size: 12.5px;
+        gap: 9px;
+        background: #111215;
+        border: 1px solid #28292e;
+        padding: 6px 14px;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        color: #ededed;
+        font-size: 12px;
         font-weight: 500;
-        letter-spacing: 0.1px;
+        letter-spacing: -0.01em;
         pointer-events: none;
         z-index: 2147483647;
-        animation: aap-banner-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
       .aap-snip-banner .aap-snip-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #f4f4f5;
+        color: #a1a1aa;
       }
 
       .aap-snip-kbd {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        padding: 2px 6px;
-        border-radius: 4px;
-        color: #a1a1aa;
+        font-size: 9.5px;
+        background: #1a1b1f;
+        border: 1px solid #27282e;
+        padding: 1.5px 5px;
+        border-radius: 3px;
+        color: #8e919d;
       }
 
       /* Drag Selection Marquee Box */
       .aap-snip-marquee {
         position: fixed;
         display: none;
-        border: 1.5px dashed #ffffff;
-        background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 0 0 99999px rgba(10, 10, 14, 0.5);
+        border: 1px dashed #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 99999px rgba(10, 10, 14, 0.55);
         pointer-events: none;
         z-index: 2147483647;
       }
@@ -163,21 +162,21 @@
         display: none;
         align-items: center;
         gap: 5px;
-        background: #18181b;
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        padding: 4px 10px;
-        border-radius: 9999px;
-        color: #ffffff;
+        background: #111215;
+        border: 1px solid #28292e;
+        padding: 3px 8px;
+        border-radius: 4px;
+        color: #ededed;
         font-size: 11px;
-        font-weight: 600;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
         pointer-events: none;
         z-index: 2147483647;
       }
 
       .aap-snip-badge.has-fields {
-        border-color: rgba(74, 222, 128, 0.6);
-        color: #4ade80;
+        border-color: #10b981;
+        color: #10b981;
       }
 
       @keyframes aap-banner-in {
