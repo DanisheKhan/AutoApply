@@ -29,39 +29,28 @@
   let isMenuVisible = false;
   let animFrameId = null;
   let isWidgetEnabled = true;
+  let userToggleEnabled = true;
   let activationMode = 'always'; // 'smart' (Job Forms Only) | 'always' | 'disabled'
 
   const ICONS = {
-    bolt: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-    sparkle: `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>`,
+    bolt: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    sparkle: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>`,
     dots: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`,
-    check: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-    file: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+    check: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+    file: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
     dot: `<svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>`,
-    scissors: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>`,
-    spinner: `<svg class="aap-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`
+    scissors: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>`,
+    spinner: `<svg class="aap-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`
   };
 
   /**
-   * Sets the activation mode: 'smart' | 'always' | 'disabled'
+   * Harmonizes floatingWidgetEnabled and popupActivationMode so neither overrides the other.
    */
-  function setActivationMode(mode) {
-    activationMode = mode || 'smart';
-    if (activationMode === 'disabled') {
-      setWidgetEnabled(false);
-    } else {
-      setWidgetEnabled(true);
-    }
-  }
-
-  /**
-   * Sets whether the floating in-field button is enabled.
-   * When disabled, immediately hides active buttons and stops tracking.
-   */
-  function setWidgetEnabled(enabled) {
-    isWidgetEnabled = Boolean(enabled);
+  function syncCombinedEnabledState() {
+    isWidgetEnabled = userToggleEnabled && (activationMode !== 'disabled');
     if (!isWidgetEnabled) {
       hideAll();
+      stopTracking();
       if (popupHost) {
         popupHost.style.display = 'none';
       }
@@ -70,6 +59,23 @@
         popupHost.style.display = '';
       }
     }
+  }
+
+  /**
+   * Sets the activation mode: 'smart' | 'always' | 'disabled'
+   */
+  function setActivationMode(mode) {
+    activationMode = mode || 'smart';
+    syncCombinedEnabledState();
+  }
+
+  /**
+   * Sets whether the floating in-field button is enabled via toggle.
+   * When disabled, immediately hides active buttons and stops tracking.
+   */
+  function setWidgetEnabled(enabled) {
+    userToggleEnabled = Boolean(enabled);
+    syncCombinedEnabledState();
   }
 
   /**
@@ -87,10 +93,14 @@
 
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['floatingWidgetEnabled', 'popupActivationMode'], (data) => {
-        if (data && data.popupActivationMode) {
-          setActivationMode(data.popupActivationMode);
-        } else if (data && data.floatingWidgetEnabled !== undefined) {
-          setWidgetEnabled(data.floatingWidgetEnabled !== false);
+        if (data) {
+          if (data.floatingWidgetEnabled !== undefined) {
+            userToggleEnabled = data.floatingWidgetEnabled !== false;
+          }
+          if (data.popupActivationMode !== undefined) {
+            activationMode = data.popupActivationMode;
+          }
+          syncCombinedEnabledState();
         }
       });
     }
@@ -145,11 +155,13 @@
         padding: 0;
       }
 
-      /* Unified Rounded Minimal Pill Button */
+      /* Unified Rounded Minimal Icon Button */
       .aap-btn-group {
         position: fixed;
         display: none;
         align-items: center;
+        justify-content: center;
+        width: 24px;
         height: 24px;
         background: #18181b;
         border: 1px solid rgba(255, 255, 255, 0.16);
@@ -160,7 +172,7 @@
         user-select: none;
         overflow: hidden;
         will-change: transform, left, top;
-        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
         animation: aap-fade-in 0.12s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
@@ -170,28 +182,25 @@
 
       .aap-btn-group:hover {
         background: #27272a;
-        border-color: rgba(255, 255, 255, 0.28);
+        border-color: rgba(255, 255, 255, 0.32);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+        transform: scale(1.06);
       }
 
       /* Inner Action Button */
       .aap-insert-btn {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
+        justify-content: center;
+        width: 100%;
         height: 100%;
-        padding: 0 10px;
+        padding: 0;
         background: transparent;
         color: #f4f4f5;
         border: none;
         border-radius: 9999px;
-        font-family: inherit;
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.1px;
         cursor: pointer;
         outline: none;
-        white-space: nowrap;
         transition: color 0.12s ease;
       }
 
@@ -201,6 +210,7 @@
 
       .aap-insert-btn:active {
         opacity: 0.85;
+        transform: scale(0.94);
       }
 
       .aap-insert-btn .aap-icon {
@@ -209,6 +219,10 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+      }
+
+      .aap-insert-btn .aap-icon svg {
+        display: block;
       }
 
       /* Success Feedback - Clean & Minimal without glow */
@@ -343,7 +357,8 @@
     insertBtn = document.createElement('button');
     insertBtn.type = 'button';
     insertBtn.className = 'aap-insert-btn';
-    insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+    insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span>`;
+    insertBtn.title = 'Insert (Right-click for options)';
 
     btnGroup.appendChild(insertBtn);
     popupShadow.appendChild(btnGroup);
@@ -486,11 +501,17 @@
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'local') {
+          let needsSync = false;
           if (changes.popupActivationMode !== undefined) {
-            setActivationMode(changes.popupActivationMode.newValue);
+            activationMode = changes.popupActivationMode.newValue || 'smart';
+            needsSync = true;
           }
           if (changes.floatingWidgetEnabled !== undefined) {
-            setWidgetEnabled(changes.floatingWidgetEnabled.newValue !== false);
+            userToggleEnabled = changes.floatingWidgetEnabled.newValue !== false;
+            needsSync = true;
+          }
+          if (needsSync) {
+            syncCombinedEnabledState();
           }
         }
       });
@@ -654,12 +675,12 @@
     if (isTrulyOpenEnded && !hasConcreteProfileValue) {
       currentMode = 'ai';
       btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span>`;
       insertBtn.title = `Insert AI (Right-click for options)`;
     }
     // 2. Resume Field: Direct auto-attach on focus/click and suppress redundant popup button
     else if (suggestions.isResume || (element.type === 'file' && typeof isCoverLetterTarget === 'function' && !isCoverLetterTarget(element))) {
-      if (typeof autoUploadResume === 'function' && element.dataset?.autoapplyResumeAttached !== 'true') {
+      if (isWidgetEnabled && typeof autoUploadResume === 'function' && element.dataset?.autoapplyResumeAttached !== 'true') {
         element.dataset.autoapplyResumeAttached = 'true';
         autoUploadResume(element).catch(() => {});
       }
@@ -670,7 +691,7 @@
     else if (currentTargetValue !== null && currentTargetValue !== undefined && currentTargetValue !== '') {
       currentMode = 'insert';
       btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span>`;
       insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
     }
     // 4. Smart fallback: avoid forcing AI mode unless truly an essay question
@@ -680,17 +701,17 @@
         currentTargetValue = fallbackVal;
         currentMode = 'insert';
         btnGroup.className = 'aap-btn-group visible';
-        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span>`;
         insertBtn.title = `Insert: ${currentTargetValue} (Right-click for options)`;
       } else if (isTrulyOpenEnded) {
         currentMode = 'ai';
         btnGroup.className = 'aap-btn-group visible';
-        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span>`;
         insertBtn.title = `Insert AI (Right-click for options)`;
       } else {
         currentMode = 'insert';
         btnGroup.className = 'aap-btn-group visible';
-        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span>`;
         insertBtn.title = `Insert (Right-click for options)`;
       }
     }
@@ -730,7 +751,8 @@
 
     // B. Resume Mode
     if (currentMode === 'resume') {
-      insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Attaching...</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span>`;
+      insertBtn.title = 'Attaching resume...';
       try {
         if (typeof autoUploadResume === 'function') {
           await autoUploadResume();
@@ -738,7 +760,8 @@
         showSuccessFeedback("Attached");
       } catch (err) {
         console.warn("[AutoApply Pro] Resume attach failed:", err);
-        insertBtn.innerHTML = `<span class="aap-btn-label">Retry</span>`;
+        insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span>`;
+        insertBtn.title = 'Retry attaching resume';
         setTimeout(() => {
           resetButtonToCurrentMode();
         }, 1500);
@@ -812,7 +835,8 @@
 
     // Step 3: Nothing found locally → call Gemini with the full fingerprint
     // Show spinner while Gemini works
-    insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Thinking...</span>`;
+    insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span>`;
+    insertBtn.title = 'Thinking...';
     btnGroup.className = 'aap-btn-group visible';
 
     try {
@@ -881,7 +905,8 @@
    */
   async function triggerAiGenerationForField(anchor, label) {
     if (!anchor) return;
-    insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span><span class="aap-btn-label">Drafting...</span>`;
+    insertBtn.innerHTML = `<span class="aap-icon aap-spin">${ICONS.spinner}</span>`;
+    insertBtn.title = 'Drafting answer...';
     btnGroup.className = 'aap-btn-group visible';
     try {
       let answer = '';
@@ -1208,9 +1233,10 @@
       successTimer = null;
     }
     btnGroup.classList.add('success');
-    insertBtn.innerHTML = `<span class="aap-icon">${ICONS.check}</span><span class="aap-btn-label">${msg}</span>`;
+    insertBtn.innerHTML = `<span class="aap-icon">${ICONS.check}</span>`;
+    insertBtn.title = msg;
 
-    // After 1.2s, gracefully revert button icon and label back to normal while remaining active!
+    // After 1.2s, gracefully revert button icon back to normal while remaining active!
     successTimer = setTimeout(() => {
       btnGroup.classList.remove('success');
       resetButtonToCurrentMode();
@@ -1219,21 +1245,21 @@
   }
 
   /**
-   * Resets insert button icon, label, and title to current mode.
+   * Resets insert button icon and title to current mode.
    */
   function resetButtonToCurrentMode() {
     if (!insertBtn || !btnGroup) return;
     if (currentMode === 'ai') {
       btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span><span class="aap-btn-label">Insert AI</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.sparkle}</span>`;
       insertBtn.title = 'Insert AI (Right-click for options)';
     } else if (currentMode === 'resume') {
       btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span><span class="aap-btn-label">Attach Resume</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.file}</span>`;
       insertBtn.title = 'Attach Resume (Right-click for options)';
     } else {
       btnGroup.className = 'aap-btn-group visible';
-      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span><span class="aap-btn-label">Insert</span>`;
+      insertBtn.innerHTML = `<span class="aap-icon">${ICONS.bolt}</span>`;
       insertBtn.title = currentTargetValue ? `Insert: ${currentTargetValue} (Right-click for options)` : 'Insert (Right-click for options)';
     }
   }
@@ -1261,7 +1287,7 @@
       if (isMenuVisible && menuEl) menuEl.style.display = 'flex';
     }
 
-    const btnWidth = btnGroup.offsetWidth || 82;
+    const btnWidth = btnGroup.offsetWidth || 24;
     const btnHeight = btnGroup.offsetHeight || 24;
 
     const tag = currentAnchor.tagName ? currentAnchor.tagName.toLowerCase() : '';

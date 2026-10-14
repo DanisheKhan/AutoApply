@@ -4,6 +4,48 @@
  * it to job portal file inputs and drag-and-drop zones (SmartRecruiters, Greenhouse, Lever, Workday, etc.)
  */
 
+let isResumeUploaderActive = true;
+
+function isResumeUploaderEnabled() {
+  if (typeof window !== 'undefined' && typeof window.isFieldPopupEnabled === 'function') {
+    return window.isFieldPopupEnabled() && isResumeUploaderActive;
+  }
+  return isResumeUploaderActive;
+}
+
+function setResumeUploaderEnabled(enabled) {
+  isResumeUploaderActive = Boolean(enabled);
+}
+
+// Initial sync with chrome.storage.local
+if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+  chrome.storage.local.get(['floatingWidgetEnabled', 'popupActivationMode'], (data) => {
+    if (data) {
+      if (data.floatingWidgetEnabled === false || data.popupActivationMode === 'disabled') {
+        isResumeUploaderActive = false;
+      } else {
+        isResumeUploaderActive = true;
+      }
+    }
+  });
+
+  // Cross-tab storage change sync
+  if (chrome.storage.onChanged) {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local') {
+        if (changes.floatingWidgetEnabled !== undefined) {
+          isResumeUploaderActive = changes.floatingWidgetEnabled.newValue !== false;
+        }
+        if (changes.popupActivationMode !== undefined) {
+          if (changes.popupActivationMode.newValue === 'disabled') {
+            isResumeUploaderActive = false;
+          }
+        }
+      }
+    });
+  }
+}
+
 function createResumeFileFromBase64() {
   try {
     if (typeof RESUME_DATA !== 'undefined' && RESUME_DATA.base64) {
@@ -173,6 +215,12 @@ function isResumeTarget(element) {
  * @returns {Promise<{ uploaded: boolean, filename: string, count: number }>}
  */
 async function autoUploadResume(targetElement = null) {
+  // Extension toggle guard: strictly only upload if extension is active
+  if (!isResumeUploaderEnabled()) {
+    console.log('[AutoApply Pro] autoUploadResume skipped: Extension toggle is OFF.');
+    return { uploaded: false, filename: '', count: 0 };
+  }
+
   // Domain guard: Never upload resume on ChatGPT, Claude, social, etc.
   if (typeof isExcludedDomain === 'function' && isExcludedDomain()) {
     console.log('[AutoApply Pro] autoUploadResume skipped: active site is excluded.');
@@ -475,6 +523,7 @@ function initDirectHoverResumeUploader() {
 
   function bindTarget(el) {
     if (!el || el.dataset?.autoapplyResumeHoverBound === 'true') return;
+    if (!isResumeUploaderEnabled()) return;
     if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
     if (!isResumeTarget(el)) return; // Strictly only bind to verified Resume fields!
     if (isCoverLetterTarget(el)) return; // Strictly ignore cover letters!
@@ -482,7 +531,8 @@ function initDirectHoverResumeUploader() {
     el.dataset.autoapplyResumeHoverBound = 'true';
 
     const onHoverOrFocus = async () => {
-      // Re-verify domain and target safety
+      // Re-verify extension toggle and domain safety
+      if (!isResumeUploaderEnabled()) return;
       if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
       if (!isResumeTarget(el) || isCoverLetterTarget(el)) return;
       if (el.dataset?.autoapplyResumeAttached === 'true') return;
@@ -504,6 +554,7 @@ function initDirectHoverResumeUploader() {
   }
 
   function scanAndBind() {
+    if (!isResumeUploaderEnabled()) return;
     if (typeof isExcludedDomain === 'function' && isExcludedDomain()) return;
     const candidates = document.querySelectorAll(
       'input[type="file"], [class*="dropzone"], [class*="drop-zone"], [data-testid*="dropzone"], [data-qa*="dropzone"], [class*="file-upload"], [class*="resume-upload"], .upload-box, [class*="document-upload"], .gf-file-upload-container, .gf-add-file-btn, div[role="button"][aria-label*="Add file" i], div[role="button"][aria-label*="Resume" i]'
@@ -528,6 +579,8 @@ if (typeof window !== 'undefined') {
   window.isCoverLetterTarget = isCoverLetterTarget;
   window.isResumeTarget = isResumeTarget;
   window.initDirectHoverResumeUploader = initDirectHoverResumeUploader;
+  window.isResumeUploaderEnabled = isResumeUploaderEnabled;
+  window.setResumeUploaderEnabled = setResumeUploaderEnabled;
 }
 if (typeof self !== 'undefined') {
   self.autoUploadResume = autoUploadResume;
@@ -535,6 +588,8 @@ if (typeof self !== 'undefined') {
   self.isCoverLetterTarget = isCoverLetterTarget;
   self.isResumeTarget = isResumeTarget;
   self.initDirectHoverResumeUploader = initDirectHoverResumeUploader;
+  self.isResumeUploaderEnabled = isResumeUploaderEnabled;
+  self.setResumeUploaderEnabled = setResumeUploaderEnabled;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -543,6 +598,8 @@ if (typeof module !== 'undefined' && module.exports) {
     getResumeFile,
     isCoverLetterTarget,
     isResumeTarget,
-    initDirectHoverResumeUploader
+    initDirectHoverResumeUploader,
+    isResumeUploaderEnabled,
+    setResumeUploaderEnabled
   };
 }

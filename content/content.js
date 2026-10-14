@@ -74,6 +74,9 @@
         } else if (typeof window.hideFieldPopup === 'function' && !isEnabled) {
           window.hideFieldPopup();
         }
+        if (typeof window.setResumeUploaderEnabled === 'function') {
+          window.setResumeUploaderEnabled(isEnabled);
+        }
         const fieldRoot = document.getElementById('autoapply-field-popup-root');
         if (fieldRoot) {
           fieldRoot.style.display = isEnabled ? '' : 'none';
@@ -90,6 +93,9 @@
           window.setFieldPopupEnabled(request.enabled);
         } else if (typeof window.hideFieldPopup === 'function' && !request.enabled) {
           window.hideFieldPopup();
+        }
+        if (typeof window.setResumeUploaderEnabled === 'function') {
+          window.setResumeUploaderEnabled(request.enabled);
         }
         const fieldRoot = document.getElementById('autoapply-field-popup-root');
         if (fieldRoot) {

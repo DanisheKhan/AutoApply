@@ -4,7 +4,7 @@ const { FIELD_PATTERNS, isOpenEndedQuestion, resolveBooleanQuestion, JobDetector
 const { generateInstantFallbackAnswer } = require('../background/gemini-client.js');
 const { RESUME_DATA } = require('../assets/resume-data.js');
 const { getFieldSuggestions } = require('../content/adapters.js');
-const { isCoverLetterTarget, isResumeTarget } = require('../content/resume-uploader.js');
+const { isCoverLetterTarget, isResumeTarget, isResumeUploaderEnabled, setResumeUploaderEnabled, autoUploadResume } = require('../content/resume-uploader.js');
 
 async function runVerification() {
   console.log("==================================================");
@@ -744,6 +744,20 @@ async function runVerification() {
   assert(mockInput.eventsDispatched.includes('input'), "Input event dispatched");
   assert(mockInput.eventsDispatched.includes('change'), "Change event dispatched");
   assert(!mockInput.eventsDispatched.includes('blur'), "Synthetic blur event omitted to protect framework reactivity");
+
+  // [12] Testing Resume Uploader Extension Toggle State Enforcement
+  console.log("\n[12] Testing Resume Uploader Extension Toggle Enforcement:");
+  setResumeUploaderEnabled(true);
+  assert(isResumeUploaderEnabled() === true, "Resume uploader toggle reports active when enabled");
+
+  setResumeUploaderEnabled(false);
+  assert(isResumeUploaderEnabled() === false, "Resume uploader toggle reports inactive when disabled");
+
+  const uploadWhenDisabled = await autoUploadResume();
+  assert(uploadWhenDisabled.uploaded === false && uploadWhenDisabled.count === 0, "autoUploadResume strictly skips upload when extension toggle is OFF");
+
+  setResumeUploaderEnabled(true);
+  assert(isResumeUploaderEnabled() === true, "Resume uploader toggle successfully restored to active");
 
   console.log("\n==================================================");
   console.log(`Master Verification Results: ${passed} passed, ${failed} failed`);
